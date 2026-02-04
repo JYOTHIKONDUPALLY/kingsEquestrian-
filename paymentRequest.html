@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+     <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    .container {
+      max-width: 650px;
+      margin: 20px auto;
+      background-color: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .header {
+      background: linear-gradient(135deg, #1f4e3d 0%, #4f9c7a 100%);
+      padding: 30px;
+      text-align: center;
+      color: #fff;
+    }
+    .header img {
+      width: 70px;
+      height: 70px;
+      border-radius: 10%;
+      margin-bottom: 10px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 26px;
+    }
+    .content {
+      padding: 35px 30px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: #1f4e3d;
+    }
+    .info-box {
+      background: #f8f8f8;
+      border-left: 4px solid #1f4e3d;
+      padding: 18px;
+      margin: 20px 0;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .footer {
+      background-color: #1f4e3d;
+      color: #fff;
+      padding: 25px;
+      text-align: center;
+      font-size: 13px;
+    }
+  </style>
+<body >
+
+  <div style="max-width:720px;margin:30px auto;background:#fff;
+              border:2px solid #000;border-radius:22px;padding:25px;">
+
+    <!-- Header -->
+ <div class="header">
+      <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" alt="Kings Equestrian Logo">
+      <h1>Kings Equestrian Foundation</h1>
+      <p style="margin:8px 0 0;">Where horses don’t just carry you — they change you </p>
+    </div>
+    <!-- Greeting -->
+    <p style="font-size:14px;margin-top:25px;">
+      Dear <b>${name}</b>,
+    </p>
+
+    <p style="font-size:14px;">
+      Thank you for completing your registration with
+      <b>${BUSINESS_NAME}</b>.  
+      Please find below the payment details to proceed.
+    </p>
+
+    <!-- Amount Box -->
+    <div style="border:2px solid #000;border-radius:10px;
+                padding:18px;margin:25px 0;text-align:center;">
+      <div style="font-size:14px;">Amount Payable</div>
+      <div style="font-size:36px;font-weight:bold;color:#e67e22;">
+        ₹${amount}
+      </div>
+    </div>
+
+    <!-- UPI Section -->
+    <div style="border:1px solid #000;border-radius:10px;padding:15px;margin-bottom:20px;">
+      <h3 style="margin-top:0;font-size:15px;">📌 UPI Payment</h3>
+      <p style="font-size:13px;margin:5px 0;">
+        <b>UPI ID:</b> ${UPI_ID}
+      </p>
+
+      <div style="text-align:center;margin-top:15px;">
+        <img src="${qrLink}"
+             alt="UPI QR Code"
+             style="max-width:260px;border:1px solid #ccc;padding:6px;" />
+        <p style="font-size:11px;color:#666;margin-top:6px;">
+          Scan the QR code to pay
+        </p>
+      </div>
+    </div>
+
+    <!-- Bank Details -->
+    <div style="border:1px solid #000;border-radius:10px;padding:15px;margin-bottom:20px;">
+      <h3 style="margin-top:0;font-size:15px;">🏦 Bank Transfer Details</h3>
+
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr>
+          <td style="padding:6px 0;"><b>Account Name</b></td>
+          <td>${ACCOUNT_NAME}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;"><b>Bank</b></td>
+          <td>${BANK_NAME}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;"><b>Account Number</b></td>
+          <td>${ACCOUNT_NUMBER}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;"><b>IFSC Code</b></td>
+          <td>${IFSC_CODE}</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Submit Payment -->
+    <div style="background:#fdf3d7;border-left:4px solid #f39c12;
+                padding:18px;border-radius:8px;">
+      <h3 style="margin-top:0;font-size:15px;">📝 Submit Payment Details</h3>
+
+      <p style="font-size:13px;">
+        After completing the payment, please submit your transaction details using the link below.
+      </p>
+
+      <div style="text-align:center;margin-top:15px;">
+        <a href="${PAYMENT_FORM_URL}"
+           style="background:#000;color:#fff;
+                  padding:12px 28px;
+                  text-decoration:none;
+                  border-radius:6px;
+                  font-size:14px;
+                  font-weight:bold;">
+          Submit Payment Details
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer Note -->
+       <div class="footer">
+      <p><strong>Kings Equestrian Foundation</strong></p>
+      <p>📍 Karnataka, India</p>
+      <p>📞 +91-XXXXXXXXXX | ✉️ support@kingsequestrian.com</p>
+      <p style="margin-top: 10px; font-size: 11px;">
+        © ${new Date().getFullYear()} Kings Equestrian Foundation. All rights reserved.
+      </p>
+    </div>
+
+  </div>
+
+</body>
+</html>

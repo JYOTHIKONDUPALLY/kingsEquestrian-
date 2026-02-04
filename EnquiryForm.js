@@ -1,11 +1,11 @@
 /**
- * Kings Equestrian - Advanced Email Queue System
+ * Kings Equestrian - Complete Email System with Consent & Payment Tracking
  * Features:
- * - Fetches email content from Google Docs
- * - No registration number generation
- * - Detailed error logging
- * - UI button to resend failed emails
- * - Automatic queue processing
+ * - HTML consent page (replaces Google Form)
+ * - Registration number generation on consent acceptance
+ * - PDF attachment of Google Docs
+ * - Payment details tracking in separate sheet
+ * - Queue management with error logging
  */
 
 // ============== CONFIGURATION ==============
@@ -13,11 +13,13 @@ const CONFIG = {
   // Email settings
   emailSubject: 'Welcome {name} to Kings Equestrian 🏇',
   
-  // Google Docs ID for email content (extract from URL)
+  // Google Docs ID for email content
   emailTemplateDocId: '1qALQ8RlVlMrpEhjLYjaf3txDUo5BZLoHjOoRTrS191g',
   
+  // Web App URL (will be set after deployment)
+  webAppUrl: '', // Leave empty, will be auto-filled
+  
   // Links
-  consentFormLink: 'https://forms.gle/SRfZmVsc3qHNJf3i7',
   websiteLink: 'https://kingsfarmequestrian.com',
   instagramLink: '@kingsequestrianfoundation',
   reviewsLink: 'https://maps.app.goo.gl/EVyzEfhh3tdJ2BTX7?g_st=iwb',
@@ -25,6 +27,16 @@ const CONFIG = {
   // Contact
   whatsappNumbers: '9980771166 | 9980895533',
   email: 'info@kingsequestrian.com',
+  
+  // Location codes for registration numbers
+  locationCodes: {
+    'bangalore': 'BLR',
+    'hyderabad': 'HYD',
+    'pune': 'PNE'
+  },
+  
+  // Default payment amount (can be customized per registration)
+  defaultPaymentAmount: 2500,
   
   // Email quota management
   DAILY_EMAIL_LIMIT: 95,
@@ -38,11 +50,284 @@ const CONFIG = {
   }
 };
 
-// ============== ADD CUSTOM MENU ==============
+// ============== WEB APP HANDLERS ==============
 
 /**
- * Creates custom menu when spreadsheet opens
+ * Handles GET requests - serves the consent page
  */
+function doGet(e) {
+  const email = e.parameter.email || '';
+  const name = e.parameter.name || '';
+  const location = e.parameter.location || '';
+  
+  if (!email) {
+    return HtmlService.createHtmlOutput('<h1>Invalid Access</h1><p>Missing email parameter.</p>');
+  }
+  
+  // Serve the consent form
+  const template = HtmlService.createTemplateFromFile('ConsentPage');
+  template.email = email;
+  template.name = name;
+  template.location = location;
+  template.colors = CONFIG.colors;
+  
+  return template.evaluate()
+    .setTitle('Terms & Conditions - Kings Equestrian')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/**
+ * Handles POST requests - processes consent acceptance
+ */
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const email = data.email;
+    const name = data.name;
+    const location = data.location;
+    const consentAccepted = data.consentAccepted;
+    
+    if (!consentAccepted) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        message: 'Consent must be accepted'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Generate registration number
+    const registrationNumber = generateRegistrationNumber(location);
+    
+    // Save to Payment Details sheet
+    const paymentAmount = CONFIG.defaultPaymentAmount;
+    saveToPaymentDetails(registrationNumber, paymentAmount, email, name, location);
+    
+    // Update main sheet with registration number and consent status
+    updateMainSheetWithConsent(email, registrationNumber, consentAccepted);
+    
+    // Generate payment link
+    const paymentLink = createPaymentLink(registrationNumber, paymentAmount);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      registrationNumber: registrationNumber,
+      paymentAmount: paymentAmount,
+      paymentLink: paymentLink,
+      message: 'Consent accepted successfully!'
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    Logger.log('Error in doPost: ' + error.toString());
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      message: 'Error processing consent: ' + error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// ============== REGISTRATION NUMBER GENERATION ==============
+
+/**
+ * Generates unique registration number based on location
+ * Format: [LOCATION_CODE][4-digit serial number]
+ */
+function generateRegistrationNumber(location) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const paymentSheet = getPaymentDetailsSheet();
+  
+  // Get location code
+  const locationKey = Object.keys(CONFIG.locationCodes).find(key => 
+    location.toLowerCase().includes(key) || key.includes(location.toLowerCase())
+  );
+  const locationCode = locationKey ? CONFIG.locationCodes[locationKey] : 'GEN';
+  
+  // Find highest existing number for this location
+  const lastRow = paymentSheet.getLastRow();
+  let maxNumber = 0;
+  
+  if (lastRow > 1) {
+    const existingNumbers = paymentSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    const pattern = new RegExp(`^${locationCode}(\\d+)$`);
+    
+    existingNumbers.forEach(row => {
+      const regNumber = row[0].toString();
+      const match = regNumber.match(pattern);
+      if (match) {
+        const num = parseInt(match[1]);
+        if (num > maxNumber) {
+          maxNumber = num;
+        }
+      }
+    });
+  }
+  
+  const newNumber = maxNumber + 1;
+  const paddedNumber = newNumber.toString().padStart(4, '0');
+  
+  return `${locationCode}${paddedNumber}`;
+}
+
+// ============== PAYMENT DETAILS SHEET ==============
+
+/**
+ * Get or create Payment Details sheet
+ */
+function getPaymentDetailsSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let paymentSheet = ss.getSheetByName('Payment Details');
+  
+  if (!paymentSheet) {
+    paymentSheet = ss.insertSheet('Payment Details');
+    
+    const headers = [
+      'Registration Number',
+      'Amount to be Paid',
+      'Email ID',
+      'Student Name',
+      'Location',
+      'Consent Accepted',
+      'Consent Timestamp',
+      'Payment Status',
+      'Payment Link'
+    ];
+    
+    paymentSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    paymentSheet.getRange(1, 1, 1, headers.length)
+      .setBackground(CONFIG.colors.primary)
+      .setFontColor('white')
+      .setFontWeight('bold');
+    
+    paymentSheet.setFrozenRows(1);
+    paymentSheet.autoResizeColumns(1, headers.length);
+  }
+  
+  return paymentSheet;
+}
+
+/**
+ * Save consent and payment details
+ */
+function saveToPaymentDetails(registrationNumber, amount, email, name, location) {
+  const paymentSheet = getPaymentDetailsSheet();
+  
+  const paymentLink = createPaymentLink(registrationNumber, amount);
+  
+  const rowData = [
+    registrationNumber,
+    amount,
+    email,
+    name,
+    location || '',
+    'Yes',
+    new Date(),
+    'Pending',
+    paymentLink
+  ];
+  
+  paymentSheet.appendRow(rowData);
+  
+  // Format the new row
+  const lastRow = paymentSheet.getLastRow();
+  paymentSheet.getRange(lastRow, 7).setNumberFormat("dd-MMM-yyyy HH:mm:ss"); // Timestamp
+  paymentSheet.getRange(lastRow, 8).setBackground('#fff3cd').setFontColor('#856404'); // Payment Status
+  
+  Logger.log(`Payment details saved for ${registrationNumber}`);
+}
+
+/**
+ * Create payment link
+ */
+function createPaymentLink(registrationNumber, amount) {
+  // Replace with your actual payment page URL
+  return `https://kings-equestrian.web.app/pay?ref=${registrationNumber}&am=${amount}`;
+}
+
+// ============== MAIN SHEET UPDATES ==============
+
+/**
+ * Update main sheet with registration number and consent status
+ */
+function updateMainSheetWithConsent(email, registrationNumber, consentAccepted) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheets()[0]; // Main registration sheet
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    
+    // Add columns if they don't exist
+    let regCol = headers.indexOf('Registration Number') + 1;
+    if (regCol === 0) {
+      regCol = sheet.getLastColumn() + 1;
+      sheet.getRange(1, regCol)
+        .setValue('Registration Number')
+        .setBackground(CONFIG.colors.primary)
+        .setFontColor('white')
+        .setFontWeight('bold');
+    }
+    
+    let consentCol = headers.indexOf('Consent Accepted') + 1;
+    if (consentCol === 0) {
+      consentCol = sheet.getLastColumn() + 1;
+      sheet.getRange(1, consentCol)
+        .setValue('Consent Accepted')
+        .setBackground(CONFIG.colors.primary)
+        .setFontColor('white')
+        .setFontWeight('bold');
+    }
+    
+    let consentTimeCol = headers.indexOf('Consent Timestamp') + 1;
+    if (consentTimeCol === 0) {
+      consentTimeCol = sheet.getLastColumn() + 1;
+      sheet.getRange(1, consentTimeCol)
+        .setValue('Consent Timestamp')
+        .setBackground(CONFIG.colors.primary)
+        .setFontColor('white')
+        .setFontWeight('bold');
+    }
+    
+    // Find the row with this email
+    const emailCol = headers.indexOf('Email ID') + 1;
+    const dataRange = sheet.getRange(2, emailCol, sheet.getLastRow() - 1, 1);
+    const emails = dataRange.getValues();
+    
+    for (let i = 0; i < emails.length; i++) {
+      if (emails[i][0] === email) {
+        const row = i + 2;
+        
+        sheet.getRange(row, regCol).setValue(registrationNumber);
+        sheet.getRange(row, consentCol).setValue(consentAccepted ? 'Yes' : 'No');
+        sheet.getRange(row, consentTimeCol).setValue(new Date()).setNumberFormat("dd-MMM-yyyy HH:mm:ss");
+        
+        break;
+      }
+    }
+    
+  } catch (error) {
+    Logger.log('Error updating main sheet: ' + error.toString());
+  }
+}
+
+// ============== PDF GENERATION ==============
+
+/**
+ * Convert Google Docs to PDF and return as blob
+ */
+function getDocAsPDF() {
+  try {
+    const docId = CONFIG.emailTemplateDocId;
+    const doc = DriveApp.getFileById(docId);
+    
+    // Export as PDF
+    const pdfBlob = doc.getAs('application/pdf');
+    pdfBlob.setName('Kings_Equestrian_Information.pdf');
+    
+    return pdfBlob;
+  } catch (error) {
+    Logger.log('Error creating PDF: ' + error.toString());
+    return null;
+  }
+}
+
+// ============== CUSTOM MENU ==============
+
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('📧 Kings Equestrian')
@@ -50,7 +335,32 @@ function onOpen() {
     .addItem('📊 View Email Usage', 'showEmailUsage')
     .addItem('⚙️ Process Email Queue', 'processEmailQueue')
     .addItem('🧪 Test Email Template', 'testEmailTemplate')
+    .addItem('🔗 Get Consent Page URL', 'showConsentPageURL')
     .addToUi();
+}
+
+/**
+ * Show consent page URL for testing
+ */
+function showConsentPageURL() {
+  const ui = SpreadsheetApp.getUi();
+  const webAppUrl = getWebAppUrl();
+  
+  const testUrl = `${webAppUrl}?email=test@example.com&name=Test%20User&location=bangalore`;
+  
+  ui.alert(
+    'Consent Page URL',
+    `Base URL: ${webAppUrl}\n\nTest URL:\n${testUrl}\n\nUse this URL in your emails.`,
+    ui.ButtonSet.OK
+  );
+}
+
+/**
+ * Get deployed web app URL
+ */
+function getWebAppUrl() {
+  const url = ScriptApp.getService().getUrl();
+  return url;
 }
 
 // ============== EMAIL QUOTA TRACKING ==============
@@ -85,17 +395,12 @@ function resetDailyEmailCounter() {
 
 // ============== GOOGLE DOCS CONTENT FETCHER ==============
 
-/**
- * Fetches and formats content from Google Docs
- */
 function getEmailContentFromDocs() {
   try {
     const doc = DocumentApp.openById(CONFIG.emailTemplateDocId);
     const body = doc.getBody();
     const text = body.getText();
     
-    // Return the raw text from the document
-    // You can format it as needed
     return {
       success: true,
       content: text,
@@ -111,18 +416,13 @@ function getEmailContentFromDocs() {
   }
 }
 
-/**
- * Converts plain text from Docs to formatted HTML
- */
 function formatDocsContentToHTML(text) {
-  // Split by sections using emojis as markers
   const sections = text.split(/(?=🤍|✨|🌿|📸|🌄|🎉)/);
   
   let html = '';
   
   sections.forEach(section => {
     if (section.trim()) {
-      // Check for section titles (with emojis)
       if (section.includes('Horse Riding') || 
           section.includes('Horse Safari') || 
           section.includes('Photography') ||
@@ -141,7 +441,6 @@ function formatDocsContentToHTML(text) {
           </div>
         `;
       } else {
-        // Regular paragraph
         html += `<p style="margin: 15px 0; line-height: 1.6;">${section.trim().replace(/\n/g, '<br>')}</p>`;
       }
     }
@@ -198,23 +497,17 @@ function addToEmailQueue(email, name, location, errorMessage = '') {
   ];
   
   queueSheet.appendRow(rowData);
+  Logger.log(`Email queued for ${email}`);
   
-  Logger.log(`Email queued for ${email} - ${errorMessage || 'Will be sent tomorrow'}`);
-  
-  // Update main sheet status
   updateEmailStatusInMainSheet(email, errorMessage ? 'Failed - Queued' : 'Queued for Tomorrow', errorMessage);
 }
 
-/**
- * Update email status in main registration sheet
- */
 function updateEmailStatusInMainSheet(email, status, errorMessage = '') {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheets()[0];
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     
-    // Email Status column
     let statusCol = headers.indexOf('Email Status') + 1;
     if (statusCol === 0) {
       statusCol = sheet.getLastColumn() + 1;
@@ -225,7 +518,6 @@ function updateEmailStatusInMainSheet(email, status, errorMessage = '') {
         .setFontWeight('bold');
     }
 
-    // Email Timestamp column
     let timestampCol = headers.indexOf('Email Sent Timestamp') + 1;
     if (timestampCol === 0) {
       timestampCol = sheet.getLastColumn() + 1;
@@ -236,7 +528,6 @@ function updateEmailStatusInMainSheet(email, status, errorMessage = '') {
         .setFontWeight('bold');
     }
     
-    // Error Message column
     let errorCol = headers.indexOf('Error Message') + 1;
     if (errorCol === 0) {
       errorCol = sheet.getLastColumn() + 1;
@@ -247,7 +538,6 @@ function updateEmailStatusInMainSheet(email, status, errorMessage = '') {
         .setFontWeight('bold');
     }
 
-    // Find Email column
     const emailCol = headers.indexOf('Email ID') + 1;
     const dataRange = sheet.getRange(2, emailCol, sheet.getLastRow() - 1, 1);
     const emails = dataRange.getValues();
@@ -256,21 +546,16 @@ function updateEmailStatusInMainSheet(email, status, errorMessage = '') {
       if (emails[i][0] === email) {
         const row = i + 2;
 
-        // Set status
         const statusCell = sheet.getRange(row, statusCol);
         statusCell.setValue(status);
 
-        // Set timestamp
         const timestampCell = sheet.getRange(row, timestampCol);
-        timestampCell.setValue(new Date())
-          .setNumberFormat("dd-MMM-yyyy HH:mm:ss");
+        timestampCell.setValue(new Date()).setNumberFormat("dd-MMM-yyyy HH:mm:ss");
         
-        // Set error message if exists
         if (errorMessage) {
           sheet.getRange(row, errorCol).setValue(errorMessage);
         }
 
-        // Color code status
         if (status === 'Sent') {
           statusCell.setBackground('#d4edda').setFontColor('#155724');
         } else if (status.includes('Queued')) {
@@ -286,16 +571,12 @@ function updateEmailStatusInMainSheet(email, status, errorMessage = '') {
   }
 }
 
-/**
- * Process pending emails from queue
- */
 function processEmailQueue() {
   const queueSheet = getEmailQueueSheet();
   const lastRow = queueSheet.getLastRow();
   
   if (lastRow <= 1) {
     SpreadsheetApp.getUi().alert('Email queue is empty');
-    Logger.log('Email queue is empty');
     return;
   }
   
@@ -303,11 +584,9 @@ function processEmailQueue() {
   const rowsToDelete = [];
   let emailsSentCount = 0;
   
-  Logger.log(`Processing ${data.length} queued emails...`);
-  
   for (let i = 0; i < data.length; i++) {
     if (!canSendEmailToday()) {
-      Logger.log(`Daily email limit reached. ${data.length - i} emails remain in queue.`);
+      Logger.log(`Daily limit reached. ${data.length - i} emails remain`);
       break;
     }
     
@@ -343,7 +622,7 @@ function processEmailQueue() {
       
     } catch (error) {
       const errorMsg = error.toString();
-      Logger.log(`❌ Failed to send email to ${email}: ${errorMsg}`);
+      Logger.log(`❌ Failed: ${email}: ${errorMsg}`);
       
       queueSheet.getRange(i + 2, 5).setValue('Failed');
       queueSheet.getRange(i + 2, 6).setValue(attempts + 1);
@@ -351,44 +630,37 @@ function processEmailQueue() {
       queueSheet.getRange(i + 2, 8).setValue(errorMsg.substring(0, 200));
       queueSheet.getRange(i + 2, 5).setBackground('#f8d7da').setFontColor('#721c24');
       
-      updateEmailStatusInMainSheet(email, 'Failed - Check Queue', errorMsg);
+      updateEmailStatusInMainSheet(email, 'Failed', errorMsg);
     }
   }
   
-  // Delete sent emails from queue
   rowsToDelete.reverse().forEach(row => {
     queueSheet.deleteRow(row);
   });
   
-  Logger.log(`Queue processing complete. Sent: ${emailsSentCount}, Remaining: ${queueSheet.getLastRow() - 1}`);
-  
-  SpreadsheetApp.getUi().alert(`Queue processed!\n\nEmails sent: ${emailsSentCount}\nRemaining in queue: ${queueSheet.getLastRow() - 1}`);
+  Logger.log(`Queue complete. Sent: ${emailsSentCount}, Remaining: ${queueSheet.getLastRow() - 1}`);
+  SpreadsheetApp.getUi().alert(`Sent: ${emailsSentCount}\nRemaining: ${queueSheet.getLastRow() - 1}`);
 }
 
-// ============== RESEND SELECTED EMAILS ==============
+// ============== RESEND FUNCTIONALITY ==============
 
-/**
- * Resend emails for selected rows in the sheet
- */
 function resendSelectedEmails() {
   const ui = SpreadsheetApp.getUi();
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const selection = sheet.getActiveRange();
   
   if (!selection) {
-    ui.alert('Please select rows to resend emails');
+    ui.alert('Please select rows to resend');
     return;
   }
   
   const response = ui.alert(
     'Resend Emails',
-    `Are you sure you want to resend emails for ${selection.getNumRows()} selected row(s)?`,
+    `Resend emails for ${selection.getNumRows()} row(s)?`,
     ui.ButtonSet.YES_NO
   );
   
-  if (response !== ui.Button.YES) {
-    return;
-  }
+  if (response !== ui.Button.YES) return;
   
   const startRow = selection.getRow();
   const numRows = selection.getNumRows();
@@ -399,18 +671,15 @@ function resendSelectedEmails() {
   const locationCol = headers.indexOf('Location') + 1;
   
   if (emailCol === 0 || nameCol === 0) {
-    ui.alert('Error: Required columns (Email ID, Student Name) not found');
+    ui.alert('Required columns not found');
     return;
   }
   
   let successCount = 0;
   let failCount = 0;
-  const errors = [];
   
   for (let i = 0; i < numRows; i++) {
     const row = startRow + i;
-    
-    // Skip header row
     if (row === 1) continue;
     
     const email = sheet.getRange(row, emailCol).getValue();
@@ -418,15 +687,13 @@ function resendSelectedEmails() {
     const location = locationCol > 0 ? sheet.getRange(row, locationCol).getValue() : '';
     
     if (!email || !isValidEmail(email)) {
-      errors.push(`Row ${row}: Invalid or missing email`);
       failCount++;
       continue;
     }
     
     if (!canSendEmailToday()) {
-      ui.alert(`Daily email limit reached!\n\nSent: ${successCount}\nFailed: ${failCount}\n\nRemaining emails added to queue.`);
+      ui.alert(`Limit reached! Sent: ${successCount}, Failed: ${failCount}`);
       
-      // Add remaining to queue
       for (let j = i; j < numRows; j++) {
         const qRow = startRow + j;
         if (qRow === 1) continue;
@@ -449,7 +716,6 @@ function resendSelectedEmails() {
         incrementEmailUsage();
         updateEmailStatusInMainSheet(email, 'Sent');
         successCount++;
-        Logger.log(`✅ Resent email to ${email}`);
       } else {
         throw new Error(result.error);
       }
@@ -457,35 +723,19 @@ function resendSelectedEmails() {
       Utilities.sleep(1000);
       
     } catch (error) {
-      const errorMsg = error.toString();
-      errors.push(`Row ${row} (${email}): ${errorMsg}`);
-      updateEmailStatusInMainSheet(email, 'Failed', errorMsg);
+      updateEmailStatusInMainSheet(email, 'Failed', error.toString());
       failCount++;
-      Logger.log(`❌ Failed to resend to ${email}: ${errorMsg}`);
     }
   }
   
-  // Show summary
-  let message = `Resend Complete!\n\n✅ Sent: ${successCount}\n❌ Failed: ${failCount}`;
-  
-  if (errors.length > 0 && errors.length <= 5) {
-    message += '\n\nErrors:\n' + errors.join('\n');
-  } else if (errors.length > 5) {
-    message += '\n\nCheck Error Message column for details.';
-  }
-  
-  ui.alert(message);
+  ui.alert(`Complete!\n✅ Sent: ${successCount}\n❌ Failed: ${failCount}`);
 }
 
-/**
- * Validate email format
- */
 function isValidEmail(email) {
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailPattern.test(email);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-// ============== MAIN TRIGGER FUNCTION ==============
+// ============== EMAIL SENDING ==============
 
 function onFormSubmit(e) {
   try {
@@ -505,12 +755,10 @@ function onFormSubmit(e) {
     const name = sheet.getRange(row, nameCol).getValue();
     const location = locationCol > 0 ? sheet.getRange(row, locationCol).getValue() : '';
     
-    // Validate email
     if (!email || !isValidEmail(email)) {
-      const error = 'Invalid email format: ' + email;
+      const error = 'Invalid email: ' + email;
       updateEmailStatusInMainSheet(email, 'Failed', error);
       addToEmailQueue(email, name, location, error);
-      Logger.log('❌ ' + error);
       return;
     }
     
@@ -520,20 +768,17 @@ function onFormSubmit(e) {
       if (result.success) {
         incrementEmailUsage();
         updateEmailStatusInMainSheet(email, 'Sent');
-        
-        const currentUsage = getEmailUsageToday();
-        Logger.log(`✅ Email sent to ${email}. Daily count: ${currentUsage}/${CONFIG.DAILY_EMAIL_LIMIT}`);
+        Logger.log(`✅ Email sent to ${email}`);
       } else {
         throw new Error(result.error);
       }
     } else {
       addToEmailQueue(email, name, location);
-      Logger.log(`Daily limit reached. Email queued for ${email}`);
+      Logger.log(`Limit reached. Queued: ${email}`);
     }
     
   } catch (error) {
-    const errorMsg = error.toString();
-    Logger.log('❌ Error in onFormSubmit: ' + errorMsg);
+    Logger.log('❌ Error: ' + error.toString());
     
     try {
       const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
@@ -542,68 +787,53 @@ function onFormSubmit(e) {
       const emailCol = headers.indexOf('Email ID') + 1;
       const email = sheet.getRange(row, emailCol).getValue();
       
-      updateEmailStatusInMainSheet(email, 'Failed', errorMsg);
-      addToEmailQueue(email, name || 'Unknown', location || '', errorMsg);
+      updateEmailStatusInMainSheet(email, 'Failed', error.toString());
+      addToEmailQueue(email, name || 'Unknown', location || '', error.toString());
     } catch (e) {
-      Logger.log('Could not update error status: ' + e.toString());
+      Logger.log('Could not update error: ' + e.toString());
     }
-    
-    sendAdminNotification(errorMsg);
   }
 }
-
-// ============== EMAIL TEMPLATE ==============
 
 function sendWelcomeEmail(email, name, location) {
   try {
-    // Validate email first
     if (!email || !isValidEmail(email)) {
-      return {
-        success: false,
-        error: 'Invalid email address: ' + email
-      };
+      return { success: false, error: 'Invalid email: ' + email };
     }
     
-    // Get content from Google Docs
     const docsContent = getEmailContentFromDocs();
-    
     if (!docsContent.success) {
-      return {
-        success: false,
-        error: 'Failed to fetch content from Google Docs: ' + docsContent.error
-      };
+      return { success: false, error: 'Failed to fetch content: ' + docsContent.error };
     }
     
-    const htmlBody = createEmailTemplate(name, location, docsContent.html);
+    const webAppUrl = getWebAppUrl();
+    const consentUrl = `${webAppUrl}?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&location=${encodeURIComponent(location)}`;
     
+    const htmlBody = createEmailTemplate(name, location, docsContent.html, consentUrl);
     const subject = CONFIG.emailSubject.replace('{name}', name);
+    
+    // Attach PDF
+    const pdfBlob = getDocAsPDF();
     
     const options = {
       htmlBody: htmlBody,
-      name: 'Kings Equestrian',
+      name: 'Kings Equestrian'
     };
     
-    MailApp.sendEmail(
-      email,
-      subject,
-      'Please view this email in an HTML-enabled email client.',
-      options
-    );
+    if (pdfBlob) {
+      options.attachments = [pdfBlob];
+    }
     
-    return {
-      success: true,
-      message: 'Email sent successfully to ' + email
-    };
+    MailApp.sendEmail(email, subject, 'Please view in HTML client.', options);
+    
+    return { success: true, message: 'Email sent to ' + email };
     
   } catch (error) {
-    return {
-      success: false,
-      error: error.toString()
-    };
+    return { success: false, error: error.toString() };
   }
 }
 
-function createEmailTemplate(name, location, docsHtmlContent) {
+function createEmailTemplate(name, location, docsHtmlContent, consentUrl) {
   const locationName = location ? (location.charAt(0).toUpperCase() + location.slice(1)) : 'Our Center';
   
   return `
@@ -639,12 +869,6 @@ function createEmailTemplate(name, location, docsHtmlContent) {
       margin: 10px 0 0 0;
       font-size: 28px;
       font-weight: 600;
-      letter-spacing: 0.5px;
-    }
-    .crown-icon img {
-      width: 70px;
-      height: 70px;
-      border-radius: 50%;
     }
     .content {
       padding: 40px 30px;
@@ -654,10 +878,6 @@ function createEmailTemplate(name, location, docsHtmlContent) {
       color: ${CONFIG.colors.primary};
       margin-bottom: 20px;
       font-weight: 600;
-    }
-    .docs-content {
-      margin: 30px 0;
-      line-height: 1.8;
     }
     .cta-button {
       display: inline-block;
@@ -684,88 +904,74 @@ function createEmailTemplate(name, location, docsHtmlContent) {
       text-align: center;
       font-size: 14px;
     }
-    .footer p { margin: 5px 0; }
     @media only screen and (max-width: 600px) {
       .container { margin: 10px; }
       .content { padding: 25px 20px; }
-      .header { padding: 30px 20px; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- Header -->
     <div class="header">
-      <div class="crown-icon">
-        <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" alt="Kings Equestrian Logo"/>
+      <div>
+        <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" width="70" height="70" style="border-radius: 50%;" alt="Logo"/>
       </div>
       <h1>KINGS EQUESTRIAN</h1>
-      <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.95;">
+      <p style="margin: 10px 0 0 0; font-size: 16px;">
         Where horses don't just carry you — they change you. 🤍🐎
       </p>
     </div>
 
-    <!-- Main Content -->
     <div class="content">
       <div class="greeting">Dear ${name},</div>
       
       <p>Welcome to <strong>Kings Equestrian</strong>! We're thrilled to have you join our equestrian family.</p>
       
-      <!-- Dynamic content from Google Docs -->
-      <div class="docs-content">
+      <p>📎 <strong>Please find attached</strong> our detailed information document for your reference.</p>
+      
+      <div style="margin: 30px 0;">
         ${docsHtmlContent}
       </div>
 
-      <!-- Terms & Conditions -->
       <div class="section-box">
         <h3 style="color: ${CONFIG.colors.primary}; margin-top: 0;">
-          ✅ Terms & Conditions Acceptance
+          ✅ Next Step: Accept Terms & Conditions
         </h3>
         <p style="margin: 15px 0;">
-          To proceed further and receive the payment request, please review and accept our Terms & Conditions.
+          To proceed with registration and receive your payment details, please review and accept our Terms & Conditions.
         </p>
         <div style="text-align: center;">
-          <a href="${CONFIG.consentFormLink}" class="cta-button" style="color: white;" target="_blank">
-            Review & Accept Terms & Conditions
+          <a href="${consentUrl}" class="cta-button" style="color: white;">
+            Review & Accept Terms
           </a>
         </div>
         <p style="margin-top: 15px; font-size: 12px; color: #777; text-align: center;">
-          Payment request will be shared after terms acceptance.
+          You'll receive your registration number and payment link after acceptance.
         </p>
       </div>
 
-      <!-- Contact & Social Links -->
       <div class="section-box">
-        <h3 style="color: ${CONFIG.colors.primary}; margin-top: 0;">📞 Get In Touch</h3>
+        <h3 style="color: ${CONFIG.colors.primary}; margin-top: 0;">📞 Contact Us</h3>
         <p style="margin: 10px 0;">
           <strong>📱 WhatsApp:</strong> ${CONFIG.whatsappNumbers}<br>
           <strong>📩 Instagram:</strong> ${CONFIG.instagramLink}<br>
-          <strong>🌐 Website:</strong> <a href="${CONFIG.websiteLink}" style="color: ${CONFIG.colors.primary};">${CONFIG.websiteLink}</a><br>
-          <strong>⭐ Reviews:</strong> <a href="${CONFIG.reviewsLink}" style="color: ${CONFIG.colors.primary};">Read customer experiences</a>
+          <strong>🌐 Website:</strong> <a href="${CONFIG.websiteLink}">${CONFIG.websiteLink}</a><br>
+          <strong>⭐ Reviews:</strong> <a href="${CONFIG.reviewsLink}">Read experiences</a>
         </p>
       </div>
 
       <p style="margin-top: 30px; font-style: italic; color: #666;">
         Come for the ride. Leave with a feeling that stays for life. 🤍🐎✨
       </p>
-      
-      <p style="margin-top: 20px;">
-        <strong>Ride with Pride!</strong><br>
-        <span style="color: ${CONFIG.colors.secondary};">The Kings Equestrian Team</span>
-      </p>
     </div>
 
-    <!-- Footer -->
     <div class="footer">
-      <p style="font-size: 16px; font-weight: 600; margin-bottom: 10px;">KINGS EQUESTRIAN</p>
+      <p style="font-size: 16px; font-weight: 600;">KINGS EQUESTRIAN</p>
       <p>📍 ${locationName}</p>
       <p>📞 ${CONFIG.whatsappNumbers} | ✉️ ${CONFIG.email}</p>
-      <p style="margin-top: 15px; font-size: 12px; opacity: 0.9;">
+      <p style="margin-top: 15px; font-size: 12px;">
         © ${new Date().getFullYear()} Kings Equestrian. All rights reserved.
       </p>
-      <div style="margin-top: 15px;">
-        <p style="font-size: 12px;">Follow us: ${CONFIG.instagramLink}</p>
-      </div>
     </div>
   </div>
 </body>
@@ -773,59 +979,23 @@ function createEmailTemplate(name, location, docsHtmlContent) {
   `;
 }
 
-// ============== ADMIN & UTILITY FUNCTIONS ==============
-
-function sendAdminNotification(error) {
-  const adminEmail = 'jyothikondupally@gmail.com';
-  
-  try {
-    MailApp.sendEmail(
-      adminEmail,
-      'Kings Equestrian - Email System Error',
-      `An error occurred:\n\n${error}\n\nTime: ${new Date()}`
-    );
-  } catch (e) {
-    Logger.log('Could not send admin notification: ' + e.toString());
-  }
-}
+// ============== UTILITY FUNCTIONS ==============
 
 function showEmailUsage() {
   const usage = getEmailUsageToday();
-  const ui = SpreadsheetApp.getUi();
-  ui.alert(
-    'Email Usage Today',
-    `Emails sent: ${usage} / ${CONFIG.DAILY_EMAIL_LIMIT}\n\n${canSendEmailToday() ? '✅ Can send more emails' : '❌ Daily limit reached'}`,
-    ui.ButtonSet.OK
+  SpreadsheetApp.getUi().alert(
+    'Email Usage',
+    `Sent: ${usage}/${CONFIG.DAILY_EMAIL_LIMIT}\n\n${canSendEmailToday() ? '✅ Can send more' : '❌ Limit reached'}`,
+    SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
 
-// ============== TEST FUNCTIONS ==============
-
 function testEmailTemplate() {
-  const testEmail = 'jyothikondupally@gmail.com';
-  const testName = 'John Doe';
-  const testLocation = 'bangalore';
-  
-  const result = sendWelcomeEmail(testEmail, testName, testLocation);
+  const result = sendWelcomeEmail('jyothikondupally@gmail.com', 'Test User', 'bangalore');
   
   if (result.success) {
-    Logger.log('✅ Test email sent successfully to: ' + testEmail);
-    SpreadsheetApp.getUi().alert('✅ Test email sent successfully to: ' + testEmail);
+    SpreadsheetApp.getUi().alert('✅ Test email sent!');
   } else {
-    Logger.log('❌ Test email failed: ' + result.error);
-    SpreadsheetApp.getUi().alert('❌ Test email failed:\n\n' + result.error);
-  }
-}
-
-function testDocsContent() {
-  const content = getEmailContentFromDocs();
-  
-  if (content.success) {
-    Logger.log('✅ Successfully fetched content from Google Docs');
-    Logger.log('Content length: ' + content.content.length + ' characters');
-    SpreadsheetApp.getUi().alert('✅ Successfully fetched content from Google Docs\n\nContent length: ' + content.content.length + ' characters');
-  } else {
-    Logger.log('❌ Failed to fetch content: ' + content.error);
-    SpreadsheetApp.getUi().alert('❌ Failed to fetch content:\n\n' + content.error);
+    SpreadsheetApp.getUi().alert('❌ Failed:\n\n' + result.error);
   }
 }

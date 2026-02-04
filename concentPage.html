@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms & Conditions - Kings Equestrian</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, <?= colors.primary ?> 0%, <?= colors.accent ?> 100%);
+      min-height: 100vh;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, <?= colors.primary ?> 0%, <?= colors.accent ?> 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+    
+    .header img {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin-bottom: 15px;
+      border: 3px solid white;
+    }
+    
+    .header h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    
+    .header p {
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    
+    .content {
+      padding: 40px 30px;
+    }
+    
+    .user-info {
+      background: <?= colors.background ?>;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      border-left: 4px solid <?= colors.secondary ?>;
+    }
+    
+    .user-info p {
+      margin: 8px 0;
+      font-size: 16px;
+    }
+    
+    .user-info strong {
+      color: <?= colors.primary ?>;
+    }
+    
+    .terms-section {
+      margin: 30px 0;
+    }
+    
+    .terms-section h2 {
+      color: <?= colors.primary ?>;
+      font-size: 24px;
+      margin-bottom: 15px;
+      border-bottom: 3px solid <?= colors.secondary ?>;
+      padding-bottom: 10px;
+    }
+    
+    .terms-box {
+      background: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 25px;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-bottom: 25px;
+    }
+    
+    .terms-box::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .terms-box::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+    
+    .terms-box::-webkit-scrollbar-thumb {
+      background: <?= colors.secondary ?>;
+      border-radius: 10px;
+    }
+    
+    .terms-box h3 {
+      color: <?= colors.primary ?>;
+      font-size: 18px;
+      margin: 20px 0 10px 0;
+    }
+    
+    .terms-box h3:first-child {
+      margin-top: 0;
+    }
+    
+    .terms-box ul {
+      margin: 10px 0 15px 25px;
+    }
+    
+    .terms-box li {
+      margin: 8px 0;
+      color: #333;
+    }
+    
+    .terms-box p {
+      margin: 10px 0;
+      color: #555;
+    }
+    
+    .consent-checkbox {
+      background: <?= colors.background ?>;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 25px 0;
+      border: 2px solid <?= colors.primary ?>;
+    }
+    
+    .consent-checkbox label {
+      display: flex;
+      align-items: flex-start;
+      cursor: pointer;
+      font-size: 16px;
+      user-select: none;
+    }
+    
+    .consent-checkbox input[type="checkbox"] {
+      width: 24px;
+      height: 24px;
+      margin-right: 15px;
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    
+    .button-container {
+      text-align: center;
+      margin: 30px 0;
+    }
+    
+    .submit-button {
+      background: linear-gradient(135deg, <?= colors.primary ?> 0%, <?= colors.accent ?> 100%);
+      color: white;
+      border: none;
+      padding: 18px 50px;
+      font-size: 18px;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .submit-button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .submit-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .success-message {
+      display: none;
+      background: #d4edda;
+      color: #155724;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+      margin: 30px 0;
+      border: 2px solid #c3e6cb;
+    }
+    
+    .success-message h2 {
+      color: #155724;
+      margin-bottom: 15px;
+    }
+    
+    .success-message .reg-number {
+      font-size: 32px;
+      font-weight: bold;
+      color: <?= colors.primary ?>;
+      margin: 20px 0;
+      letter-spacing: 2px;
+    }
+    
+    .success-message .payment-box {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    
+    .success-message .payment-link {
+      display: inline-block;
+      background: <?= colors.primary ?>;
+      color: white;
+      padding: 15px 40px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      margin-top: 15px;
+      transition: background 0.3s;
+    }
+    
+    .success-message .payment-link:hover {
+      background: <?= colors.accent ?>;
+    }
+    
+    .error-message {
+      display: none;
+      background: #f8d7da;
+      color: #721c24;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+      border: 2px solid #f5c6cb;
+    }
+    
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid <?= colors.primary ?>;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .footer {
+      background: <?= colors.primary ?>;
+      color: white;
+      padding: 25px;
+      text-align: center;
+    }
+    
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      
+      .header {
+        padding: 30px 20px;
+      }
+      
+      .header h1 {
+        font-size: 24px;
+      }
+      
+      .content {
+        padding: 25px 20px;
+      }
+      
+      .terms-box {
+        max-height: 300px;
+      }
+      
+      .submit-button {
+        padding: 15px 35px;
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" alt="Kings Equestrian Logo">
+      <h1>KINGS EQUESTRIAN</h1>
+      <p>Terms & Conditions Agreement</p>
+    </div>
+    
+    <!-- Content -->
+    <div class="content">
+      <!-- User Information -->
+      <div class="user-info">
+        <p><strong>Name:</strong> <?= name ?></p>
+        <p><strong>Email:</strong> <?= email ?></p>
+        <p><strong>Location:</strong> <?= location ?></p>
+      </div>
+      
+      <!-- Terms & Conditions -->
+      <div class="terms-section">
+        <h2>📋 Terms & Conditions</h2>
+        
+        <div class="terms-box">
+          <h3>1. Registration & Membership</h3>
+          <ul>
+            <li>Registration is valid for one year from the date of payment</li>
+            <li>Membership is non-transferable and personal to the registered individual</li>
+            <li>All information provided must be accurate and updated if changed</li>
+            <li>Registration fees are non-refundable once payment is completed</li>
+          </ul>
+          
+          <h3>2. Safety & Liability</h3>
+          <ul>
+            <li>All riders must follow safety instructions provided by instructors at all times</li>
+            <li>Proper riding gear (helmet, boots, appropriate clothing) is mandatory</li>
+            <li>Kings Equestrian is not liable for injuries sustained during riding activities</li>
+            <li>Participants engage in activities at their own risk</li>
+            <li>Medical fitness is the responsibility of the participant</li>
+            <li>Any pre-existing medical conditions must be disclosed before riding</li>
+          </ul>
+          
+          <h3>3. Riding Sessions & Scheduling</h3>
+          <ul>
+            <li>Sessions must be booked in advance through our booking system</li>
+            <li>Cancellations must be made at least 24 hours before scheduled time</li>
+            <li>Late arrivals (more than 15 minutes) may result in session cancellation</li>
+            <li>No-shows will be charged the full session fee</li>
+            <li>Rescheduling is subject to availability</li>
+          </ul>
+          
+          <h3>4. Payment Terms</h3>
+          <ul>
+            <li>Payment must be completed within 7 days of registration</li>
+            <li>Session packages must be paid in full before commencement</li>
+            <li>Monthly packages are valid for 30 days from payment date</li>
+            <li>No refunds for unused sessions in a package</li>
+            <li>Price changes may occur with 30 days notice</li>
+          </ul>
+          
+          <h3>5. Code of Conduct</h3>
+          <ul>
+            <li>Treat horses, staff, and fellow riders with respect and kindness</li>
+            <li>Follow all facility rules and instructor directions</li>
+            <li>No alcohol or drugs on premises</li>
+            <li>Children under 16 must be accompanied by a parent/guardian</li>
+            <li>Photography/videography requires prior permission</li>
+            <li>Maintain cleanliness and care for facility property</li>
+          </ul>
+          
+          <h3>6. Health & Safety Requirements</h3>
+          <ul>
+            <li>Participants must be in good physical and mental health</li>
+            <li>Pregnant women are advised against participating without medical clearance</li>
+            <li>Report any injuries or incidents immediately to staff</li>
+            <li>Follow all COVID-19 or health protocols in place</li>
+            <li>Maintain personal hygiene standards</li>
+          </ul>
+          
+          <h3>7. Property & Equipment</h3>
+          <ul>
+            <li>Kings Equestrian equipment must be used with care</li>
+            <li>Damage to equipment due to misuse will be charged to the participant</li>
+            <li>Personal belongings are the responsibility of the participant</li>
+            <li>Lost and found items are held for 30 days only</li>
+          </ul>
+          
+          <h3>8. Photography & Media</h3>
+          <ul>
+            <li>Kings Equestrian may photograph/video activities for promotional purposes</li>
+            <li>By agreeing, you consent to use of your image in our marketing materials</li>
+            <li>If you wish to opt-out, please notify us in writing</li>
+          </ul>
+          
+          <h3>9. Termination & Suspension</h3>
+          <ul>
+            <li>Kings Equestrian reserves the right to terminate membership for rule violations</li>
+            <li>Dangerous or inappropriate behavior will result in immediate expulsion</li>
+            <li>Refunds will not be provided for terminated memberships</li>
+          </ul>
+          
+          <h3>10. Privacy & Data Protection</h3>
+          <ul>
+            <li>Your personal information will be kept confidential</li>
+            <li>Data is used only for Kings Equestrian operations and communications</li>
+            <li>We do not sell or share your information with third parties</li>
+            <li>You may request data deletion as per applicable privacy laws</li>
+          </ul>
+          
+          <h3>11. Force Majeure</h3>
+          <ul>
+            <li>Kings Equestrian is not liable for cancellations due to weather, natural disasters, or emergencies</li>
+            <li>Sessions cancelled by the facility will be rescheduled or credited</li>
+          </ul>
+          
+          <h3>12. Amendments</h3>
+          <ul>
+            <li>These terms may be updated periodically</li>
+            <li>Continued use of services constitutes acceptance of updated terms</li>
+            <li>Major changes will be communicated via email</li>
+          </ul>
+          
+          <p style="margin-top: 20px; font-weight: bold; color: <?= colors.primary ?>;">
+            By clicking "I Accept" below, you acknowledge that you have read, understood, 
+            and agree to be bound by these Terms & Conditions.
+          </p>
+        </div>
+      </div>
+      
+      <!-- Consent Checkbox -->
+      <div class="consent-checkbox">
+        <label>
+          <input type="checkbox" id="consentCheckbox">
+          <span>
+            I have read and understood all the Terms & Conditions stated above. 
+            I agree to abide by these terms and accept full responsibility for my 
+            participation in Kings Equestrian activities. I acknowledge that 
+            horseback riding involves inherent risks and I voluntarily assume those risks.
+          </span>
+        </label>
+      </div>
+      
+      <!-- Submit Button -->
+      <div class="button-container">
+        <button class="submit-button" id="submitButton" disabled onclick="submitConsent()">
+          I Accept - Complete Registration
+        </button>
+      </div>
+      
+      <!-- Loading -->
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p style="margin-top: 15px; color: <?= colors.primary ?>;">Processing your acceptance...</p>
+      </div>
+      
+      <!-- Error Message -->
+      <div class="error-message" id="errorMessage"></div>
+      
+      <!-- Success Message -->
+      <div class="success-message" id="successMessage">
+        <h2>✅ Registration Confirmed!</h2>
+        <p>Thank you for accepting our Terms & Conditions.</p>
+        
+        <div class="reg-number" id="regNumber"></div>
+        
+        <div class="payment-box">
+          <p><strong>Next Step: Complete Payment</strong></p>
+          <p style="font-size: 20px; color: <?= colors.primary ?>;">
+            Amount: ₹<span id="paymentAmount"></span>
+          </p>
+          <a href="#" id="paymentLink" class="payment-link" target="_blank">
+            💰 Proceed to Payment
+          </a>
+        </div>
+        
+        <p style="margin-top: 20px; font-size: 14px; color: #666;">
+          A confirmation email with payment details has been sent to your email address.
+        </p>
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer">
+      <p style="font-weight: 600; font-size: 16px;">KINGS EQUESTRIAN</p>
+      <p style="margin-top: 10px;">📞 9980771166 | 9980895533</p>
+      <p>✉️ info@kingsequestrian.com</p>
+      <p style="margin-top: 15px; font-size: 12px;">
+        © <?= new Date().getFullYear() ?> Kings Equestrian. All rights reserved.
+      </p>
+    </div>
+  </div>
+  
+  <script>
+    // Enable submit button when checkbox is checked
+    document.getElementById('consentCheckbox').addEventListener('change', function() {
+      document.getElementById('submitButton').disabled = !this.checked;
+    });
+    
+    // Submit consent
+    function submitConsent() {
+      const checkbox = document.getElementById('consentCheckbox');
+      
+      if (!checkbox.checked) {
+        alert('Please accept the Terms & Conditions to proceed.');
+        return;
+      }
+      
+      // Show loading
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('submitButton').style.display = 'none';
+      document.getElementById('errorMessage').style.display = 'none';
+      
+      // Prepare data
+      const data = {
+        email: '<?= email ?>',
+        name: '<?= name ?>',
+        location: '<?= location ?>',
+        consentAccepted: true
+      };
+      
+      // Send to server
+      fetch(window.location.href, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+      .then(response => response.json())
+      .then(result => {
+        document.getElementById('loading').style.display = 'none';
+        
+        if (result.success) {
+          // Hide form content
+          document.querySelector('.user-info').style.display = 'none';
+          document.querySelector('.terms-section').style.display = 'none';
+          document.querySelector('.consent-checkbox').style.display = 'none';
+          
+          // Show success message
+          document.getElementById('regNumber').textContent = 'Registration #: ' + result.registrationNumber;
+          document.getElementById('paymentAmount').textContent = result.paymentAmount;
+          document.getElementById('paymentLink').href = result.paymentLink;
+          document.getElementById('successMessage').style.display = 'block';
+          
+          // Scroll to success message
+          document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth' });
+        } else {
+          // Show error
+          document.getElementById('errorMessage').textContent = '❌ Error: ' + result.message;
+          document.getElementById('errorMessage').style.display = 'block';
+          document.getElementById('submitButton').style.display = 'inline-block';
+        }
+      })
+      .catch(error => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('errorMessage').textContent = '❌ Network error. Please try again.';
+        document.getElementById('errorMessage').style.display = 'block';
+        document.getElementById('submitButton').style.display = 'inline-block';
+        console.error('Error:', error);
+      });
+    }
+  </script>
+</body>
+</html>
