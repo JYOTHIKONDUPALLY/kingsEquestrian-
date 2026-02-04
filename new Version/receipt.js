@@ -469,7 +469,7 @@ function createReceiptHTML(donorName, pan, amount, transactionRef, receiptNumber
         </div>
         
         <div class="payment-mode">Mode of Payment (✓ Tick above):</div>
-        <div class="checkbox-list" style="display:flex;flex-wrap:wrap; gap:10px;">
+        <div class="checkbox-list" style="display:flex;flex-wrap:wrap; gap:10px;"><span>${transactionRef}</span>
           <div class="checkbox-item">
             <span class="checkbox checked"></span>
             <span>UPI</span>
@@ -518,36 +518,61 @@ function createReceiptHTML(donorName, pan, amount, transactionRef, receiptNumber
 }
 
 
-function onPaymentFormSubmit(e) {
+function SendPaymentReceipt(e) {
   const sheet = e.range.getSheet();
-  const sheetName = sheet.getName();
+  if (sheet.getName() !== 'Payment Form Response') return;
 
-  // Run only for the required sheet
-  if (sheetName !== 'payment Submission') return;
+  const rowIndex = e.range.getRow();
+  if (rowIndex === 1) return; // skip header
 
-  const row = e.range.getRow();
+  // 🔹 Payment sheet data
+  const paymentHeaderMap = getHeaderIndexMap(sheet);
+  const row = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
 
-  // 👉 Adjust column numbers as per your sheet
-  // const name = sheet.getRange(row, 1).getValue();          // Name
-  const pan = sheet.getRange(row, 6).getValue();           // PAN
-  const amount = sheet.getRange(row, 2).getValue();        // Amount
-  const transactionId = sheet.getRange(row, 3).getValue(); // Transaction ID
-   const email = sheet.getRange(row, 1).getValue();         // Email
-  const registerNumber = sheet.getRange(row, 11).getValue();// Register Number
+  const registrationNumber = row[paymentHeaderMap['Registration Number']];
+  const amount = row[paymentHeaderMap['Amount Paid (₹)']];
+  const transactionId = row[paymentHeaderMap['Transaction Reference ID']];
+  const pan = row[paymentHeaderMap['Pan / AAdhar Number']];
+  const email = row[paymentHeaderMap['Email Id']];
 
-  // Generate receipt PDF
-  const receiptPDF = generate80GReceipt(
-    name,
+  // 🔹 Get Parent Name from Mainsheet
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const mainSheet = ss.getSheetByName('Mainsheet');
+  if (!mainSheet) throw new Error('Mainsheet not found');
+
+  const mainHeaderMap = getHeaderIndexMap(mainSheet);
+  const mainValues = mainSheet.getDataRange().getValues();
+
+  let parentName = '';
+
+  for (let i = 1; i < mainValues.length; i++) {
+    const r = mainValues[i];
+
+    if (
+      r[mainHeaderMap['Registration Number']] === registrationNumber &&
+      r[mainHeaderMap['Email ID']]?.toString().toLowerCase() === email.toLowerCase()
+    ) {
+      parentName = r[mainHeaderMap['Parent Name']];
+      break;
+    }
+  }
+
+  if (!parentName) {
+    Logger.log(`❌ Parent name not found for ${registrationNumber}`);
+    return;
+  }
+
+  // Email subject
+  const subject = `${name} - ${registerNumber} - Payment Receipt`;
+const receiptNumber=generateReceiptNumber()
+const receiptPDF = generate80GReceipt(
+    parentName,
     pan,
     amount,
     transactionId,
     email,
-    registerNumber
+    receiptNumber
   );
-
-  // Email subject
-  const subject = `${name} - ${registerNumber} - Payment Receipt`;
-receiptNumber
   // Dummy HTML body (replace later)
   const htmlBody = `
     <!DOCTYPE html>
@@ -625,7 +650,7 @@ receiptNumber
 
     <!-- Content -->
  <div class="content">
-  <div class="greeting">Dear ${donorName},</div>
+  <div class="greeting">Dear ${parentName},</div>
 
   <!-- Payment Success Indicator -->
   <div style="text-align:center; margin: 25px 0;">
@@ -660,7 +685,7 @@ receiptNumber
     Registration Number: ${registrationNumber}<br>
     Receipt No: ${receiptNumber}<br>
     Amount: ₹${amount.toLocaleString('en-IN')}<br>
-    Transaction Reference: ${transactionRef}
+    Transaction Reference: ${transactionId}
   </p>
 
   <p style="margin-top: 25px;">
@@ -671,7 +696,7 @@ receiptNumber
     <div class="footer">
       <p><strong>Kings Equestrian Foundation</strong></p>
       <p>📍 Karnataka, India</p>
-      <p>📞 +91-XXXXXXXXXX | ✉️ support@kingsequestrian.com</p>
+      <p>📞 +91-9980895533 | ✉️info@kingsequestrian.com</p>
       <p style="margin-top: 10px; font-size: 11px;">
         © ${new Date().getFullYear()} Kings Equestrian Foundation. All rights reserved.
       </p>

@@ -18,8 +18,8 @@ const CONFIG = {
   termsConditionsDocId: '1ePc_Rb62vcRRN5Z8SybaJ-MEZlBGQnwDiJ9qNstzs4c', // ← UPDATE THIS
   
   // Web App URL (auto-filled after deployment)
-  webAppUrl: 'https://script.google.com/macros/s/AKfycbwI0YjkNLMpOEF9Tww_4i7-A4Gx1Bgd5TihrfC9Y-chW1ORb3pnw-xDKFJ1pBrwjVi6/exec',
-  
+  // webAppUrl: 'https://script.google.com/macros/s/AKfycbwI0YjkNLMpOEF9Tww_4i7-A4Gx1Bgd5TihrfC9Y-chW1ORb3pnw-xDKFJ1pBrwjVi6/exec',
+  webAppUrl:'https://script.google.com/macros/s/AKfycbwv2BAYZI9qblkaWc8kT-3yzeAw17t26kAN_ogxILqrZUq0TBw40ITsysXYIBdY3KQG/exec',
   // Links
   websiteLink: 'https://kingsfarmequestrian.com',
   instagramLink: '@kingsequestrianfoundation',
@@ -258,8 +258,17 @@ function submitConsentToServer(data) {
     // 🆕 New registration
     const registrationNumber = generateRegistrationNumber(data.location);
     const paymentAmount = CONFIG.defaultPaymentAmount;
+    const parentName ='';
+    const contact='';
 
     saveToMainSheet(
+      registrationNumber,
+      paymentAmount,
+      data.email,
+      data.name,
+      data.location
+    );
+     saveToPaymentDetails(
       registrationNumber,
       paymentAmount,
       data.email,
@@ -270,7 +279,7 @@ function submitConsentToServer(data) {
     updateMainSheetWithConsent(
       data.email,
       registrationNumber,
-      true
+      data.consentAccepted
     );
       try {
     const enquireSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Enquire Response');
@@ -316,6 +325,44 @@ function submitConsentToServer(data) {
   }
 }
 
+
+function saveToPaymentDetails(registrationNumber, amount, email, name, location) {
+  const paymentSheet = getPaymentDetailsSheet();
+
+  const rowData = [
+    registrationNumber,
+    amount,
+    email,
+    name,
+    location || '',
+    'Yes',
+    new Date(),
+    'Pending',
+    'No'
+  ];
+
+  paymentSheet.appendRow(rowData);
+  const lastRow = paymentSheet.getLastRow();
+
+  paymentSheet.getRange(lastRow, 7).setNumberFormat("dd-MMM-yyyy HH:mm:ss");
+  paymentSheet.getRange(lastRow, 8).setBackground('#fff3cd').setFontColor('#856404');
+
+  const receiptDropdownRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Yes', 'No'], true)
+    .setAllowInvalid(false)
+    .build();
+
+  paymentSheet.getRange(lastRow, 9).setDataValidation(receiptDropdownRule);
+  
+  sendPaymentRequestEmail({
+    registrationNumber,
+    email,
+    name,
+    amount
+  });
+
+  Logger.log(`Payment details saved for ${registrationNumber}`);
+}
 
 function generateRegistrationNumber(location) {
   const EnquireSheet = getEnquireDetailsSheet();
@@ -363,10 +410,10 @@ function getPaymentDetailsSheet() {
       'Email ID',
       'Student Name',
       'Location',
-      'Consent Accepted',
-      'Consent Timestamp',
       'Payment Status',
-      'Send Payment Link'
+      'Payment Link',
+      'Send Payment Link',
+      'Sent Timestamps'
     ];
     
     paymentSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -412,7 +459,7 @@ function getEnquireDetailsSheet() {
     EnquireSheet.autoResizeColumns(1, headers.length);
   }
   
-  return paymentSheet;
+  return EnquireSheet;
 }
 
 function saveToMainSheet(registrationNumber, amount, email, name, location) {
@@ -453,10 +500,6 @@ function saveToMainSheet(registrationNumber, amount, email, name, location) {
   Logger.log(`Payment details saved for ${registrationNumber}`);
 }
 
-function sendPaymentRequestEmail(data) {
-  // Payment request email logic here
-  Logger.log('Payment request email would be sent to: ' + data.email);
-}
 
 function updateMainSheetWithConsent(email, registrationNumber, consentAccepted) {
   try {
@@ -497,12 +540,11 @@ function updateMainSheetWithConsent(email, registrationNumber, consentAccepted) 
     const emailCol = headers.indexOf('Email ID') + 1;
     const dataRange = sheet.getRange(2, emailCol, sheet.getLastRow() - 1, 1);
     const emails = dataRange.getValues();
+    const registerationNumbers = sheet.getRange(2, regCol, sheet.getLastRow() - 1, 1).getValues();
     
     for (let i = 0; i < emails.length; i++) {
-      if (emails[i][0] === email) {
+      if (emails[i][0] === email && registerationNumbers[i][0] === registrationNumber) {
         const row = i + 2;
-        
-        sheet.getRange(row, regCol).setValue(registrationNumber);
         sheet.getRange(row, consentCol).setValue(consentAccepted ? 'Yes' : 'No');
         sheet.getRange(row, consentTimeCol).setValue(new Date()).setNumberFormat("dd-MMM-yyyy HH:mm:ss");
         
@@ -537,6 +579,7 @@ function onOpen() {
     .addItem('🧪 Test Email Template', 'testEmailTemplate')
     .addItem('🔗 Get Consent Page URL', 'showConsentPageURL')
     .addItem('🔄 RESEND PAYMENT EMAIL', 'resendPaymentEmail')
+    .addItem('📧SEND RECEIPT', 'SendPaymentReceipt')
     .addToUi();
 }
 function resendSelectedEmails() {
@@ -687,55 +730,35 @@ function getEmailContentFromDocs() {
   }
 }
 
-function formatDocsContentToHTML(docBody) {
+function formatDocsContentToHTML(text) {
+  const sections = text.split(/(?=🤍|✨|🌿|📸|🌄|🎉)/);
   let html = '';
-  let currentBlock = null;
-  let listOpen = false;
-
-  const paragraphs = docBody.getParagraphs();
-
-  paragraphs.forEach(p => {
-    const text = p.getText().trim();
-    if (!text) return;
-
-    const attrs = p.getAttributes();
-    const fontSize = attrs[DocumentApp.Attribute.FONT_SIZE] || 12;
-    const isList = p.getType() === DocumentApp.ElementType.LIST_ITEM;
-
-    // 🔹 TITLE
-    if (fontSize >= 18 && !isList) {
-      html += flushBlock(currentBlock, listOpen);
-      listOpen = false;
-
-      currentBlock = {
-        title: text,
-        subtitle: '',
-        content: [],
-        list: []
-      };
-      return;
+  
+  sections.forEach(section => {
+    if (section.trim()) {
+      if (section.includes('Horse Riding') || 
+          section.includes('Horse Safari') || 
+          section.includes('Photography') ||
+          section.includes('Training') ||
+          section.includes('Leadership') ||
+          section.includes('Events')) {
+        
+        const lines = section.split('\n');
+        const title = lines[0];
+        const content = lines.slice(1).join('<br>');
+        
+        html += `
+          <div style="margin: 25px 0; padding: 20px; background: ${CONFIG.colors.background}; border-radius: 8px; border-left: 4px solid ${CONFIG.colors.secondary};">
+            <h3 style="color: ${CONFIG.colors.primary}; margin-top: 0;">${title}</h3>
+            <p style="margin: 0; color: ${CONFIG.colors.text};">${content}</p>
+          </div>
+        `;
+      } else {
+        html += `<p style="margin: 15px 0; line-height: 1.6;">${section.trim().replace(/\n/g, '<br>')}</p>`;
+      }
     }
-
-    // 🔸 SUBTITLE
-    if (fontSize >= 14 && !isList) {
-      if (!currentBlock) currentBlock = createEmptyBlock();
-      currentBlock.subtitle = text;
-      return;
-    }
-
-    // 🔘 BULLET POINT
-    if (isList) {
-      if (!currentBlock) currentBlock = createEmptyBlock();
-      currentBlock.list.push(text);
-      return;
-    }
-
-    // ⚪ NORMAL PARAGRAPH
-    if (!currentBlock) currentBlock = createEmptyBlock();
-    currentBlock.content.push(text);
   });
-
-  html += flushBlock(currentBlock, listOpen);
+  
   return html;
 }
 function createEmptyBlock() {
@@ -763,7 +786,7 @@ function flushBlock(block) {
 
 
 
-function onEnquireFormSubmit(e) {
+function onFormSubmit(e) {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     const row = e.range.getRow();

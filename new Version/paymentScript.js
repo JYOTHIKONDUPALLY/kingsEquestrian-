@@ -237,20 +237,36 @@ function sendPaymentRequestEmail(data) {
       attachments: [pdfBlob]
     });
     
-    // ✅ ONLY if email SUCCEEDS → Update sheet to 'Yes'
-    const paymentSheet = getPaymentDetailsSheet();
-    const dataRange = paymentSheet.getDataRange();
-    const values = dataRange.getValues();
-    
-    for (let i = 1; i < values.length; i++) {
-      if (values[i][0] === registrationNumber) {
-        paymentSheet.getRange(i + 1, 8).setValue('Yes');  // Col 8 = Send Payment Link
-         paymentSheet.getRange(i + 1, 9).setValue(new Date());         // Col 9 = Sent Timestamps
-        paymentSheet.getRange(i + 1, 9).setNumberFormat("dd-MMM-yyyy HH:mm:ss");  // Format timestamp
-        Logger.log(`✅ Email sent + Sheet updated to 'Yes' for ${registrationNumber}`);
-        break;
-      }
+// ✅ ONLY if email SUCCEEDS → Update sheet to 'Yes'
+const paymentSheet = getPaymentDetailsSheet();
+const values = paymentSheet.getDataRange().getValues();
+const headerMap = getHeaderIndexMap(paymentSheet);
+
+for (let i = 1; i < values.length; i++) {
+  const row = values[i];
+
+  if (row[headerMap['Registration Number']] === registrationNumber) {
+
+    // Email Sent = Yes
+    if (headerMap['Email Sent'] !== undefined) {
+      paymentSheet
+        .getRange(i + 1, headerMap['Email Sent'] + 1)
+        .setValue('Yes');
     }
+
+    // Sent Timestamp
+    if (headerMap['Sent Timestamps'] !== undefined) {
+      paymentSheet
+        .getRange(i + 1, headerMap['Sent Timestamps'] + 1)
+        .setValue(new Date())
+        .setNumberFormat("dd-MMM-yyyy HH:mm:ss");
+    }
+
+    Logger.log(`✅ Email sent + Sheet updated for ${registrationNumber}`);
+    break;
+  }
+}
+
     
   } catch (error) {
     // ❌ Email FAILED → Mark as 'No' + log error
