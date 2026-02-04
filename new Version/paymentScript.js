@@ -48,7 +48,7 @@ function sendPaymentRequestEmail(data) {
     parentName,  // parent name  
     contact,     // contact number
     location,
-    amount
+    amount,concentDate
   } = data;
 
   const reference = registrationNumber;
@@ -57,7 +57,7 @@ function sendPaymentRequestEmail(data) {
   );
 
   const subject = `Payment Request | ${name} | Reg No: ${registrationNumber}`;
-  const pdfBlob = generateConsentPDF(name, parentName, contact, location, email);
+  const pdfBlob = generateConsentPDF(name, parentName, contact, location, email, concentDate);
   const htmlBody = `
  <!DOCTYPE html>
 <html>
@@ -82,6 +82,7 @@ function sendPaymentRequestEmail(data) {
       padding: 30px;
       text-align: center;
       color: #fff;
+      margin: auto 0;
     }
     .header img {
       width: 70px;
@@ -125,8 +126,8 @@ function sendPaymentRequestEmail(data) {
 
     <!-- Header -->
  <div class="header">
-      <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" alt="Kings Equestrian Logo">
-      <h1>Kings Equestrian Foundation</h1>
+      <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" width="70px" height="70px" alt="Kings Equestrian Logo">
+      <h1 style="font-size:26px;text-align:center;">Kings Equestrian Foundation</h1>
       <p style="margin:8px 0 0;">Where horses don’t just carry you — they change you </p>
     </div>
     <!-- Greeting -->
@@ -216,7 +217,7 @@ function sendPaymentRequestEmail(data) {
        <div class="footer">
       <p><strong>Kings Equestrian Foundation</strong></p>
       <p>📍 Karnataka, India</p>
-      <p>📞 +91-XXXXXXXXXX | ✉️ support@kingsequestrian.com</p>
+      <p>📞 9980771166 | 9980895533 | ✉️ info@kingsequestrian.com</p>
       <p style="margin-top: 10px; font-size: 11px;">
         © ${new Date().getFullYear()} Kings Equestrian Foundation. All rights reserved.
       </p>
@@ -248,14 +249,14 @@ for (let i = 1; i < values.length; i++) {
   if (row[headerMap['Registration Number']] === registrationNumber) {
 
     // Email Sent = Yes
-    if (headerMap['Email Sent'] !== undefined) {
+    if (headerMap['Email Sent'] !== undefined && row[headerMap['Email Sent']] !== '') {
       paymentSheet
         .getRange(i + 1, headerMap['Email Sent'] + 1)
         .setValue('Yes');
     }
 
     // Sent Timestamp
-    if (headerMap['Sent Timestamps'] !== undefined) {
+    if (headerMap['Sent Timestamps'] !== undefined && row[headerMap['Sent Timestamps']] !== '') {
       paymentSheet
         .getRange(i + 1, headerMap['Sent Timestamps'] + 1)
         .setValue(new Date())
@@ -286,7 +287,7 @@ for (let i = 1; i < values.length; i++) {
 }
 
 
-function generateConsentPDF(studentName, parentName, contact, location, email) {
+function generateConsentPDF(studentName, parentName, contact, location, email, concentDate) {
   const LABEL_FONT = 'Comic Sans MS';
   const VALUE_FONT = 'Arial';
   const FONT_SIZE = 11;
@@ -446,7 +447,7 @@ function generateConsentPDF(studentName, parentName, contact, location, email) {
   p = body.appendParagraph('');
   t = p.editAsText();
   const parentSignatureSpaced = parentName ? `  ${parentName}  ` : '____________________';
-  const signatureLine = `Signature: ${parentSignatureSpaced}     Date: ____________________`;
+  const signatureLine = `Signature: ${parentSignatureSpaced}     Date:${concentDate} ____________________`;
   t.setText(signatureLine).setFontFamily(LABEL_FONT).setFontSize(18);
   if (parentName) {
     const sigStart = signatureLine.indexOf(parentSignatureSpaced);
@@ -469,77 +470,106 @@ function generateConsentPDF(studentName, parentName, contact, location, email) {
 
 
 function resendPaymentEmail() {
-  const paymentSheet = getPaymentDetailsSheet();
   const ui = SpreadsheetApp.getUi();
-  
-  // Get selected row from Payment Details
-  const activeCell = paymentSheet.getActiveCell();
-  const row = activeCell.getRow();
-  
-  if (row < 2) {
-    ui.alert('Please select a row with payment details (row 2+).');
-    return;
-  }
-  
-  // Read PAYMENT row data
-  const paymentRowData = paymentSheet.getRange(row, 1, 1, 10).getValues()[0];
-  const [registrationNumber, amount, email, name, location] = paymentRowData;
-  
-  if (!email || !registrationNumber) {
-    ui.alert('Missing email or registration number.');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  const paymentSheet = getPaymentDetailsSheet();
+  const mainSheet = ss.getSheetByName('Mainsheet');
+
+  if (!paymentSheet || !mainSheet) {
+    ui.alert('Required sheets not found.');
     return;
   }
 
-  // ✅ LOOKUP Enquire Response sheet for parent details
-  let parentName = name.toString();  // fallback
-  let contact = email.toString();    // fallback
-  
-  try {
-    const enquireSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Enquire Response');
-    if (enquireSheet) {
-      const enquireData = enquireSheet.getDataRange().getValues();
-      const headers = enquireData[0];
-      
-      // Find column indices
-      const regNumCol = headers.indexOf('Registration Number') || headers.indexOf('Reg#') || 0;
-      const parentCol = headers.indexOf('Parent Name');
-      const phoneCol = headers.indexOf('Phone Number');
-      
-      // Find matching row
-      for (let i = 1; i < enquireData.length; i++) {
-        if (enquireData[i][regNumCol]?.toString().trim() === registrationNumber.toString().trim()) {
-          parentName = enquireData[i][parentCol] || parentName;
-          contact = enquireData[i][phoneCol] || contact;
-          break;
-        }
+  const selection = paymentSheet.getActiveRange();
+  const startRow = selection.getRow();
+  const numRows = selection.getNumRows();
+
+  if (startRow < 2) {
+    ui.alert('Please select data rows only (not header).');
+    return;
+  }
+
+  const paymentHeaders = getHeaderIndexMap(paymentSheet);
+  const mainHeaders = getHeaderIndexMap(mainSheet);
+
+  const paymentData = paymentSheet
+    .getRange(startRow, 1, numRows, paymentSheet.getLastColumn())
+    .getValues();
+
+  const mainData = mainSheet.getDataRange().getValues();
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (let r = 0; r < paymentData.length; r++) {
+    const sheetRow = startRow + r;
+    const rowData = paymentData[r];
+
+    const registrationNumber = rowData[paymentHeaders['Registration Number']];
+    const amount = rowData[paymentHeaders['Amount To be Paid']];
+    const email = rowData[paymentHeaders['Email ID']];
+    const studentName = rowData[paymentHeaders['Student Name']];
+    const location = rowData[paymentHeaders['Location']];
+
+    if (!registrationNumber || !email) {
+      failCount++;
+      continue;
+    }
+
+    // 🔍 Lookup MainSheet
+    let parentName = '';
+    let contact = '';
+    let consentDate = '';
+
+    for (let i = 1; i < mainData.length; i++) {
+      const mainRow = mainData[i];
+
+      if (
+        mainRow[mainHeaders['Registration Number']] === registrationNumber &&
+        mainRow[mainHeaders['Email ID']] === email
+      ) {
+        parentName = mainRow[mainHeaders['Parent Name']] || '';
+        contact = mainRow[mainHeaders['Phone Number']] || '';
+        consentDate = mainRow[mainHeaders['Consent Timestamp']] || '';
+        break;
       }
     }
-  } catch (e) {
-    Logger.log('Enquire lookup failed: ' + e);
+
+    const data = {
+      registrationNumber: registrationNumber.toString(),
+      email: email.toString(),
+      name: studentName.toString(),
+      parentName: parentName.toString(),
+      contact: contact.toString(),
+      location: location.toString(),
+      amount: Number(amount),
+      concentDate: consentDate
+    };
+
+    try {
+      sendPaymentRequestEmail(data);
+
+      // ✅ Update Sent Timestamp
+      if (paymentHeaders['Sent Timestamps'] !== undefined) {
+        paymentSheet
+          .getRange(sheetRow, paymentHeaders['Sent Timestamps'] + 1)
+          .setValue(new Date())
+          .setNumberFormat("dd-MMM-yyyy HH:mm:ss");
+      }
+
+      successCount++;
+    } catch (err) {
+      Logger.log(`❌ Failed for ${registrationNumber}: ${err}`);
+      failCount++;
+    }
   }
 
-  const data = {
-    registrationNumber: registrationNumber.toString(),
-    email: email.toString(),
-    name: name.toString(),
-    parentName: parentName.toString(),
-    contact: contact.toString(),
-    location: location.toString(),
-    amount: parseInt(amount) || 9000
-  };
-  
-  try {
-    sendPaymentRequestEmail(data);
-    
-    // Update timestamp in payment sheet
-    paymentSheet.getRange(row, 9).setValue(new Date());
-    paymentSheet.getRange(row, 9).setNumberFormat("dd-MMM-yyyy HH:mm:ss");
-    
-    ui.alert(`✅ Payment email resent!\nReg#: ${registrationNumber}\nEmail: ${email}\nParent: ${parentName}\nContact: ${contact}`);
-    
-  } catch (error) {
-    ui.alert(`❌ Failed: ${error.toString()}`);
-  }
+  ui.alert(
+    `📧 Resend Complete\n\n` +
+    `✅ Success: ${successCount}\n` +
+    `❌ Failed: ${failCount}`
+  );
 }
 
 
@@ -552,6 +582,6 @@ function testPaymentEmail() {
     "parentName",  // parent name  
     "90909",     // contact number
     "location",
-    "amount");
+    "amount", new Date().toLocaleDateString());
 }
 

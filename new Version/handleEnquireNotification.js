@@ -268,18 +268,17 @@ function submitConsentToServer(data) {
       data.name,
       data.location
     );
+     updateMainSheetWithConsent(
+      data.email,
+      registrationNumber,
+      data.consentAccepted
+    );
      saveToPaymentDetails(
       registrationNumber,
       paymentAmount,
       data.email,
       data.name,
       data.location
-    );
-
-    updateMainSheetWithConsent(
-      data.email,
-      registrationNumber,
-      data.consentAccepted
     );
       try {
     const enquireSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Enquire Response');
@@ -304,15 +303,17 @@ function submitConsentToServer(data) {
   } catch (e) {
     Logger.log('Enquire lookup failed: ' + e);
   }
-
-
-    sendPaymentRequestEmail( registrationNumber,
+sendPaymentRequestEmail( registrationNumber,
     data.email,
     data.name,        // studentName
     parentName,  // parent name  
     contact,     // contact number
     data.location,
-    amount);
+    data.amount,
+    data.consentDate);
+
+
+ 
 
     return {
       success: true,
@@ -327,40 +328,19 @@ function submitConsentToServer(data) {
 
 
 function saveToPaymentDetails(registrationNumber, amount, email, name, location) {
-  const paymentSheet = getPaymentDetailsSheet();
-
-  const rowData = [
+    const paymentSheet = getPaymentDetailsSheet();
+    const rowData = [
     registrationNumber,
     amount,
     email,
     name,
     location || '',
-    'Yes',
-    new Date(),
-    'Pending',
-    'No'
+    '',
+    '',
+    'Pending'
   ];
-
   paymentSheet.appendRow(rowData);
-  const lastRow = paymentSheet.getLastRow();
-
-  paymentSheet.getRange(lastRow, 7).setNumberFormat("dd-MMM-yyyy HH:mm:ss");
-  paymentSheet.getRange(lastRow, 8).setBackground('#fff3cd').setFontColor('#856404');
-
-  const receiptDropdownRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(['Yes', 'No'], true)
-    .setAllowInvalid(false)
-    .build();
-
-  paymentSheet.getRange(lastRow, 9).setDataValidation(receiptDropdownRule);
-  
-  sendPaymentRequestEmail({
-    registrationNumber,
-    email,
-    name,
-    amount
-  });
-
+    
   Logger.log(`Payment details saved for ${registrationNumber}`);
 }
 
@@ -411,9 +391,9 @@ function getPaymentDetailsSheet() {
       'Student Name',
       'Location',
       'Payment Status',
-      'Payment Link',
       'Send Payment Link',
-      'Sent Timestamps'
+      'Sent Timestamps',
+      'Payment Status'
     ];
     
     paymentSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -446,7 +426,8 @@ function getEnquireDetailsSheet() {
       'Phone Number',
       'Location',
       'Email Sent',
-      'Email Sent Timestamps'
+      'Email Sent Timestamps',
+      'Error Message'
     ];
     
    EnquireSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -463,48 +444,65 @@ function getEnquireDetailsSheet() {
 }
 
 function saveToMainSheet(registrationNumber, amount, email, name, location) {
-  const  EnquireSheet = getEnquireDetailsSheet();
+   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const enquireSheet = ss.getSheetByName('Enquire Response');
+  const mainSheet = ss.getSheetByName('Mainsheet');
+    if (!enquireSheet || !mainSheet) {
+    throw new Error('Required sheets not found');
+  }
+  const enquireHeaders = getHeaderIndexMap(enquireSheet);
+  const mainHeaders = getHeaderIndexMap(mainSheet);
 
-  const rowData = [
-    registrationNumber,
-    amount,
-    email,
-    name,
-    location || '',
-    'Yes',
-    new Date(),
-    'Pending',
-    'No'
-  ];
+  const enquireValues = enquireSheet.getDataRange().getValues();
 
-  EnquireSheet.appendRow(rowData);
-  const lastRow = EnquireSheet.getLastRow();
+  // 🔍 Find matching enquiry row
+  let enquiryRow = null;
 
-  EnquireSheet.getRange(lastRow, 7).setNumberFormat("dd-MMM-yyyy HH:mm:ss");
-  EnquireSheet.getRange(lastRow, 8).setBackground('#fff3cd').setFontColor('#856404');
+  for (let i = 1; i < enquireValues.length; i++) {
+    const row = enquireValues[i];
 
-  const receiptDropdownRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(['Yes', 'No'], true)
-    .setAllowInvalid(false)
-    .build();
+    if (
+      row[enquireHeaders['Email ID']]?.toString().toLowerCase() === email.toLowerCase() &&
+      row[enquireHeaders['Location']] === location &&
+      row[enquireHeaders['Student Name']] === name
+    ) {
+      enquiryRow = row;
+      break;
+    }
+  }
 
-  EnquireSheet.getRange(lastRow, 9).setDataValidation(receiptDropdownRule);
+  if (!enquiryRow) {
+    throw new Error(`No enquiry found for ${email} / ${location} / ${name}`);
+  }
+
+  // 🧾 Build Mainsheet row (based on column names)
+  const newRow = Array(mainSheet.getLastColumn()).fill('');
+
+  newRow[mainHeaders['RegistrationNumber']] = registrationNumber;
+  newRow[mainHeaders['Student Name']] = enquiryRow[enquireHeaders['Student Name']];
+  newRow[mainHeaders['Grade & Section']] = enquiryRow[enquireHeaders['Grade & Section']];
+  newRow[mainHeaders['Parent Name']] = enquiryRow[enquireHeaders['Parent Name']];
+  newRow[mainHeaders['Email ID']] = enquiryRow[enquireHeaders['Email ID']];
+  newRow[mainHeaders['Phone Number']] = enquiryRow[enquireHeaders['Phone Number']];
+  newRow[mainHeaders['Location']] = enquiryRow[enquireHeaders['Location']];
+
+  newRow[mainHeaders['Consent Accepted']] = '';
+  newRow[mainHeaders['Consent Timestamp']] = '';
+  newRow[mainHeaders['Program Selected']] = '';
+  newRow[mainHeaders['Amount To be Paid']] = amount;
+  newRow[mainHeaders['Total Amount Paid']] = '';
+  newRow[mainHeaders['PAN/AAdhar']] = '';
+
+  // ➕ Append to Mainsheet
+  mainSheet.appendRow(newRow);
   
-  sendPaymentRequestEmail({
-    registrationNumber,
-    email,
-    name,
-    amount
-  });
-
-  Logger.log(`Payment details saved for ${registrationNumber}`);
 }
 
 
 function updateMainSheetWithConsent(email, registrationNumber, consentAccepted) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheets()[0];
+    const sheet = ss.getSheetByName('Mainsheet');
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     
     let regCol = headers.indexOf('Registration Number') + 1;

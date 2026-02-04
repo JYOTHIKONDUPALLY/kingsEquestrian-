@@ -519,15 +519,15 @@ function createReceiptHTML(donorName, pan, amount, transactionRef, receiptNumber
 
 
 function SendPaymentReceipt(e) {
-  const sheet = e.range.getSheet();
-  if (sheet.getName() !== 'Payment Form Response') return;
-
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const mainSheet = ss.getSheetByName('Mainsheet');
+  const paymentSheet = ss.getSheetByName('Payment Form Response');
   const rowIndex = e.range.getRow();
   if (rowIndex === 1) return; // skip header
 
   // 🔹 Payment sheet data
-  const paymentHeaderMap = getHeaderIndexMap(sheet);
-  const row = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const paymentHeaderMap = getHeaderIndexMap(paymentSheet);
+  const row = paymentSheet.getRange(rowIndex, 1, 1, paymentSheet.getLastColumn()).getValues()[0];
 
   const registrationNumber = row[paymentHeaderMap['Registration Number']];
   const amount = row[paymentHeaderMap['Amount Paid (₹)']];
@@ -536,13 +536,15 @@ function SendPaymentReceipt(e) {
   const email = row[paymentHeaderMap['Email Id']];
 
   // 🔹 Get Parent Name from Mainsheet
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const mainSheet = ss.getSheetByName('Mainsheet');
   if (!mainSheet) throw new Error('Mainsheet not found');
 
   const mainHeaderMap = getHeaderIndexMap(mainSheet);
   const mainValues = mainSheet.getDataRange().getValues();
-
+  const panColIndex = mainHeaderMap['PAN / AAdhar'];
+  const panValue = mainValues[rowIndex - 1][panColIndex];
+  if (!panValue) {
+    mainSheet.getRange(rowIndex, panColIndex + 1, rowIndex, panColIndex + 1).setValue(pan);
+  }
   let parentName = '';
 
   for (let i = 1; i < mainValues.length; i++) {
@@ -564,8 +566,8 @@ function SendPaymentReceipt(e) {
 
   // Email subject
   const subject = `${name} - ${registerNumber} - Payment Receipt`;
-const receiptNumber=generateReceiptNumber()
-const receiptPDF = generate80GReceipt(
+  const receiptNumber = generateReceiptNumber();
+  const receiptPDF = generate80GReceipt(
     parentName,
     pan,
     amount,
@@ -649,71 +651,93 @@ const receiptPDF = generate80GReceipt(
     </div>
 
     <!-- Content -->
- <div class="content">
-  <div class="greeting">Dear ${parentName},</div>
+    <div class="content">
+      <div class="greeting">Dear ${parentName},</div>
 
-  <!-- Payment Success Indicator -->
-  <div style="text-align:center; margin: 25px 0;">
-    <img 
-      src="https://i.pinimg.com/736x/69/3c/20/693c200ad675967032f941cf76953b3e.jpg"
-      alt="Payment Successful"
-      width="200"
-      height="150"
-      style="display:block; margin:0 auto;"
-    />
-    <div style="
-      font-size:18px;
-      font-weight:600;
-      color:#1f7a3f;
-      margin-top:10px;
-    ">
-      Transaction Successful
-    </div>
-  </div>
+      <!-- Payment Success Indicator -->
+      <div style="text-align:center; margin: 25px 0;">
+        <img 
+          src="https://i.pinimg.com/736x/69/3c/20/693c200ad675967032f941cf76953b3e.jpg"
+          alt="Payment Successful"
+          width="200"
+          height="150"
+          style="display:block; margin:0 auto;"
+        />
+        <div style="
+          font-size:18px;
+          font-weight:600;
+          color:#1f7a3f;
+          margin-top:10px;
+        ">
+          Transaction Successful
+        </div>
+      </div>
 
-  <p>
-    Thank you for your generous contribution to <strong>Kings Equestrian Foundation</strong>.
-    Your support helps us continue our mission toward horse welfare and equestrian development.
-  </p>
-
-  <div class="info-box">
-    📎 <strong>Your Donation Receipt</strong> is attached to this email for your records.
-  </div>
-
-  <p>
-    <strong>Donation Details:</strong><br>
-    Registration Number: ${registrationNumber}<br>
-    Receipt No: ${receiptNumber}<br>
-    Amount: ₹${amount.toLocaleString('en-IN')}<br>
-    Transaction Reference: ${transactionId}
-  </p>
-
-  <p style="margin-top: 25px;">
-    If you have any questions or require assistance, feel free to reach out to us a
-
-
-    <!-- Footer -->
-    <div class="footer">
-      <p><strong>Kings Equestrian Foundation</strong></p>
-      <p>📍 Karnataka, India</p>
-      <p>📞 +91-9980895533 | ✉️info@kingsequestrian.com</p>
-      <p style="margin-top: 10px; font-size: 11px;">
-        © ${new Date().getFullYear()} Kings Equestrian Foundation. All rights reserved.
+      <p>
+        Thank you for your generous contribution to <strong>Kings Equestrian Foundation</strong>.
+        Your support helps us continue our mission toward horse welfare and equestrian development.
       </p>
-    </div>
 
+      <div class="info-box">
+        📎 <strong>Your Donation Receipt</strong> is attached to this email for your records.
+      </div>
+
+      <p>
+        <strong>Donation Details:</strong><br>
+        Registration Number: ${registrationNumber}<br>
+        Receipt No: ${receiptNumber}<br>
+        Amount: ₹${amount.toLocaleString('en-IN')}<br>
+        Transaction Reference: ${transactionId}
+      </p>
+
+      <p style="margin-top: 25px;">
+        If you have any questions or require assistance, feel free to reach out to us at
+      </p>
+
+      <!-- Footer -->
+      <div class="footer">
+        <p><strong>Kings Equestrian Foundation</strong></p>
+        <p>📍 Karnataka, India</p>
+        <p>📞 +91-9980895533 | ✉️info@kingsequestrian.com</p>
+        <p style="margin-top: 10px; font-size: 11px;">
+          © ${new Date().getFullYear()} Kings Equestrian Foundation. All rights reserved.
+        </p>
+      </div>
+
+    </div>
   </div>
 </body>
 </html>
   `;
+  try{
+    // Send email
+    MailApp.sendEmail({
+      to: email,
+      subject: subject,
+      htmlBody: htmlBody,
+      attachments: [receiptPDF]
+      
+    });
+    // Set receipt sent timestamp
+    const mainValues = paymentSheet.getDataRange().getValues();
+    const row = mainValues[rowIndex - 1];
+    const receiptSentColIndex = mainHeaderMap['Receipt Sent Timestamp'];
+    const receiptSentYesColIndex = mainHeaderMap['Receipt Sent'];
+    const receiptNumberColIndex = mainHeaderMap['Payment Receipt No.'];
+    if (!row[receiptSentColIndex]) {
+      paymentSheet.getRange(rowIndex, receiptSentColIndex + 1, rowIndex, receiptSentColIndex + 1).setValue(new Date().toISOString());
+    }
+    if (!row[receiptSentYesColIndex]) {
+      paymentSheet.getRange(rowIndex, receiptSentYesColIndex + 1, rowIndex, receiptSentYesColIndex + 1).setValue('Yes');
+    }
+    if(!row[receiptNumberColIndex]){
+      paymentSheet.getRange(rowIndex, receiptNumberColIndex + 1, rowIndex, receiptNumberColIndex + 1).setValue(receiptNumber)
+    }
+  }catch(err){
 
-  // Send email
-  MailApp.sendEmail({
-    to: email,
-    subject: subject,
-    htmlBody: htmlBody,
-    attachments: [receiptPDF]
-  });
+    Logger.log('❌ Error sending email to ' + email + ': ' + err.message);
+    return;
+  }
 
   Logger.log('✅ Receipt sent to: ' + email);
 }
