@@ -821,65 +821,82 @@ function getHeaderIndexMap(sheet) {
 }
 
 function sendWelcomeEmail(email, name, location) {
+  let status = 'Sent';
+  let errorMsg = '';
+  const timestamp = new Date();
+
   try {
     if (!email || !isValidEmail(email)) {
-      return { success: false, error: 'Invalid email: ' + email };
+      throw new Error('Invalid email: ' + email);
     }
-    
+
     const docsContent = getEmailContentFromDocs();
     if (!docsContent.success) {
-      return { success: false, error: 'Failed to fetch content: ' + docsContent.error };
+      throw new Error('Failed to fetch content: ' + docsContent.error);
     }
-    
-    const webAppUrl = getWebAppUrl();
-    const consentUrl = `${getWebAppUrl()}?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&location=${encodeURIComponent(location)}`;
-    
+
+    const consentUrl =
+      `${getWebAppUrl()}?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&location=${encodeURIComponent(location)}`;
+
     const htmlBody = createEmailTemplate(name, location, docsContent.html, consentUrl);
     const subject = CONFIG.emailSubject.replace('{name}', name);
-    
+
     const pdfBlob = getDocAsPDF();
-    
+
     const options = {
-      htmlBody: htmlBody,
-      name: 'Kings Equestrian'
+      htmlBody,
+      name: 'Kings Equestrian',
+      ...(pdfBlob && { attachments: [pdfBlob] })
     };
-    
-    if (pdfBlob) {
-      options.attachments = [pdfBlob];
-    }
-    
+
     MailApp.sendEmail(email, subject, 'Please view in HTML client.', options);
-    
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName('Enquire Response');
-  const dataRange = sheet.getDataRange();
-    const values = dataRange.getValues();
-      for (let i = 1; i < values.length; i++) {
-      const rowEmail = values[i][5]?.toString().toLowerCase(); // Col C = Email (adjust index)
-      
+
+  } catch (err) {
+    status = 'Failed';
+    errorMsg = err.toString();
+  }
+
+  // 🔁 Update sheet using header names
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Enquire Response');
+    if (!sheet) throw new Error('Sheet "Enquire Response" not found');
+
+    const headerMap = getHeaderIndexMap(sheet);
+    const values = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < values.length; i++) {
+      const rowEmail = values[i][headerMap['Email']]?.toString().toLowerCase();
+
       if (rowEmail === email.toLowerCase()) {
-        // Update Email Status column (adjust column index - e.g., Col K = 11)
-        sheet.getRange(i + 1, 12).setValue(status);  // Col K = Email Status
-        
-        // Update Email Sent Timestamps column (adjust - e.g., Col L = 12)
-        sheet.getRange(i + 1, 13).setValue(timestamp);
-        sheet.getRange(i + 1, 13).setNumberFormat("dd-MMM-yyyy HH:mm:ss");
-        
-        // Optional: Add error details in next column (Col M = 13)
-        if (errorMsg && status === 'Failed') {
-          sheet.getRange(i + 1, 11).setValue(errorMsg.substring(0, 100) + '...');
+
+        if (headerMap['Email Status'] !== undefined) {
+          sheet.getRange(i + 1, headerMap['Email Status'] + 1).setValue(status);
         }
-        
-        Logger.log(`✅ Sheet updated - ${email}: ${status} @ ${timestamp}`);
-        return;
+
+        if (headerMap['Email Sent Timestamp'] !== undefined) {
+          sheet.getRange(i + 1, headerMap['Email Sent Timestamp'] + 1)
+            .setValue(timestamp)
+            .setNumberFormat("dd-MMM-yyyy HH:mm:ss");
+        }
+
+        if (status === 'Failed' && headerMap['Error Message'] !== undefined) {
+          sheet.getRange(i + 1, headerMap['Error Message'] + 1)
+            .setValue(errorMsg.substring(0, 200));
+        }
+
+        Logger.log(`✅ Sheet updated - ${email}: ${status}`);
+        break;
       }
     }
-    return { success: true, message: 'Email sent to ' + email };
-    
-  } catch (error) {
-    return { success: false, error: error.toString() };
+
+  } catch (sheetErr) {
+    Logger.log('❌ Sheet update failed: ' + sheetErr.toString());
   }
+
+  return { success: status === 'Sent', status, error: errorMsg };
 }
+
 
 function createEmailTemplate(name, location, docsHtmlContent, consentUrl) {
   const locationName = location ? (location.charAt(0).toUpperCase() + location.slice(1)) : 'Our Center';
@@ -1021,7 +1038,7 @@ function isValidEmail(email) {
 function updateEmailStatusInMainSheet(email, status, errorMessage = '') {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheets()[0];
+    const sheet = ss.getSheetByName('Enquire Response');
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     
     let statusCol = headers.indexOf('Email Status') + 1;
