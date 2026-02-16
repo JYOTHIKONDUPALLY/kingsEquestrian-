@@ -48,16 +48,24 @@ function sendPaymentRequestEmail(data) {
     parentName,  // parent name  
     contact,     // contact number
     location,
-    amount,concentDate
+    amount,
+    consentDate
   } = data;
 
+  const cleanEmail = String(email || '').trim();
+  
+  // ✅ Validate before proceeding
+  if (!cleanEmail || !cleanEmail.includes('@')) {
+    Logger.log(`❌ Invalid email for ${registrationNumber}: "${cleanEmail}"`);
+    throw new Error(`Invalid email address: "${cleanEmail}"`);
+  }
   const reference = registrationNumber;
   const qrLink = createQRCode(
     `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(BUSINESS_NAME)}&am=${amount}&cu=INR&tn=${reference}`
   );
 
   const subject = `Payment Request | ${name} | Reg No: ${registrationNumber}`;
-  const pdfBlob = generateConsentPDF(name, parentName, contact, location, email, concentDate);
+  const pdfBlob = generateConsentPDF(name, parentName, contact, location, email, consentDate);
   const htmlBody = `
  <!DOCTYPE html>
 <html>
@@ -232,7 +240,7 @@ function sendPaymentRequestEmail(data) {
  try {
     // ✅ Send email FIRST
     MailApp.sendEmail({
-      to: email,
+      to: cleanEmail,
       subject: subject,
       htmlBody: htmlBody,
       attachments: [pdfBlob]

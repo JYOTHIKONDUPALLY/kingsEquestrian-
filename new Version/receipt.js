@@ -510,74 +510,117 @@ function createReceiptHTML(donorName, pan, amount, transactionRef, receiptNumber
   </div>
 </body>
 </html>
-
-
   `;
   
   return html;
 }
 
 
-function SendPaymentReceipt(e) {
+function SendPaymentReceipt() {  // ✅ Removed (e) parameter - not needed for menu function
+  const ui = SpreadsheetApp.getUi();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const mainSheet = ss.getSheetByName('Mainsheet');
   const paymentSheet = ss.getSheetByName('Payment Form Response');
-  const rowIndex = e.range.getRow();
-  if (rowIndex === 1) return; // skip header
-
-  // 🔹 Payment sheet data
-  const paymentHeaderMap = getHeaderIndexMap(paymentSheet);
-  const row = paymentSheet.getRange(rowIndex, 1, 1, paymentSheet.getLastColumn()).getValues()[0];
-
-  const registrationNumber = row[paymentHeaderMap['Registration Number']];
-  const amount = row[paymentHeaderMap['Amount Paid (₹)']];
-  const transactionId = row[paymentHeaderMap['Transaction Reference ID']];
-  const pan = row[paymentHeaderMap['Pan / AAdhar Number']];
-  const email = row[paymentHeaderMap['Email Id']];
-
-  // 🔹 Get Parent Name from Mainsheet
-  if (!mainSheet) throw new Error('Mainsheet not found');
-
-  const mainHeaderMap = getHeaderIndexMap(mainSheet);
-  const mainValues = mainSheet.getDataRange().getValues();
-  const panColIndex = mainHeaderMap['PAN / AAdhar'];
-  const panValue = mainValues[rowIndex - 1][panColIndex];
-  if (!panValue) {
-    mainSheet.getRange(rowIndex, panColIndex + 1, rowIndex, panColIndex + 1).setValue(pan);
-  }
-  let parentName = '';
-
-  for (let i = 1; i < mainValues.length; i++) {
-    const r = mainValues[i];
-
-    if (
-      r[mainHeaderMap['Registration Number']] === registrationNumber &&
-      r[mainHeaderMap['Email ID']]?.toString().toLowerCase() === email.toLowerCase()
-    ) {
-      parentName = r[mainHeaderMap['Parent Name']];
-      break;
-    }
-  }
-
-  if (!parentName) {
-    Logger.log(`❌ Parent name not found for ${registrationNumber}`);
+  const mainSheet = ss.getSheetByName('Mainsheet');
+  
+  if (!paymentSheet) {
+    ui.alert('❌ Payment Form Response sheet not found');
     return;
   }
-
-  // Email subject
-  const subject = `${name} - ${registerNumber} - Payment Receipt`;
-  const receiptNumber = generateReceiptNumber();
-  const receiptPDF = generate80GReceipt(
-    parentName,
-    pan,
-    amount,
-    transactionId,
-    email,
-    receiptNumber
+  
+  const selection = paymentSheet.getActiveRange();
+  
+  if (!selection) {
+    ui.alert('Please select rows to send receipts');
+    return;
+  }
+  
+  const startRow = selection.getRow();
+  const numRows = selection.getNumRows();
+  
+  if (startRow === 1) {
+    ui.alert('Cannot send receipts for header row');
+    return;
+  }
+  
+  const response = ui.alert(
+    'Send Payment Receipts',
+    `Send receipts for ${numRows} row(s)?`,
+    ui.ButtonSet.YES_NO
   );
-  // Dummy HTML body (replace later)
-  const htmlBody = `
-    <!DOCTYPE html>
+  
+  if (response !== ui.Button.YES) return;
+  
+  // Get header mappings
+  const paymentHeaderMap = getHeaderIndexMap(paymentSheet);
+  const mainHeaderMap = getHeaderIndexMap(mainSheet);
+  const mainValues = mainSheet.getDataRange().getValues();
+  
+  let successCount = 0;
+  let failCount = 0;
+  const errors = [];
+  
+  for (let i = 0; i < numRows; i++) {
+    const rowIndex = startRow + i;
+    
+    try {
+      // Get data from payment sheet
+      const row = paymentSheet.getRange(rowIndex, 1, 1, paymentSheet.getLastColumn()).getValues()[0];
+      
+      const registrationNumber = row[paymentHeaderMap['Registration Number']];
+      const amount = row[paymentHeaderMap['Amount Paid (₹)']];
+      const transactionId = row[paymentHeaderMap['Transaction Reference ID']];
+      const pan = row[paymentHeaderMap['Pan / AAdhar Number']];
+      const email = row[paymentHeaderMap['Email Id']];
+      
+      // Validate required fields
+      if (!registrationNumber || !email || !amount || !transactionId) {
+        throw new Error('Missing required fields');
+      }
+      
+      // Find parent name from Mainsheet
+      let parentName = '';
+      let studentName = '';
+      
+      for (let j = 1; j < mainValues.length; j++) {
+        const mainRow = mainValues[j];
+        
+        if (
+          mainRow[mainHeaderMap['Registration Number']] === registrationNumber &&
+          mainRow[mainHeaderMap['Email ID']]?.toString().toLowerCase() === email.toLowerCase()
+        ) {
+          parentName = mainRow[mainHeaderMap['Parent Name']];
+          studentName = mainRow[mainHeaderMap['Student Name']];
+          
+          // Update PAN if not present
+          const panColIndex = mainHeaderMap['PAN / AAdhar'];
+          if (panColIndex !== undefined && !mainRow[panColIndex]) {
+            mainSheet.getRange(j + 1, panColIndex + 1).setValue(pan);
+          }
+          break;
+        }
+      }
+      
+      if (!parentName) {
+        throw new Error(`Parent name not found for ${registrationNumber}`);
+      }
+      
+      // Generate receipt
+      const receiptNumber = generateReceiptNumber();
+      const receiptPDF = generate80GReceipt(
+        parentName,
+        pan,
+        amount,
+        transactionId,
+        email,
+        receiptNumber
+      );
+      
+      // Email subject
+      const subject = `Payment Receipt - ${studentName || registrationNumber} - Reg No: ${registrationNumber}`;
+      
+      // Email body
+      const htmlBody = `
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -647,7 +690,7 @@ function SendPaymentReceipt(e) {
     <div class="header">
       <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" alt="Kings Equestrian Logo">
       <h1>Kings Equestrian Foundation</h1>
-      <p style="margin:8px 0 0;">Where horses don’t just carry you — they change you </p>
+      <p style="margin:8px 0 0;">Where horses don't just carry you — they change you </p>
     </div>
 
     <!-- Content -->
@@ -691,14 +734,14 @@ function SendPaymentReceipt(e) {
       </p>
 
       <p style="margin-top: 25px;">
-        If you have any questions or require assistance, feel free to reach out to us at
+        If you have any questions or require assistance, feel free to reach out to us.
       </p>
 
       <!-- Footer -->
       <div class="footer">
         <p><strong>Kings Equestrian Foundation</strong></p>
         <p>📍 Karnataka, India</p>
-        <p>📞 +91-9980895533 | ✉️info@kingsequestrian.com</p>
+        <p>📞 +91-9980895533 | ✉️ info@kingsequestrian.com</p>
         <p style="margin-top: 10px; font-size: 11px;">
           © ${new Date().getFullYear()} Kings Equestrian Foundation. All rights reserved.
         </p>
@@ -708,37 +751,65 @@ function SendPaymentReceipt(e) {
   </div>
 </body>
 </html>
-  `;
-  try{
-    // Send email
-    MailApp.sendEmail({
-      to: email,
-      subject: subject,
-      htmlBody: htmlBody,
-      attachments: [receiptPDF]
+      `;
       
-    });
-    // Set receipt sent timestamp
-    const mainValues = paymentSheet.getDataRange().getValues();
-    const row = mainValues[rowIndex - 1];
-    const receiptSentColIndex = mainHeaderMap['Receipt Sent Timestamp'];
-    const receiptSentYesColIndex = mainHeaderMap['Receipt Sent'];
-    const receiptNumberColIndex = mainHeaderMap['Payment Receipt No.'];
-    if (!row[receiptSentColIndex]) {
-      paymentSheet.getRange(rowIndex, receiptSentColIndex + 1, rowIndex, receiptSentColIndex + 1).setValue(new Date().toISOString());
+      // Send email
+      MailApp.sendEmail({
+        to: email,
+        subject: subject,
+        htmlBody: htmlBody,
+        attachments: [receiptPDF]
+      });
+      
+      // ✅ Update payment sheet columns (FIXED)
+      const receiptSentColIndex = paymentHeaderMap['Receipt sent'];
+      const receiptSentTimestampColIndex = paymentHeaderMap['Receipt SentTimestamps'];
+      const receiptNumberColIndex = paymentHeaderMap['Payment Receipt No'];
+      
+      // Update Receipt Sent to 'Yes'
+      if (receiptSentColIndex !== undefined) {
+        paymentSheet.getRange(rowIndex, receiptSentColIndex + 1).setValue('Yes')
+        .setBackground('#d4edda')   // light green
+    .setFontColor('#155724')    // dark green text (optional but nice)
+    .setFontWeight('bold');
+      }
+      
+      // Update Receipt Sent Timestamp
+      if (receiptSentTimestampColIndex !== undefined) {
+        paymentSheet.getRange(rowIndex, receiptSentTimestampColIndex + 1)
+          .setValue(new Date())
+          .setNumberFormat("dd-MMM-yyyy HH:mm:ss");
+      }
+      
+      // Update Receipt Number
+      if (receiptNumberColIndex !== undefined) {
+        paymentSheet.getRange(rowIndex, receiptNumberColIndex + 1).setValue(receiptNumber);
+      }
+      
+      successCount++;
+      Logger.log(`✅ Receipt sent to: ${email} for ${registrationNumber}`);
+      
+      // Add delay between emails
+      Utilities.sleep(1000);
+      
+    } catch (error) {
+      failCount++;
+      const errorMsg = `Row ${rowIndex} (${email || 'no email'}): ${error.message}`;
+      errors.push(errorMsg);
+      Logger.log(`❌ ${errorMsg}`);
     }
-    if (!row[receiptSentYesColIndex]) {
-      paymentSheet.getRange(rowIndex, receiptSentYesColIndex + 1, rowIndex, receiptSentYesColIndex + 1).setValue('Yes');
-    }
-    if(!row[receiptNumberColIndex]){
-      paymentSheet.getRange(rowIndex, receiptNumberColIndex + 1, rowIndex, receiptNumberColIndex + 1).setValue(receiptNumber)
-    }
-  }catch(err){
-
-    Logger.log('❌ Error sending email to ' + email + ': ' + err.message);
-    return;
   }
-
-  Logger.log('✅ Receipt sent to: ' + email);
+  
+  // Show summary
+  let message = `Complete!\n✅ Sent: ${successCount}\n❌ Failed: ${failCount}`;
+  
+  if (errors.length > 0) {
+    message += '\n\nErrors:\n' + errors.slice(0, 5).join('\n');
+    if (errors.length > 5) {
+      message += `\n... and ${errors.length - 5} more`;
+    }
+  }
+  
+  ui.alert(message);
 }
 

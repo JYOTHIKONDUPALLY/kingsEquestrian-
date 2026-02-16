@@ -37,7 +37,7 @@ const CONFIG = {
   },
   
   // Default payment amount
-  defaultPaymentAmount: 2500,
+  defaultPaymentAmount: 950000,
   
   // Email quota management
   DAILY_EMAIL_LIMIT: 95,
@@ -303,15 +303,27 @@ function submitConsentToServer(data) {
   } catch (e) {
     Logger.log('Enquire lookup failed: ' + e);
   }
-sendPaymentRequestEmail( registrationNumber,
-    data.email,
-    data.name,        // studentName
-    parentName,  // parent name  
-    contact,     // contact number
-    data.location,
-    data.amount,
-    data.consentDate);
+  Logger.log('=== DEBUG START ===');
+Logger.log('Full data object: ' + JSON.stringify(data));
+Logger.log('data.email type: ' + typeof data.email);
+Logger.log('data.email value: "' + data.email + '"');
+Logger.log('data.email is null: ' + (data.email === null));
+Logger.log('data.email is undefined: ' + (data.email === undefined));
+Logger.log('registrationNumber: ' + registrationNumber);
+Logger.log('parentName: ' + parentName);
+Logger.log('contact: ' + contact);
+Logger.log('=== DEBUG END ===');
 
+sendPaymentRequestEmail({
+  registrationNumber: registrationNumber,
+  email: data.email,
+  name: data.name,
+  parentName: parentName,
+  contact: contact,
+  location: data.location,
+  amount: paymentAmount,
+  consentDate: data.consentDate
+});
 
  
 
@@ -478,7 +490,7 @@ function saveToMainSheet(registrationNumber, amount, email, name, location) {
   // 🧾 Build Mainsheet row (based on column names)
   const newRow = Array(mainSheet.getLastColumn()).fill('');
 
-  newRow[mainHeaders['RegistrationNumber']] = registrationNumber;
+  newRow[mainHeaders['Registration Number']] = registrationNumber;
   newRow[mainHeaders['Student Name']] = enquiryRow[enquireHeaders['Student Name']];
   newRow[mainHeaders['Grade & Section']] = enquiryRow[enquireHeaders['Grade & Section']];
   newRow[mainHeaders['Parent Name']] = enquiryRow[enquireHeaders['Parent Name']];
@@ -891,11 +903,11 @@ function sendWelcomeEmail(email, name, location) {
 
       if (rowEmail === email.toLowerCase()) {
 
-        if (headerMap['Email Status'] !== undefined) {
+        if (headerMap['Email Status'] !== undefined && headerMap['Email Status'] !== "") {
           sheet.getRange(i + 1, headerMap['Email Status'] + 1).setValue(status);
         }
 
-        if (headerMap['Email Sent Timestamp'] !== undefined) {
+        if (headerMap['Email Sent Timestamp'] !== undefined && headerMap['Email Sent Timestamp'] !== "") {
           sheet.getRange(i + 1, headerMap['Email Sent Timestamp'] + 1)
             .setValue(timestamp)
             .setNumberFormat("dd-MMM-yyyy HH:mm:ss");
