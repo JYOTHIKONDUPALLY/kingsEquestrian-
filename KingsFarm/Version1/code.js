@@ -10,15 +10,14 @@ const CONFIG = {
     PAYMENT_FORM_LINK: "https://forms.gle/WxskpjCcDQWkA7L57",
     EMAIL_TEMPLATE_DOC_ID: "1bUTpk9QCR4n1uUmMuoSRRcflTShG3jawuhemE28aTio",
     TERMS_CONDITIONS_DOC_ID: "1QbJHA5keyTLvgw-5stTY74i92BQ89TYya-NvtJ4YGx4",
-    ADVANCE_BOOKING_AMOUNT: 1000, // Fixed advance booking fee
+    ADVANCE_BOOKING_AMOUNT: 1000,
     webAppUrl: "https://script.google.com/macros/s/AKfycbxGNi137N_vvd6kFWe0CL2clALwKLp7QKsLgiWUd9fGcvYhTlaeQIy15n2vai_1g-PIig/exec",
     
     SHEETS: {
         BOOKING_FORM: "Booking Form Response",
         PAYMENT_FORM: "Payment Form Response",
         PRICING: "Pricing",
-        MAIL_INFO: "Mail Info",
-        PAYMENT_LOG: "Payment Logs"
+        MAIL_INFO: "Mail Info"
     },
     
     BOOKING_COLS: {
@@ -36,31 +35,19 @@ const CONFIG = {
     
     PAYMENT_COLS: {
         TIMESTAMP: 0,
-        REGISTRATION_NO: 1,
-        AMOUNT_PAID: 2,
-        SCREENSHOT: 3,
-        PAYMENT_DATE: 4,
-        TRANSACTION_REFERENCE_NUMBER: 5,
-        PAN_AADHAAR: 6,
-        PREFERRED_SERVICE_DATE: 7,
-        PREFERRED_TIME_SLOT: 8,
+        REGISTRATION_NO: 2,
+        AMOUNT_PAID: 3,
+        SCREENSHOT: 4,
+        PAYMENT_DATE: 5,
+        TRANSACTION_REFERENCE_NUMBER: 6,
+        PAN_AADHAAR: 7,
+        PREFERRED_SERVICE_DATE: 8,
+        PREFERRED_TIME_SLOT: 9,
         TRANSACTION_VERIFIED: 10,
         RECEIPT_SENT: 11,
         RECEIPT_SENT_TIMESTAMP: 12,
         PAYMENT_RECEIPT_NO: 13,
         PAYMENT_RECEIPT_DRIVER_LINK: 14
-    },
-    
-    PAYMENT_LOG_COLS: {
-        TIMESTAMP: 0,
-        REFERENCE_NO: 1,
-        AMOUNT: 2,
-        QR_CODE: 3,
-        UPI_LINK: 4,
-        PAYMENT_STATUS: 5,
-        MAIL_SENT: 6,
-        MAIL_TIMESTAMPS: 7,
-        RECEIPT_NO: 8
     }
 };
 
@@ -160,7 +147,6 @@ function getCCRecipients(mailType) {
         }
         const data = mailInfoSheet.getDataRange().getValues();
         const ccEmails = [];
-        // Assuming columns: Email ID | Mail Type
         for (let i = 1; i < data.length; i++) {
             const email = data[i][0];
             const type = data[i][1];
@@ -175,17 +161,6 @@ function getCCRecipients(mailType) {
     }
 }
 
-function getHeaderIndexMap(sheet) {
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    const map = {};
-    headers.forEach((header, index) => {
-        if (header) {
-            map[header.toString().trim()] = index;
-        }
-    });
-    return map;
-}
-
 // --------------- MAIN FORM SUBMIT HANDLER ---------------
 
 function onBookingFormSubmit(e) {
@@ -193,7 +168,6 @@ function onBookingFormSubmit(e) {
         const sheet = e.range.getSheet();
         const row = e.range.getRow();
 
-        // Get form data
         const name = sheet.getRange(row, CONFIG.BOOKING_COLS.NAME + 1).getValue();
         const email = sheet.getRange(row, CONFIG.BOOKING_COLS.EMAIL_ID + 1).getValue();
         const phone = sheet.getRange(row, CONFIG.BOOKING_COLS.PHONE_NUMBER + 1).getValue();
@@ -201,40 +175,13 @@ function onBookingFormSubmit(e) {
         const participants = Number(sheet.getRange(row, CONFIG.BOOKING_COLS.NUMBER_OF_PARTICIPANTS + 1).getValue()) || 1;
         const bookingDate = sheet.getRange(row, CONFIG.BOOKING_COLS.TIMESTAMP + 1).getValue();
 
-        // Fixed advance booking amount
         const amount = CONFIG.ADVANCE_BOOKING_AMOUNT;
-
-        // Generate payment details
         const reference = generateReference();
         const upiLink = createUPILink(amount, reference);
         const qrCode = createQRCode(upiLink);
-        const paymentStatus = 'Pending';
 
-        // Update BOOKING sheet with reference number only
+        // Update BOOKING sheet with reference number
         sheet.getRange(row, CONFIG.BOOKING_COLS.REFERENCE + 1).setValue(reference);
-
-        // Get Payment Log sheet and create entry
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const paymentLogSheet = ss.getSheetByName(CONFIG.SHEETS.PAYMENT_LOG);
-        if (!paymentLogSheet) {
-            throw new Error('Payment Log sheet not found. Please check sheet name: "' + CONFIG.SHEETS.PAYMENT_LOG + '"');
-        }
-
-        // Append new row to Payment Log
-        const paymentLogData = [
-            new Date(), // TIMESTAMP
-            reference, // REFERENCE_NO
-            amount, // AMOUNT
-            qrCode, // QR_CODE
-            upiLink, // UPI_LINK
-            paymentStatus, // PAYMENT_STATUS
-            '', // MAIL_SENT (will update after email)
-            '', // MAIL_TIMESTAMPS (will update after email)
-            '' // RECEIPT_NO (will update after receipt sent)
-        ];
-        paymentLogSheet.appendRow(paymentLogData);
-        const logRowIndex = paymentLogSheet.getLastRow();
-        Logger.log(`Payment Log entry created at row ${logRowIndex} for reference: ${reference}`);
 
         // Send welcome email
         sendWelcomeEmail({
@@ -249,8 +196,6 @@ function onBookingFormSubmit(e) {
             qrCode: qrCode,
             row: row,
             sheet: sheet,
-            logRow: logRowIndex,
-            logSheet: paymentLogSheet,
             bookingDate: bookingDate
         });
 
@@ -271,7 +216,6 @@ function onPaymentFormSubmit(e) {
 
         Logger.log(`Payment form submitted at row ${row}`);
 
-        // Get registration number from payment form
         const referenceNumber = sheet.getRange(row, CONFIG.PAYMENT_COLS.REGISTRATION_NO + 1).getValue();
         const amount = Number(sheet.getRange(row, CONFIG.PAYMENT_COLS.AMOUNT_PAID + 1).getValue());
         const paymentDate = sheet.getRange(row, CONFIG.PAYMENT_COLS.PAYMENT_DATE + 1).getValue();
@@ -290,18 +234,15 @@ function onPaymentFormSubmit(e) {
         if (duplicateInfo.isDuplicate) {
             Logger.log(`Duplicate receipt detected for ${referenceNumber}. Resending existing receipt.`);
             
-            // Mark the current row as duplicate
             sheet.getRange(row, CONFIG.PAYMENT_COLS.RECEIPT_SENT + 1)
                 .setValue('Duplicate - Resent')
                 .setBackground('#fff3cd')
                 .setFontColor('#856404');
             
-            // Resend email with existing receipt (don't generate new receipt or store in drive)
             resendExistingReceipt(row, duplicateInfo.existingRow);
             return;
         }
 
-        // Not a duplicate - proceed with normal flow
         // Auto-verify transaction and send receipt
         sheet.getRange(row, CONFIG.PAYMENT_COLS.TRANSACTION_VERIFIED + 1)
             .setValue('Yes')
@@ -311,10 +252,7 @@ function onPaymentFormSubmit(e) {
 
         Logger.log('Transaction auto-verified, proceeding to send receipt');
 
-        // Wait a moment for the verification to save
         Utilities.sleep(500);
-
-        // Send receipt automatically
         sendReceiptForRow(row);
 
     } catch (error) {
@@ -335,12 +273,9 @@ function findDuplicateReceipt(referenceNumber, amount, paymentDate, currentTimes
         }
 
         const data = paymentSheet.getDataRange().getValues();
-        
-        // Normalize the payment date for comparison
         const normalizedDate = normalizeDate(paymentDate);
         const normalizedCurrentTimestamp = normalizeDate(currentTimestamp);
         
-        // Start from row 2 (skip header)
         for (let i = 1; i < data.length; i++) {
             const rowRef = String(data[i][CONFIG.PAYMENT_COLS.REGISTRATION_NO] || '').trim();
             const rowAmount = Number(data[i][CONFIG.PAYMENT_COLS.AMOUNT_PAID]);
@@ -348,23 +283,17 @@ function findDuplicateReceipt(referenceNumber, amount, paymentDate, currentTimes
             const rowTimestamp = data[i][CONFIG.PAYMENT_COLS.TIMESTAMP];
             const rowReceiptSent = String(data[i][CONFIG.PAYMENT_COLS.RECEIPT_SENT] || '').trim();
             
-            // Skip the current submission row (compare timestamps)
             if (normalizeDate(rowTimestamp) === normalizedCurrentTimestamp) {
                 continue;
             }
             
-            // Check if registration number, amount, and date match
-            // and receipt was already sent (not 'Duplicate' marker)
             if (rowRef === String(referenceNumber).trim() && 
                 rowAmount === amount &&
                 normalizeDate(rowDate) === normalizedDate &&
                 rowReceiptSent.toLowerCase() === 'yes') {
                 
                 Logger.log(`Found existing receipt at row ${i + 1}`);
-                return { 
-                    isDuplicate: true, 
-                    existingRow: i + 1 
-                };
+                return { isDuplicate: true, existingRow: i + 1 };
             }
         }
         
@@ -378,12 +307,9 @@ function findDuplicateReceipt(referenceNumber, amount, paymentDate, currentTimes
 
 function normalizeDate(dateValue) {
     if (!dateValue) return '';
-    
     try {
         const date = new Date(dateValue);
         if (isNaN(date.getTime())) return String(dateValue);
-        
-        // Return as YYYY-MM-DD for comparison
         return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd');
     } catch (e) {
         return String(dateValue);
@@ -403,12 +329,10 @@ function resendExistingReceipt(currentRow, existingRow) {
             return false;
         }
 
-        // Get existing receipt information
         const existingData = paymentSheet.getRange(existingRow, 1, 1, paymentSheet.getLastColumn()).getValues()[0];
         const existingReceiptNumber = existingData[CONFIG.PAYMENT_COLS.PAYMENT_RECEIPT_NO];
         const existingDriveLink = existingData[CONFIG.PAYMENT_COLS.PAYMENT_RECEIPT_DRIVER_LINK];
         
-        // Get current row data
         const currentData = paymentSheet.getRange(currentRow, 1, 1, paymentSheet.getLastColumn()).getValues()[0];
         const referenceNumber = currentData[CONFIG.PAYMENT_COLS.REGISTRATION_NO];
         const amount = Number(currentData[CONFIG.PAYMENT_COLS.AMOUNT_PAID]);
@@ -417,42 +341,27 @@ function resendExistingReceipt(currentRow, existingRow) {
         const preferredDate = currentData[CONFIG.PAYMENT_COLS.PREFERRED_SERVICE_DATE];
         const preferredTimeSlots = currentData[CONFIG.PAYMENT_COLS.PREFERRED_TIME_SLOT];
 
-        // Find booking match
         const bookingValues = bookingSheet.getDataRange().getValues();
         let bookingMatch = null;
         for (let j = 1; j < bookingValues.length; j++) {
             if (String(bookingValues[j][CONFIG.BOOKING_COLS.REFERENCE] || '').trim() === String(referenceNumber || '').trim()) {
-                bookingMatch = {
-                    rowIndex: j + 1,
-                    row: bookingValues[j]
-                };
+                bookingMatch = { rowIndex: j + 1, row: bookingValues[j] };
                 break;
             }
         }
 
-        if (!bookingMatch) {
-            throw new Error(`Booking not found for reference ${referenceNumber}`);
-        }
+        if (!bookingMatch) throw new Error(`Booking not found for reference ${referenceNumber}`);
 
         const riderName = bookingMatch.row[CONFIG.BOOKING_COLS.NAME];
         const email = bookingMatch.row[CONFIG.BOOKING_COLS.EMAIL_ID];
-        const phone = bookingMatch.row[CONFIG.BOOKING_COLS.PHONE_NUMBER];
-        const services = bookingMatch.row[CONFIG.BOOKING_COLS.OUR_SERVICES];
-        const participants = bookingMatch.row[CONFIG.BOOKING_COLS.NUMBER_OF_PARTICIPANTS] || 1;
 
-        if (!email) {
-            throw new Error('Email not found in booking');
-        }
+        if (!email) throw new Error('Email not found in booking');
 
-        // Regenerate the receipt PDF with existing receipt number (don't store in drive again)
         const receiptPDF = generate80GReceipt(riderName, pan, amount, transactionId, existingReceiptNumber);
 
-        // Send receipt email
         const subject = `Payment Receipt - ${riderName} - Ref: ${referenceNumber}`;
-
         const htmlBody = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: 0 auto; padding: 20px;"><div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border-radius: 12px 12px 0 0;"><h1 style="color: white; margin: 0; font-size: 28px;">Kings Equestrian Foundation</h1><p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-style: italic;">Where horses don't just carry you - they change you</p></div><div style="background: white; padding: 30px; border: 1px solid #e0e0e0; border-top: none;"><p style="font-size: 16px; margin-bottom: 25px;">Dear <strong>${riderName}</strong>,</p><div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 20px; margin: 20px 0; border-radius: 4px; text-align: center;"><h2 style="color: #2e7d32; margin: 0 0 10px 0;">✅ Payment Confirmed - Booking Complete!</h2><p style="margin: 0; font-size: 14px;">Thank you for your payment. Your booking is confirmed.</p></div><p style="font-size: 14px; margin: 20px 0;"><strong>Your Payment Receipt (80G) is attached to this email for tax deduction purposes.</strong></p><h3 style="color: #2c3e50; border-bottom: 2px solid #4caf50; padding-bottom: 10px; margin-top: 25px;">Payment Details:</h3><table style="width: 100%; margin: 15px 0;"><tr><td style="padding: 8px 0; color: #666;">Booking Reference:</td><td style="padding: 8px 0; font-weight: bold;">${referenceNumber}</td></tr><tr><td style="padding: 8px 0; color: #666;">Receipt No:</td><td style="padding: 8px 0; font-weight: bold;">${existingReceiptNumber}</td></tr><tr><td style="padding: 8px 0; color: #666;">Amount Paid:</td><td style="padding: 8px 0; font-weight: bold; color: #4caf50; font-size: 18px;">₹${amount.toLocaleString('en-IN')}</td></tr>${transactionId ? `<tr><td style="padding: 8px 0; color: #666;">Transaction ID:</td><td style="padding: 8px 0; font-weight: bold;">${transactionId}</td></tr>` : ''}${preferredDate ? `<tr><td style="padding: 8px 0; color: #666;">Scheduled Date:</td><td style="padding: 8px 0; font-weight: bold;">${formatDate(preferredDate)}</td></tr>` : ''}${preferredTimeSlots ? `<tr><td style="padding: 8px 0; color: #666;">Time Slot:</td><td style="padding: 8px 0; font-weight: bold;">${preferredTimeSlots}</td></tr>` : ''}</table><div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 25px 0; border-radius: 4px;"><p style="margin: 0; color: #856404;"><strong>We look forward to welcoming you at Kings Equestrian. Please arrive 15 minutes before your scheduled time.</strong></p></div><h4 style="color: #2c3e50; margin-top: 25px;">What to bring:</h4><ul style="margin: 10px 0; padding-left: 20px; color: #666;"><li>Comfortable clothing</li><li>Closed-toe shoes</li><li>Your booking reference: <strong>${referenceNumber}</strong></li></ul></div><div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 12px 12px; border: 1px solid #e0e0e0; border-top: none;"><p style="margin: 5px 0; color: #666; font-size: 14px;"><strong>Kings Equestrian Foundation</strong></p><p style="margin: 5px 0; color: #666; font-size: 13px;">Karnataka, India</p><p style="margin: 5px 0; color: #666; font-size: 13px;">+91-9980895533 | info@kingsequestrian.com</p></div></body></html>`;
 
-        // Get CC recipients for receipt emails
         const ccEmails = getCCRecipients('Receipt Mail');
 
         MailApp.sendEmail({
@@ -464,13 +373,8 @@ function resendExistingReceipt(currentRow, existingRow) {
             name: 'Kings Equestrian Foundation'
         });
 
-        // Update current row with existing receipt info
-        paymentSheet.getRange(currentRow, CONFIG.PAYMENT_COLS.PAYMENT_RECEIPT_NO + 1)
-            .setValue(existingReceiptNumber);
-        
-        paymentSheet.getRange(currentRow, CONFIG.PAYMENT_COLS.PAYMENT_RECEIPT_DRIVER_LINK + 1)
-            .setValue(existingDriveLink);
-        
+        paymentSheet.getRange(currentRow, CONFIG.PAYMENT_COLS.PAYMENT_RECEIPT_NO + 1).setValue(existingReceiptNumber);
+        paymentSheet.getRange(currentRow, CONFIG.PAYMENT_COLS.PAYMENT_RECEIPT_DRIVER_LINK + 1).setValue(existingDriveLink);
         paymentSheet.getRange(currentRow, CONFIG.PAYMENT_COLS.RECEIPT_SENT_TIMESTAMP + 1)
             .setValue(new Date())
             .setNumberFormat('dd-MMM-yyyy HH:mm:ss');
@@ -490,14 +394,11 @@ function sendWelcomeEmail(data) {
     const subject = `Welcome to Kings Equestrian - Booking ${data.reference}`;
     const participants = data.participants || 1;
 
-    // Prepare attachments
     const attachments = [];
 
-    // Add Terms & Conditions PDF
     const termsPDF = getTermsAndConditionsPDF();
     if (termsPDF) attachments.push(termsPDF);
 
-    // Add Consent Form PDF
     try {
         const consentPDF = generateConsentPDF(data.name, data.email, data.phone, data.bookingDate);
         if (consentPDF) {
@@ -508,7 +409,6 @@ function sendWelcomeEmail(data) {
         Logger.log('Error generating consent PDF: ' + error);
     }
 
-    // Add service-related PDFs
     const pricingData = getPricingData();
     const serviceList = Array.isArray(data.services) ? data.services.map(s => String(s).trim()).filter(Boolean) : String(data.services || '').split(',').map(s => s.trim()).filter(Boolean);
 
@@ -520,7 +420,6 @@ function sendWelcomeEmail(data) {
         }
     });
 
-    // Simple service list HTML (no pricing breakdown)
     const servicesHTML = serviceList.map(s => `<li>${s}</li>`).join('');
 
     const serviceDetailsHTML = ` <div style="margin: 15px 0; padding: 15px; background: #f9f9f9; border-radius: 8px;">
@@ -544,13 +443,11 @@ function sendWelcomeEmail(data) {
       </p>
       
       <div style=" margin: 25px 0;">
-        <!-- QR Code -->
         <div style="flex: 1; min-width: 180px; background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <p style="margin: 0 0 12px 0; font-weight: bold; font-size: 14px; color: #2c5f2d;">Scan to Pay</p>
           <img src="${data.qrCode}" alt="QR Code" style="width: 150px; height: 150px; border: 2px solid #e0e0e0; border-radius: 4px;">
         </div>
         
-        <!-- Submit Payment Button -->
         <div style="flex: 1; min-width: 180px; text-align: center;">
           <p style="margin: 0 0 15px 0; font-size: 14px; color: #333;">After making payment:</p>
           <a href="${CONFIG.PAYMENT_FORM_LINK}" 
@@ -581,14 +478,12 @@ function sendWelcomeEmail(data) {
     <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0; background: #f5f5f5;">
       <div style="max-width: 650px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
         
-        <!-- Header -->
         <div style="background: linear-gradient(135deg, #1f4e3d 0%, #4f9c7a 100%); padding: 30px; text-align: center; color: white;">
           <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" alt="Kings Equestrian" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 15px;">
           <h1 style="margin: 0; font-size: 28px;">Welcome to Kings Equestrian!</h1>
           <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">Where horses don't just carry you — they change you</p>
         </div>
         
-        <!-- Content -->
         <div style="padding: 30px;">
           <h2 style="color: #2c5f2d; margin-top: 0;">Hello ${data.name}! 👋</h2>
           
@@ -622,7 +517,6 @@ function sendWelcomeEmail(data) {
           </p>
         </div>
         
-        <!-- Footer -->
         <div style="background: #1f4e3d; color: white; padding: 20px; text-align: center; font-size: 13px;">
           <p style="margin: 0 0 10px 0;"><strong>Kings Equestrian Foundation</strong></p>
           <p style="margin: 0;">📍 Karnataka, India</p>
@@ -670,7 +564,6 @@ Karnataka, India
 +91-9980895533 | info@kingsequestrian.com
   `;
 
-    // Get CC recipients for welcome emails
     const ccEmails = getCCRecipients('Welcome Mail');
 
     MailApp.sendEmail({
@@ -696,30 +589,14 @@ Karnataka, India
             .setNumberFormat('dd-MMM-yyyy HH:mm:ss');
     }
 
-    // Update PAYMENT LOG sheet email status
-    if (data.logSheet && data.logRow) {
-        data.logSheet.getRange(data.logRow, CONFIG.PAYMENT_LOG_COLS.MAIL_SENT + 1)
-            .setValue('Yes')
-            .setBackground('#d4edda')
-            .setFontColor('#155724')
-            .setFontWeight('bold');
-
-        data.logSheet.getRange(data.logRow, CONFIG.PAYMENT_LOG_COLS.MAIL_TIMESTAMPS + 1)
-            .setValue(new Date())
-            .setNumberFormat('dd-MMM-yyyy HH:mm:ss');
-    }
-
     Logger.log(`Welcome email sent to: ${data.email} with CC to: ${ccEmails.join(', ')}`);
 }
 
 // --------------- RECEIPT GENERATION ---------------
 
 function generateReceiptNumber(referenceNumber) {
-    // Extract the serial number from reference (last 4 digits)
     const serialMatch = referenceNumber.match(/\d{4}$/);
     const serial = serialMatch ? serialMatch[0] : '0000';
-    
-    // Format: ReferenceNumber/SerialNumber
     return `${referenceNumber}/${serial}`;
 }
 
@@ -760,12 +637,8 @@ function numberToWords(num) {
         if (num < 20) return teens[num - 10];
         if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 ? ' ' + ones[num % 10] : '');
         if (num < 1000) return ones[Math.floor(num / 100)] + ' Hundred' + (num % 100 ? ' ' + convert(num % 100) : '');
-        if (num < 100000) {
-            return convert(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 ? ' ' + convert(num % 1000) : '');
-        }
-        if (num < 10000000) {
-            return convert(Math.floor(num / 100000)) + ' Lakh' + (num % 100000 ? ' ' + convert(num % 100000) : '');
-        }
+        if (num < 100000) return convert(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 ? ' ' + convert(num % 1000) : '');
+        if (num < 10000000) return convert(Math.floor(num / 100000)) + ' Lakh' + (num % 100000 ? ' ' + convert(num % 100000) : '');
         return convert(Math.floor(num / 10000000)) + ' Crore' + (num % 10000000 ? ' ' + convert(num % 10000000) : '');
     }
 
@@ -795,144 +668,107 @@ function createReceiptHTML(donorName, pan, amount, transactionRef, receiptNumber
   const currentDate = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yy');
   const amountInWords = numberToWords(amount);
   
-  // Determine payment mode based on transaction reference
-  const isUPI = transactionRef && transactionRef !== 'N/A';
-  
   const html = `
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <style>
+<meta charset="UTF-8">
+<style>
     @page { size: A4; margin: 0; }
-    body { font-family: Arial, sans-serif; margin: 0; padding: 30px; background: #fff; }
-    .receipt-container { border: 2px solid #000; border-radius: 25px; padding: 25px; max-width: 750px; margin: 0 auto; }
-    .header { display: flex; align-items: flex-start; margin-bottom: 15px; position: relative; }
-    .logo-section { flex: 0 0 130px; text-align: center; }
-    .logo-img { width: 100px; height: 100px; margin-bottom: 5px; }
-    .logo-text { font-size: 11px; font-weight: bold; line-height: 1.2; }
-    .header-center { flex: 1; text-align: center; padding: 0 15px; }
-    .org-name { font-size: 22px; font-weight: bold; margin-bottom: 3px; }
-    .registration-info { font-size: 10px; margin-bottom: 2px; }
-    .location { font-size: 9px; }
-    .receipt-number { position: absolute; right: 0; top: 0; background: #ff4444; color: white; font-size: 22px; font-weight: bold; padding: 8px 18px; border-radius: 5px; }
-    .receipt-box { border: 1px solid #000; border-radius: 10px; padding: 12px; text-align: center; margin: 15px 0; }
-    .receipt-title { font-size: 18px; font-weight: bold; margin-bottom: 3px; }
-    .receipt-subtitle { font-size: 9px; font-style: italic; }
-    .main-content { display: flex; gap: 20px; }
-    .left-column { flex: 1; }
-    .right-column { flex: 1; }
-    .section-title { font-size: 11px; font-weight: bold; margin-bottom: 8px; }
-    .checkbox-list { font-size: 10px; margin-bottom: 12px; }
-    .checkbox-item { margin: 4px 0; display: flex; align-items: center; }
-    .checkbox { width: 12px; height: 12px; border: 1px solid #000; display: inline-block; margin-right: 6px; }
+    body { font-family: "Times New Roman", serif; margin: 0; padding: 25px; background: #fff; }
+    .receipt-container { border: 2px solid #000; border-radius: 35px; padding: 25px 30px; max-width: 800px; margin: auto; position: relative; }
+    .header { display: flex; align-items: flex-start; }
+    .logo-section { width: 140px; text-align: center; }
+    .logo-img { width: 110px; }
+    .header-center { flex: 1; text-align: center; }
+    .org-name { font-size: 28px; font-weight: bold; margin-bottom: 5px; }
+    .registration-info { font-size: 13px; }
+    .registration-subdetails { font-size: 13px; margin-top: 3px; }
+    .subtext { margin-top: 10px; font-style: italic; font-weight: bold; text-decoration: underline; }
+    .receipt-number { position: absolute; right: 30px; top: 15px; font-size: 16px; font-weight: bold; color: red; }
+    .receipt-box { border: 2px solid #000; border-radius: 12px; text-align: center; padding: 10px; margin: 20px 0 10px; }
+    .receipt-title { font-size: 20px; font-weight: bold; }
+    .receipt-subtitle { font-size: 12px; }
+    .date-row { text-align: right; font-size: 14px; margin-bottom: 10px; }
+    .section-title { font-weight: bold; margin: 12px 0 6px; font-size: 15px; }
+    .main-content { display: flex; gap: 30px; margin-top: 10px; }
+    .left-column, .right-column { flex: 1; font-size: 14px; }
+    .checkbox-item { margin: 5px 0; }
+    .checkbox { display: inline-block; width: 13px; height: 13px; border: 1px solid #000; margin-right: 6px; vertical-align: middle; }
     .checkbox.checked { background: #000; position: relative; }
-    .checkbox.checked::after { content: '✓'; color: white; font-size: 10px; position: absolute; top: -2px; left: 1px; }
-    .amount-section { border: 2px solid #000; padding: 15px; margin: 15px 0; position: relative; min-height: 60px; }
-    .rupee-symbol { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-size: 36px; font-weight: bold; color: #ffa500; }
-    .amount-value { text-align: center; font-size: 32px; font-weight: bold; padding-top: 5px; }
-    .payment-mode { font-size: 10px; margin: 10px 0 5px 0; }
-    .declaration-section { font-size: 8.5px; line-height: 1.4; text-align: justify; margin-top: 8px; }
-    .donor-details { font-size: 10px; line-height: 1.6; }
-    .detail-row { margin: 5px 0; }
+    .checkbox.checked::after { content: "✓"; color: #fff; font-size: 11px; position: absolute; left: 1px; top: -2px; }
+    .detail-row { margin: 8px 0; }
     .detail-label { font-weight: bold; }
-    .signature-section { margin-top: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
-    .left-signature { flex: 1; }
-    .right-signature { flex: 1; text-align: center; }
-    .org-label { font-size: 11px; font-weight: bold; margin-bottom: 5px; }
-    .stamp-and-sign { position: relative; width: 150px; height: 150px; margin:auto 0; }
-    .stamp-img { position: absolute; width: 120px; height: 120px; left: 15px; top: 50px; }
-    .sign-img { position: absolute; width: 100px; height: 40px; left:25px; top: -45px; }
-    .authorized-text { font-size: 10px; margin-top: 70px; text-decoration: underline; }
-  </style>
+    .amount-section { border: 2px solid #000; margin: 20px 0; padding: 18px; position: relative; text-align: center; }
+    .rupee-symbol { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); font-size: 40px; color: goldenrod; font-weight: bold; }
+    .amount-value { font-size: 34px; font-weight: bold; }
+    .payment-mode { font-size: 14px; margin-top: 10px; }
+    .declaration-section { margin-top: 15px; font-size: 13px; text-align: justify; }
+    .signature-section { margin-top: 40px; text-align: right; }
+    .org-label { font-weight: bold; margin-bottom: 5px; }
+    .stamp-and-sign { position: relative; height: 120px; }
+    .sign-img { width: 110px; }
+    .stamp-img { width: 120px; }
+    .authorized-text { margin-top: 90px; text-decoration: underline; font-size: 14px; }
+</style>
 </head>
 <body>
-  <div class="receipt-container">
+<div class="receipt-container">
+    <div class="receipt-number">${receiptNumber}</div>
     <div class="header">
-      <div class="logo-section">
-        <img src="${logoBase64}" class="logo-img" alt="Logo">
-        <div class="logo-text">KINGS EQUESTRIAN<br>SADOLI, UP.</div>
-      </div>
-      
-      <div class="header-center">
-        <div class="org-name">Kings Equestrian Foundation</div>
-        <div class="registration-info">Registered u/s 80G of Income-tax Act, 1961, PAN: AAJCK7191E</div>
-        <div class="location">Karnataka, India</div>
-        <div class="receipt-box">
-          <div class="receipt-title">Receipt</div>
-          <div class="receipt-subtitle">This receipt is issued in compliance with Rule 18AB and Form 10BD requirements.</div>
+        <div class="logo-section">
+            <img src="${logoBase64}" class="logo-img" />
         </div>
-      </div>
-      
-      <div class="receipt-number">${receiptNumber}</div>
+        <div class="header-center">
+            <div class="org-name">Kings Equestrian Foundation</div>
+            <div class="registration-info">Registered u/s 80G of Income-tax Act Rg no:AAJCK7191GE20231, 1961, PAN: AAJCK7191G</div>
+            <div class="registration-subdetails">K202, Tower-6, Jacaranda Block, Devarabisanahalli, Bellandur S.O, Bengaluru – 560103 Karnataka, India<br>kingsequestrianfoundation@gmail.com, kingsequestrianfoundation.com</div>
+            <div class="subtext">We gratefully acknowledge your generous contribution in support of our programmes promoting education, well-being, and personal development through sport and experiential learning.</div>
+        </div>
     </div>
-    
-    <div>
-      <div class="main-content">
+    <div class="receipt-box">
+        <div class="receipt-title">Receipt</div>
+        <div class="receipt-subtitle">This receipt is issued in compliance with Rule 18AB and Form 10BD requirements</div>
+    </div>
+    <div class="date-row"><strong>Date:</strong> ${currentDate}</div>
+    <div class="main-content">
         <div class="left-column">
-          <div class="section-title">Donation Purpose (✓ Tick Applicable)</div>
-          <div class="checkbox-list" style="display:flex;flex-wrap:wrap; gap:10px;">
-            <div class="checkbox-item"><span class="checkbox checked"></span><span>All</span></div>
-            <div class="checkbox-item"><span class="checkbox"></span><span>Horse welfare</span></div>
-            <div class="checkbox-item"><span class="checkbox"></span><span>Recovery training</span></div>
-            <div class="checkbox-item"><span class="checkbox"></span><span>Nutrition & feed</span></div>
-            <div class="checkbox-item"><span class="checkbox"></span><span>Rehabilitation including timely veterinary care</span></div>
-            <div class="checkbox-item"><span class="checkbox"></span><span>Non-commercial equestrian skill and sports development</span></div>
-          </div>
-          
-          <div class="section-title">Donor Category (✓ Tick Applicable)</div>
-          <div class="checkbox-list">
-            <div class="checkbox-item"><span class="checkbox checked"></span><span>Resident Indian Donor</span></div>
-            <div class="checkbox-item"><span class="checkbox"></span><span>Non Resident Indian (NRI)</span></div>
-          </div>
+            <div class="section-title">Donor Category (✓ Tick Applicable)</div>
+            <div class="checkbox-item"><span class="checkbox checked"></span> Resident Indian Donor</div>
+            <div class="checkbox-item"><span class="checkbox"></span> Non-Resident Indian (NRI)</div>
         </div>
-        
         <div class="right-column">
-          <div class="section-title">Donor Details</div>
-          <div class="donor-details">
-            <div class="detail-row"><span class="detail-label">Date:</span> ${currentDate}</div>
+            <div class="section-title">Donor Details</div>
             <div class="detail-row"><span class="detail-label">Name of Donor:</span> ${donorName}</div>
             <div class="detail-row"><span class="detail-label">PAN / Aadhaar:</span> ${pan}</div>
             <div class="detail-row"><span class="detail-label">Amount in Words:</span> ${amountInWords}</div>
-          </div>
         </div>
-      </div>
-      
-      <div class="amount-section">
+    </div>
+    <div class="amount-section">
         <span class="rupee-symbol">₹</span>
         <div class="amount-value">${amount.toLocaleString('en-IN')}</div>
-      </div>
-      
-      <div class="payment-mode">
-        <strong>Mode of Payment (✓ Tick above):</strong> Cheque / DD / NEFT / RTGS / UPI (Cash not eligible u/s 80G)<br><br>
+    </div>
+    <div class="payment-mode">
+        <strong>Mode of Payment:</strong> Cheque / DD / NEFT / RTGS / UPI (Cash not eligible u/s 80G)<br><br>
         ${transactionRef && transactionRef !== 'N/A' ? `Transaction Reference No.: <strong>${transactionRef}</strong><br><br>` : ''}
-        Amount in Words: <strong>${amountInWords}</strong>
-      </div>
-      <div class="checkbox-list" style="display:flex;flex-wrap:wrap; gap:10px;">
-        <div class="checkbox-item"><span class="checkbox ${isUPI ? 'checked' : ''}"></span><span>UPI</span></div>
-        <div class="checkbox-item"><span class="checkbox"></span><span>RTGS</span></div>
-        <div class="checkbox-item"><span class="checkbox"></span><span>NEFT</span></div>
-        <div class="checkbox-item"><span class="checkbox"></span><span>DD</span></div>
-        <div class="checkbox-item"><span class="checkbox"></span><span>Cheque</span></div>
-      </div>
-      
-      <div class="declaration-section">
-        Certified that the above donation is received by trust for charitable purposes only. This donation is eligible for deduction under Section 80G of the Income Tax Act, 1961, subject to applicable limits. This receipt will be reported in Form 10BD and a certificate in Form 10BE will be issued to the donor.
-      </div>
-      
-      <div style="margin-top: 40px;">
+        <strong>Amount in Words:</strong> ${amountInWords}
+    </div>
+    <div class="declaration-section">
+        Certified that the above donation is received by trust for charitable purposes only.
+        This donation is eligible for deduction under Section 80G of the Income Tax Act, 1961.
+        This receipt will be reported in Form 10BD and Form 10BE will be issued to the donor.
+    </div>
+    <div class="signature-section">
         <div class="org-label">For Kings Equestrian Foundation</div>
         <div class="stamp-and-sign">
-          <div class="authorized-text">Authorized Signatory</div>
-          <img src="${signBase64}" class="sign-img" alt="Signature">
-          <img src="${stampBase64}" class="stamp-img" alt="Stamp">
+            <img src="${signBase64}" class="sign-img" />
+            <img src="${stampBase64}" class="stamp-img" />
+           
         </div>
-      </div>
     </div>
-  </div>
+</div>
 </body>
-</html>
-  `;
+</html>`;
   
   return html;
 }
@@ -943,15 +779,13 @@ function sendReceiptForRow(rowIndex) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const paymentSheet = ss.getSheetByName(CONFIG.SHEETS.PAYMENT_FORM);
     const bookingSheet = ss.getSheetByName(CONFIG.SHEETS.BOOKING_FORM);
-    const paymentLogSheet = ss.getSheetByName(CONFIG.SHEETS.PAYMENT_LOG);
 
-    if (!paymentSheet || !bookingSheet || !paymentLogSheet) {
+    if (!paymentSheet || !bookingSheet) {
         Logger.log('Required sheets not found');
         return false;
     }
 
     const bookingValues = bookingSheet.getDataRange().getValues();
-    const paymentLogValues = paymentLogSheet.getDataRange().getValues();
 
     let email = '';
     let referenceNumber = '';
@@ -960,25 +794,18 @@ function sendReceiptForRow(rowIndex) {
         const row = paymentSheet.getRange(rowIndex, 1, 1, paymentSheet.getLastColumn()).getValues()[0];
         referenceNumber = row[CONFIG.PAYMENT_COLS.REGISTRATION_NO];
 
-        if (!referenceNumber) {
-            throw new Error('Reference number missing');
-        }
+        if (!referenceNumber) throw new Error('Reference number missing');
 
         // Find booking match
         let bookingMatch = null;
         for (let j = 1; j < bookingValues.length; j++) {
             if (String(bookingValues[j][CONFIG.BOOKING_COLS.REFERENCE] || '').trim() === String(referenceNumber || '').trim()) {
-                bookingMatch = {
-                    rowIndex: j + 1,
-                    row: bookingValues[j]
-                };
+                bookingMatch = { rowIndex: j + 1, row: bookingValues[j] };
                 break;
             }
         }
 
-        if (!bookingMatch) {
-            throw new Error(`Booking not found for reference ${referenceNumber}`);
-        }
+        if (!bookingMatch) throw new Error(`Booking not found for reference ${referenceNumber}`);
 
         const riderName = bookingMatch.row[CONFIG.BOOKING_COLS.NAME];
         email = bookingMatch.row[CONFIG.BOOKING_COLS.EMAIL_ID];
@@ -986,14 +813,10 @@ function sendReceiptForRow(rowIndex) {
         const services = bookingMatch.row[CONFIG.BOOKING_COLS.OUR_SERVICES];
         const participants = bookingMatch.row[CONFIG.BOOKING_COLS.NUMBER_OF_PARTICIPANTS] || 1;
 
-        if (!email) {
-            throw new Error('Email not found in booking');
-        }
+        if (!email) throw new Error('Email not found in booking');
 
         const amount = Number(row[CONFIG.PAYMENT_COLS.AMOUNT_PAID]);
-        if (!amount || Number.isNaN(amount)) {
-            throw new Error('Valid amount is required');
-        }
+        if (!amount || Number.isNaN(amount)) throw new Error('Valid amount is required');
 
         const transactionId = row[CONFIG.PAYMENT_COLS.TRANSACTION_REFERENCE_NUMBER] || '';
         const pan = row[CONFIG.PAYMENT_COLS.PAN_AADHAAR] || '';
@@ -1005,24 +828,7 @@ function sendReceiptForRow(rowIndex) {
             throw new Error('Transaction not verified. Please verify first.');
         }
 
-        // Find and update Payment Log entry
-        let paymentLogRowIndex = -1;
-        for (let k = 1; k < paymentLogValues.length; k++) {
-            const logReference = String(paymentLogValues[k][CONFIG.PAYMENT_LOG_COLS.REFERENCE_NO] || '').trim();
-            const logAmount = Number(paymentLogValues[k][CONFIG.PAYMENT_LOG_COLS.AMOUNT]);
-
-            // Match by reference AND amount for accuracy
-            if (logReference === String(referenceNumber).trim() && logAmount === amount) {
-                paymentLogRowIndex = k + 1;
-                break;
-            }
-        }
-
-        if (paymentLogRowIndex === -1) {
-            throw new Error(`Payment log entry not found for ${referenceNumber} with amount ${amount}`);
-        }
-
-        // Generate receipt with new format: RegistrationNumber/SerialNumber
+        // Generate receipt
         const receiptNumber = generateReceiptNumber(referenceNumber);
         const receiptPDF = generate80GReceipt(riderName, pan, amount, transactionId, receiptNumber);
 
@@ -1030,24 +836,12 @@ function sendReceiptForRow(rowIndex) {
         const driveInfo = storeReceiptInDrive(receiptPDF, riderName, receiptNumber, referenceNumber);
         if (driveInfo) {
             Logger.log(`Receipt stored in Drive: ${driveInfo.fileUrl}`);
-
-            // Store Drive link in payment sheet
             paymentSheet.getRange(rowIndex, CONFIG.PAYMENT_COLS.PAYMENT_RECEIPT_DRIVER_LINK + 1).setValue(driveInfo.fileUrl);
         }
 
-        // Update Payment Log sheet
-        paymentLogSheet.getRange(paymentLogRowIndex, CONFIG.PAYMENT_LOG_COLS.PAYMENT_STATUS + 1)
-            .setValue('Paid')
-            .setBackground('#d4edda')
-            .setFontColor('#155724')
-            .setFontWeight('bold');
-
-        paymentLogSheet.getRange(paymentLogRowIndex, CONFIG.PAYMENT_LOG_COLS.RECEIPT_NO + 1)
-            .setValue(receiptNumber);
-
-      // Send receipt email
-      const subject = `Payment Receipt - ${riderName} - Ref: ${referenceNumber}`;
-      const htmlBody = `
+        // Send receipt email
+        const subject = `Payment Receipt - ${riderName} - Ref: ${referenceNumber}`;
+        const htmlBody = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -1074,17 +868,9 @@ function sendReceiptForRow(rowIndex) {
     </div>
     <div class="content">
       <div class="greeting">Dear ${riderName},</div>
-      
       <div class="success-banner">
-        <img 
-          src="https://i.pinimg.com/736x/69/3c/20/693c200ad675967032f941cf76953b3e.jpg"
-          alt="Payment Successful"
-          width="200"
-          height="150"
-        />
-        <div style="font-size:18px; font-weight:600; color:#1f7a3f; margin-top:10px;">
-          ✅ Payment Confirmed - Booking Complete!
-        </div>
+        <img src="https://i.pinimg.com/736x/69/3c/20/693c200ad675967032f941cf76953b3e.jpg" alt="Payment Successful" width="200" height="150" />
+        <div style="font-size:18px; font-weight:600; color:#1f7a3f; margin-top:10px;">✅ Payment Confirmed - Booking Complete!</div>
         <p>Thank you for your payment. Your booking is confirmed.</p>
       </div>
       <div class="info-box">
@@ -1116,10 +902,8 @@ function sendReceiptForRow(rowIndex) {
     </div>
   </div>
 </body>
-</html>
-      `;
+</html>`;
 
-        // Get CC recipients for receipt emails
         const ccEmails = getCCRecipients('Receipt Mail');
 
         MailApp.sendEmail({
@@ -1131,7 +915,7 @@ function sendReceiptForRow(rowIndex) {
             name: 'Kings Equestrian Foundation'
         });
 
-        // Update Payment Form Response sheet
+        // Update Payment Form sheet
         paymentSheet.getRange(rowIndex, CONFIG.PAYMENT_COLS.RECEIPT_SENT + 1)
             .setValue('Yes')
             .setBackground('#d4edda')
@@ -1145,7 +929,7 @@ function sendReceiptForRow(rowIndex) {
         paymentSheet.getRange(rowIndex, CONFIG.PAYMENT_COLS.PAYMENT_RECEIPT_NO + 1)
             .setValue(receiptNumber);
 
-        // Create calendar event with date/time from Payment Form
+        // Create calendar event
         if (preferredDate && preferredTimeSlots) {
             try {
                 const calendarEventId = createCalendarEvent({
@@ -1158,13 +942,11 @@ function sendReceiptForRow(rowIndex) {
                     reference: referenceNumber,
                     participants: participants
                 });
-
                 if (calendarEventId) {
                     Logger.log(`Calendar event created: ${calendarEventId} for ${referenceNumber}`);
                 }
             } catch (calError) {
                 Logger.log(`Warning: Calendar event creation failed for ${referenceNumber}: ${calError.message}`);
-                // Don't fail the entire receipt process if calendar fails
             }
         }
 
@@ -1177,7 +959,7 @@ function sendReceiptForRow(rowIndex) {
     }
 }
 
-// --------------- PAYMENT RECEIPT FUNCTION ---------------
+// --------------- PAYMENT RECEIPT MENU FUNCTION ---------------
 
 function SendPaymentReceipt() {
     const ui = SpreadsheetApp.getUi();
@@ -1198,12 +980,7 @@ function SendPaymentReceipt() {
     const startRow = selection.getRow();
     const numRows = selection.getNumRows();
 
-    const response = ui.alert(
-        'Send Payment Receipts',
-        `Send receipts for ${numRows} row(s)?`,
-        ui.ButtonSet.YES_NO
-    );
-
+    const response = ui.alert('Send Payment Receipts', `Send receipts for ${numRows} row(s)?`, ui.ButtonSet.YES_NO);
     if (response !== ui.Button.YES) return;
 
     let successCount = 0;
@@ -1212,11 +989,10 @@ function SendPaymentReceipt() {
 
     for (let i = 0; i < numRows; i++) {
         const rowIndex = startRow + i;
-
         try {
             sendReceiptForRow(rowIndex);
             successCount++;
-            Utilities.sleep(1000); // Rate limiting
+            Utilities.sleep(1000);
         } catch (error) {
             failCount++;
             errors.push(`Row ${rowIndex}: ${error.message}`);
@@ -1228,17 +1004,15 @@ function SendPaymentReceipt() {
         message += '\n\nErrors:\n' + errors.slice(0, 5).join('\n');
         if (errors.length > 5) message += `\n... and ${errors.length - 5} more`;
     }
-
     ui.alert(message);
 }
 
-// --------------- RESEND WELCOME EMAIL FUNCTION ---------------
+// --------------- RESEND WELCOME EMAIL MENU FUNCTION ---------------
 
 function ResendWelcomeEmail() {
     const ui = SpreadsheetApp.getUi();
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const bookingSheet = ss.getSheetByName(CONFIG.SHEETS.BOOKING_FORM);
-    const paymentLogSheet = ss.getSheetByName(CONFIG.SHEETS.PAYMENT_LOG);
 
     if (!bookingSheet) {
         ui.alert('❌ Booking Form Response sheet not found');
@@ -1259,12 +1033,7 @@ function ResendWelcomeEmail() {
         return;
     }
 
-    const response = ui.alert(
-        'Resend Welcome Emails',
-        `Resend welcome emails for ${numRows} row(s)?`,
-        ui.ButtonSet.YES_NO
-    );
-
+    const response = ui.alert('Resend Welcome Emails', `Resend welcome emails for ${numRows} row(s)?`, ui.ButtonSet.YES_NO);
     if (response !== ui.Button.YES) return;
 
     let successCount = 0;
@@ -1272,7 +1041,6 @@ function ResendWelcomeEmail() {
 
     for (let i = 0; i < numRows; i++) {
         const rowIndex = startRow + i;
-
         try {
             const name = bookingSheet.getRange(rowIndex, CONFIG.BOOKING_COLS.NAME + 1).getValue();
             const email = bookingSheet.getRange(rowIndex, CONFIG.BOOKING_COLS.EMAIL_ID + 1).getValue();
@@ -1282,25 +1050,11 @@ function ResendWelcomeEmail() {
             const participants = Number(bookingSheet.getRange(rowIndex, CONFIG.BOOKING_COLS.NUMBER_OF_PARTICIPANTS + 1).getValue()) || 1;
             const bookingDate = bookingSheet.getRange(rowIndex, CONFIG.BOOKING_COLS.TIMESTAMP + 1).getValue();
 
-            if (!email || !reference) {
-                throw new Error('Missing email or reference');
-            }
+            if (!email || !reference) throw new Error('Missing email or reference');
 
             const amount = CONFIG.ADVANCE_BOOKING_AMOUNT;
             const upiLink = createUPILink(amount, reference);
             const qrCode = createQRCode(upiLink);
-
-            // Find payment log row for this reference
-            let logRowIndex = null;
-            if (paymentLogSheet) {
-                const logValues = paymentLogSheet.getDataRange().getValues();
-                for (let j = 1; j < logValues.length; j++) {
-                    if (String(logValues[j][CONFIG.PAYMENT_LOG_COLS.REFERENCE_NO] || '').trim() === String(reference).trim()) {
-                        logRowIndex = j + 1;
-                        break;
-                    }
-                }
-            }
 
             sendWelcomeEmail({
                 name: name,
@@ -1314,8 +1068,6 @@ function ResendWelcomeEmail() {
                 qrCode: qrCode,
                 row: rowIndex,
                 sheet: bookingSheet,
-                logRow: logRowIndex,
-                logSheet: paymentLogSheet,
                 bookingDate: bookingDate
             });
 
@@ -1347,12 +1099,11 @@ function formatDate(date) {
 function createCalendarEvent(bookingData) {
     try {
         const calendar = CalendarApp.getDefaultCalendar();
-
         const date = new Date(bookingData.date);
         const timeSlots = String(bookingData.timeSlots).split(',');
         const firstSlot = timeSlots[0].trim();
-
         const timeParts = firstSlot.match(/(\d+):(\d+)\s*(AM|PM)/i);
+
         if (!timeParts) {
             Logger.log('Invalid time format: ' + firstSlot);
             return null;
@@ -1421,14 +1172,10 @@ function generateConsentPDF(name, email, phone, bookingDate) {
     function formatValue(textObj, fullText, value) {
         if (!value || value.toString().trim().length === 0) return;
         if (!fullText) return;
-
         const valStr = value.toString();
         const start = fullText.indexOf(valStr);
-
         if (start === -1) return;
-
         const end = start + valStr.length - 1;
-
         if (end >= start && start >= 0 && end < fullText.length) {
             textObj.setBold(start, end, true);
             textObj.setUnderline(start, end, true);
@@ -1437,33 +1184,23 @@ function generateConsentPDF(name, email, phone, bookingDate) {
 
     function formatDateOnly(dateValue) {
         if (!dateValue) return null;
-
         if (typeof dateValue === 'string') {
             try {
                 const parsed = new Date(dateValue);
-                if (!isNaN(parsed.getTime())) {
-                    dateValue = parsed;
-                } else {
-                    return dateValue;
-                }
-            } catch (e) {
-                return dateValue;
-            }
+                if (!isNaN(parsed.getTime())) { dateValue = parsed; } else { return dateValue; }
+            } catch (e) { return dateValue; }
         }
-
         if (dateValue instanceof Date) {
             const day = String(dateValue.getDate()).padStart(2, '0');
             const month = String(dateValue.getMonth() + 1).padStart(2, '0');
             const year = dateValue.getFullYear();
             return `${day}/${month}/${year}`;
         }
-
         return dateValue.toString();
     }
 
     const logoUrl = 'https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg';
     let logoBlob;
-
     try {
         logoBlob = UrlFetchApp.fetch(logoUrl).getBlob();
     } catch (e) {
@@ -1484,9 +1221,7 @@ function generateConsentPDF(name, email, phone, bookingDate) {
     paragraph('(Applicable for Individual / Group / Family Participants)', 10, false, 25, DocumentApp.HorizontalAlignment.CENTER);
 
     paragraph('Kings Equestrian Foundation offers horse riding programs and related activities, which may include casual riding, dressage, jumping, workshops, clinics, and equine interaction.', 11, false, 12);
-
     paragraph('I/we understand and acknowledge that participation in equestrian activities involves inherent risks, including but not limited to falls, bruises, muscle strain, fractures, head injuries, or other serious injuries. I/we further acknowledge that horses are live animals and their behaviour can be unpredictable.', 11, false, 12);
-
     paragraph('I/we also acknowledge that Kings Equestrian Foundation follows reasonable safety precautions, provides trained supervision, and enforces established safety guidelines. However, despite all precautions, accidents may occasionally occur.', 11, false, 20);
 
     let sepPara = body.appendParagraph('⸻');
@@ -1494,11 +1229,8 @@ function generateConsentPDF(name, email, phone, bookingDate) {
     sepPara.setSpacingAfter(20);
 
     paragraph('Medical Fitness & Insurance Declaration', 12, true, 12);
-
     paragraph('I/we hereby declare that I / my child / all participants covered under this consent are medically fit to participate in horse riding and equestrian-related activities. To the best of my/our knowledge, there are no undisclosed medical conditions, injuries, or health concerns that would prevent safe participation, except those disclosed in writing to Kings Equestrian Foundation prior to participation.', 11, false, 12);
-
     paragraph('I/we further confirm that I / my child / all participants are covered by valid medical and/or personal accident insurance, which will cover any injuries, medical treatment, or emergencies arising from participation.', 11, false, 12);
-
     paragraph('I/we understand and agree that Kings Equestrian Foundation is not responsible for medical expenses, and all such costs shall be borne by the participant(s) or covered under their insurance.', 11, false, 20);
 
     sepPara = body.appendParagraph('⸻');
@@ -1525,7 +1257,6 @@ function generateConsentPDF(name, email, phone, bookingDate) {
     });
 
     body.appendParagraph('').setSpacingAfter(8);
-
     paragraph('I/we agree that Kings Equestrian Foundation, its trainers, staff, and associates shall not be held responsible for injuries arising from participation, except in cases of proven negligence.', 11, false, 20);
 
     sepPara = body.appendParagraph('⸻');
@@ -1623,7 +1354,6 @@ function getKingsFarmFolder() {
 function storeReceiptInDrive(receiptBlob, riderName, receiptNumber, referenceNumber) {
     try {
         const folder = getKingsFarmFolder();
-
         const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd_HHmmss');
         const fileName = `Receipt_${receiptNumber.replace(/\//g, '-')}_${riderName.replace(/\s+/g, '_')}_${timestamp}.pdf`;
 
@@ -1678,6 +1408,6 @@ function setupTriggers() {
         'The system will now automatically:\n' +
         '- Generate reference numbers and send welcome emails on booking\n' +
         '- Auto-send receipts when payment form is submitted\n' +
-        '- Resend existing receipts for duplicate submissions (same ref + amount + date)\n' +
+        '- Resend existing receipts for duplicate submissions\n' +
         '- Store receipts in Google Drive');
 }
