@@ -22,17 +22,17 @@ const CONFIG = {
     
     BOOKING_COLS: {
         TIMESTAMP: 0,
-        NAME: 1,
-        EMAIL_ID: 2,
-        PHONE_NUMBER: 3,
-        OUR_SERVICES: 4,
-        NUMBER_OF_PARTICIPANTS: 5,
-        PREFERRED_SERVICE_DATE:6,
-        PREFERRED_TIME_SLOT:7,
-        CONSENT: 8,
-        REFERENCE: 9,
-        WELCOME_EMAIL_SENT: 10,
-        WELCOME_EMAIL_TIMESTAMP: 11,
+        NAME: 2,
+        EMAIL_ID: 3,
+        PHONE_NUMBER: 4,
+        OUR_SERVICES: 5,
+        NUMBER_OF_PARTICIPANTS: 6,
+        PREFERRED_SERVICE_DATE:7,
+        PREFERRED_TIME_SLOT:8,
+        CONSENT: 9,
+        REFERENCE: 10,
+        WELCOME_EMAIL_SENT: 11,
+        WELCOME_EMAIL_TIMESTAMP: 12,
     },
     
     PAYMENT_COLS: {
@@ -43,11 +43,11 @@ const CONFIG = {
         PAYMENT_DATE: 5,
         TRANSACTION_REFERENCE_NUMBER: 6,
         PAN_AADHAAR: 7,
-        TRANSACTION_VERIFIED: 8,
-        RECEIPT_SENT: 9,
-        RECEIPT_SENT_TIMESTAMP: 10,
-        PAYMENT_RECEIPT_NO: 11,
-        PAYMENT_RECEIPT_DRIVER_LINK: 12
+        TRANSACTION_VERIFIED: 10,
+        RECEIPT_SENT: 11,
+        RECEIPT_SENT_TIMESTAMP: 12,
+        PAYMENT_RECEIPT_NO: 13,
+        PAYMENT_RECEIPT_DRIVER_LINK: 14
     }
 };
 
@@ -338,8 +338,6 @@ function resendExistingReceipt(currentRow, existingRow) {
         const amount = Number(currentData[CONFIG.PAYMENT_COLS.AMOUNT_PAID]);
         const transactionId = currentData[CONFIG.PAYMENT_COLS.TRANSACTION_REFERENCE_NUMBER] || '';
         const pan = currentData[CONFIG.PAYMENT_COLS.PAN_AADHAAR] || '';
-        const preferredDate = currentData[CONFIG.PAYMENT_COLS.PREFERRED_SERVICE_DATE];
-        const preferredTimeSlots = currentData[CONFIG.PAYMENT_COLS.PREFERRED_TIME_SLOT];
 
         const bookingValues = bookingSheet.getDataRange().getValues();
         let bookingMatch = null;
@@ -354,6 +352,8 @@ function resendExistingReceipt(currentRow, existingRow) {
 
         const riderName = bookingMatch.row[CONFIG.BOOKING_COLS.NAME];
         const email = bookingMatch.row[CONFIG.BOOKING_COLS.EMAIL_ID];
+        const preferredDate = bookingMatch.row[CONFIG.BOOKING_COLS.PREFERRED_SERVICE_DATE];
+        const preferredTimeSlots = bookingMatch.row[CONFIG.BOOKING_COLS.PREFERRED_TIME_SLOT];
 
         if (!email) throw new Error('Email not found in booking');
 
@@ -812,6 +812,8 @@ function sendReceiptForRow(rowIndex) {
         const phone = bookingMatch.row[CONFIG.BOOKING_COLS.PHONE_NUMBER];
         const services = bookingMatch.row[CONFIG.BOOKING_COLS.OUR_SERVICES];
         const participants = bookingMatch.row[CONFIG.BOOKING_COLS.NUMBER_OF_PARTICIPANTS] || 1;
+        const preferredDate = bookingMatch.row[CONFIG.BOOKING_COLS.PREFERRED_SERVICE_DATE];
+        const preferredTimeSlots = bookingMatch.row[CONFIG.BOOKING_COLS.PREFERRED_TIME_SLOT];
 
         if (!email) throw new Error('Email not found in booking');
 
@@ -821,8 +823,6 @@ function sendReceiptForRow(rowIndex) {
         const transactionId = row[CONFIG.PAYMENT_COLS.TRANSACTION_REFERENCE_NUMBER] || '';
         const pan = row[CONFIG.PAYMENT_COLS.PAN_AADHAAR] || '';
         const transactionVerified = row[CONFIG.PAYMENT_COLS.TRANSACTION_VERIFIED];
-        const preferredDate = row[CONFIG.PAYMENT_COLS.PREFERRED_SERVICE_DATE];
-        const preferredTimeSlots = row[CONFIG.PAYMENT_COLS.PREFERRED_TIME_SLOT];
 
         if (String(transactionVerified || '').toLowerCase() !== 'yes') {
             throw new Error('Transaction not verified. Please verify first.');
