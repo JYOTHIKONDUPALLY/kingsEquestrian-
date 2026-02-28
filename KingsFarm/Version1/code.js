@@ -199,6 +199,7 @@ function onBookingFormSubmit(e) {
         const phone = sheet.getRange(row, CONFIG.BOOKING_COLS.PHONE_NUMBER + 1).getValue();
         const services = sheet.getRange(row, CONFIG.BOOKING_COLS.OUR_SERVICES + 1).getValue();
         const participants = Number(sheet.getRange(row, CONFIG.BOOKING_COLS.NUMBER_OF_PARTICIPANTS + 1).getValue()) || 1;
+        const bookingDate = sheet.getRange(row, CONFIG.BOOKING_COLS.TIMESTAMP + 1).getValue();
 
         // Fixed advance booking amount
         const amount = CONFIG.ADVANCE_BOOKING_AMOUNT;
@@ -234,9 +235,6 @@ function onBookingFormSubmit(e) {
         paymentLogSheet.appendRow(paymentLogData);
         const logRowIndex = paymentLogSheet.getLastRow();
         Logger.log(`Payment Log entry created at row ${logRowIndex} for reference: ${reference}`);
-
-        // Get booking timestamp for consent PDF
-        const bookingDate = sheet.getRange(row, CONFIG.BOOKING_COLS.TIMESTAMP + 1).getValue();
 
         // Send welcome email
         sendWelcomeEmail({
@@ -277,7 +275,8 @@ function onPaymentFormSubmit(e) {
         const referenceNumber = sheet.getRange(row, CONFIG.PAYMENT_COLS.REGISTRATION_NO + 1).getValue();
         const amount = Number(sheet.getRange(row, CONFIG.PAYMENT_COLS.AMOUNT_PAID + 1).getValue());
         const paymentDate = sheet.getRange(row, CONFIG.PAYMENT_COLS.PAYMENT_DATE + 1).getValue();
-        const Timestamp = sheet.getRange(row, CONFIG.PAYMENT_COLS.TIMESTAMP + 1).getValue();
+        const timestamp = sheet.getRange(row, CONFIG.PAYMENT_COLS.TIMESTAMP + 1).getValue();
+
         if (!referenceNumber) {
             Logger.log('No registration number found in payment form submission');
             return;
@@ -286,20 +285,24 @@ function onPaymentFormSubmit(e) {
         Logger.log(`Processing payment for reference: ${referenceNumber}, amount: ${amount}`);
 
         // Check if this is a duplicate submission
-        if (isDuplicateReceipt(referenceNumber, amount, paymentDate, Timestamp)) {
-            Logger.log(`Duplicate receipt detected for ${referenceNumber} with amount ${amount} on ${paymentDate}. Skipping.`);
+        const duplicateInfo = findDuplicateReceipt(referenceNumber, amount, paymentDate, timestamp);
+        
+        if (duplicateInfo.isDuplicate) {
+            Logger.log(`Duplicate receipt detected for ${referenceNumber}. Resending existing receipt.`);
             
-            // Mark the row to indicate duplicate
+            // Mark the current row as duplicate
             sheet.getRange(row, CONFIG.PAYMENT_COLS.RECEIPT_SENT + 1)
-                .setValue('Duplicate')
+                .setValue('Duplicate - Resent')
                 .setBackground('#fff3cd')
                 .setFontColor('#856404');
             
+            // Resend email with existing receipt (don't generate new receipt or store in drive)
+            resendExistingReceipt(row, duplicateInfo.existingRow);
             return;
         }
 
+        // Not a duplicate - proceed with normal flow
         // Auto-verify transaction and send receipt
-        // Mark as verified
         sheet.getRange(row, CONFIG.PAYMENT_COLS.TRANSACTION_VERIFIED + 1)
             .setValue('Yes')
             .setBackground('#d4edda')
@@ -322,46 +325,54 @@ function onPaymentFormSubmit(e) {
 
 // --------------- DUPLICATE DETECTION ---------------
 
-function isDuplicateReceipt(referenceNumber, amount, paymentDate, timestamps) {
+function findDuplicateReceipt(referenceNumber, amount, paymentDate, currentTimestamp) {
     try {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const paymentSheet = ss.getSheetByName(CONFIG.SHEETS.PAYMENT_FORM);
         
         if (!paymentSheet) {
-            return false;
+            return { isDuplicate: false, existingRow: null };
         }
 
         const data = paymentSheet.getDataRange().getValues();
         
         // Normalize the payment date for comparison
         const normalizedDate = normalizeDate(paymentDate);
-        
-        let matchCount = 0;
+        const normalizedCurrentTimestamp = normalizeDate(currentTimestamp);
         
         // Start from row 2 (skip header)
         for (let i = 1; i < data.length; i++) {
             const rowRef = String(data[i][CONFIG.PAYMENT_COLS.REGISTRATION_NO] || '').trim();
             const rowAmount = Number(data[i][CONFIG.PAYMENT_COLS.AMOUNT_PAID]);
             const rowDate = data[i][CONFIG.PAYMENT_COLS.PAYMENT_DATE];
-            const rowReceiptSent = String(data[i][CONFIG.PAYMENT_COLS.RECEIPT_SENT] || '').trim();
             const rowTimestamp = data[i][CONFIG.PAYMENT_COLS.TIMESTAMP];
-            // Only count if registration number, amount, and date match
+            const rowReceiptSent = String(data[i][CONFIG.PAYMENT_COLS.RECEIPT_SENT] || '').trim();
+            
+            // Skip the current submission row (compare timestamps)
+            if (normalizeDate(rowTimestamp) === normalizedCurrentTimestamp) {
+                continue;
+            }
+            
+            // Check if registration number, amount, and date match
             // and receipt was already sent (not 'Duplicate' marker)
             if (rowRef === String(referenceNumber).trim() && 
                 rowAmount === amount &&
                 normalizeDate(rowDate) === normalizedDate &&
-                rowReceiptSent.toLowerCase() === 'yes' && 
-                rowTimestamp === timestamps) {
-                matchCount++;
+                rowReceiptSent.toLowerCase() === 'yes') {
+                
+                Logger.log(`Found existing receipt at row ${i + 1}`);
+                return { 
+                    isDuplicate: true, 
+                    existingRow: i + 1 
+                };
             }
         }
         
-        // If we found at least one match with receipt already sent, this is a duplicate
-        return matchCount > 0;
+        return { isDuplicate: false, existingRow: null };
         
     } catch (error) {
         Logger.log('Error checking for duplicate: ' + error);
-        return false;
+        return { isDuplicate: false, existingRow: null };
     }
 }
 
@@ -376,6 +387,100 @@ function normalizeDate(dateValue) {
         return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd');
     } catch (e) {
         return String(dateValue);
+    }
+}
+
+// --------------- RESEND EXISTING RECEIPT ---------------
+
+function resendExistingReceipt(currentRow, existingRow) {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const paymentSheet = ss.getSheetByName(CONFIG.SHEETS.PAYMENT_FORM);
+        const bookingSheet = ss.getSheetByName(CONFIG.SHEETS.BOOKING_FORM);
+        
+        if (!paymentSheet || !bookingSheet) {
+            Logger.log('Required sheets not found');
+            return false;
+        }
+
+        // Get existing receipt information
+        const existingData = paymentSheet.getRange(existingRow, 1, 1, paymentSheet.getLastColumn()).getValues()[0];
+        const existingReceiptNumber = existingData[CONFIG.PAYMENT_COLS.PAYMENT_RECEIPT_NO];
+        const existingDriveLink = existingData[CONFIG.PAYMENT_COLS.PAYMENT_RECEIPT_DRIVER_LINK];
+        
+        // Get current row data
+        const currentData = paymentSheet.getRange(currentRow, 1, 1, paymentSheet.getLastColumn()).getValues()[0];
+        const referenceNumber = currentData[CONFIG.PAYMENT_COLS.REGISTRATION_NO];
+        const amount = Number(currentData[CONFIG.PAYMENT_COLS.AMOUNT_PAID]);
+        const transactionId = currentData[CONFIG.PAYMENT_COLS.TRANSACTION_REFERENCE_NUMBER] || '';
+        const pan = currentData[CONFIG.PAYMENT_COLS.PAN_AADHAAR] || '';
+        const preferredDate = currentData[CONFIG.PAYMENT_COLS.PREFERRED_SERVICE_DATE];
+        const preferredTimeSlots = currentData[CONFIG.PAYMENT_COLS.PREFERRED_TIME_SLOT];
+
+        // Find booking match
+        const bookingValues = bookingSheet.getDataRange().getValues();
+        let bookingMatch = null;
+        for (let j = 1; j < bookingValues.length; j++) {
+            if (String(bookingValues[j][CONFIG.BOOKING_COLS.REFERENCE] || '').trim() === String(referenceNumber || '').trim()) {
+                bookingMatch = {
+                    rowIndex: j + 1,
+                    row: bookingValues[j]
+                };
+                break;
+            }
+        }
+
+        if (!bookingMatch) {
+            throw new Error(`Booking not found for reference ${referenceNumber}`);
+        }
+
+        const riderName = bookingMatch.row[CONFIG.BOOKING_COLS.NAME];
+        const email = bookingMatch.row[CONFIG.BOOKING_COLS.EMAIL_ID];
+        const phone = bookingMatch.row[CONFIG.BOOKING_COLS.PHONE_NUMBER];
+        const services = bookingMatch.row[CONFIG.BOOKING_COLS.OUR_SERVICES];
+        const participants = bookingMatch.row[CONFIG.BOOKING_COLS.NUMBER_OF_PARTICIPANTS] || 1;
+
+        if (!email) {
+            throw new Error('Email not found in booking');
+        }
+
+        // Regenerate the receipt PDF with existing receipt number (don't store in drive again)
+        const receiptPDF = generate80GReceipt(riderName, pan, amount, transactionId, existingReceiptNumber);
+
+        // Send receipt email
+        const subject = `Payment Receipt - ${riderName} - Ref: ${referenceNumber}`;
+
+        const htmlBody = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: 0 auto; padding: 20px;"><div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border-radius: 12px 12px 0 0;"><h1 style="color: white; margin: 0; font-size: 28px;">Kings Equestrian Foundation</h1><p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-style: italic;">Where horses don't just carry you - they change you</p></div><div style="background: white; padding: 30px; border: 1px solid #e0e0e0; border-top: none;"><p style="font-size: 16px; margin-bottom: 25px;">Dear <strong>${riderName}</strong>,</p><div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 20px; margin: 20px 0; border-radius: 4px; text-align: center;"><h2 style="color: #2e7d32; margin: 0 0 10px 0;">✅ Payment Confirmed - Booking Complete!</h2><p style="margin: 0; font-size: 14px;">Thank you for your payment. Your booking is confirmed.</p></div><p style="font-size: 14px; margin: 20px 0;"><strong>Your Payment Receipt (80G) is attached to this email for tax deduction purposes.</strong></p><h3 style="color: #2c3e50; border-bottom: 2px solid #4caf50; padding-bottom: 10px; margin-top: 25px;">Payment Details:</h3><table style="width: 100%; margin: 15px 0;"><tr><td style="padding: 8px 0; color: #666;">Booking Reference:</td><td style="padding: 8px 0; font-weight: bold;">${referenceNumber}</td></tr><tr><td style="padding: 8px 0; color: #666;">Receipt No:</td><td style="padding: 8px 0; font-weight: bold;">${existingReceiptNumber}</td></tr><tr><td style="padding: 8px 0; color: #666;">Amount Paid:</td><td style="padding: 8px 0; font-weight: bold; color: #4caf50; font-size: 18px;">₹${amount.toLocaleString('en-IN')}</td></tr>${transactionId ? `<tr><td style="padding: 8px 0; color: #666;">Transaction ID:</td><td style="padding: 8px 0; font-weight: bold;">${transactionId}</td></tr>` : ''}${preferredDate ? `<tr><td style="padding: 8px 0; color: #666;">Scheduled Date:</td><td style="padding: 8px 0; font-weight: bold;">${formatDate(preferredDate)}</td></tr>` : ''}${preferredTimeSlots ? `<tr><td style="padding: 8px 0; color: #666;">Time Slot:</td><td style="padding: 8px 0; font-weight: bold;">${preferredTimeSlots}</td></tr>` : ''}</table><div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 25px 0; border-radius: 4px;"><p style="margin: 0; color: #856404;"><strong>We look forward to welcoming you at Kings Equestrian. Please arrive 15 minutes before your scheduled time.</strong></p></div><h4 style="color: #2c3e50; margin-top: 25px;">What to bring:</h4><ul style="margin: 10px 0; padding-left: 20px; color: #666;"><li>Comfortable clothing</li><li>Closed-toe shoes</li><li>Your booking reference: <strong>${referenceNumber}</strong></li></ul></div><div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 12px 12px; border: 1px solid #e0e0e0; border-top: none;"><p style="margin: 5px 0; color: #666; font-size: 14px;"><strong>Kings Equestrian Foundation</strong></p><p style="margin: 5px 0; color: #666; font-size: 13px;">Karnataka, India</p><p style="margin: 5px 0; color: #666; font-size: 13px;">+91-9980895533 | info@kingsequestrian.com</p></div></body></html>`;
+
+        // Get CC recipients for receipt emails
+        const ccEmails = getCCRecipients('Receipt Mail');
+
+        MailApp.sendEmail({
+            to: email,
+            cc: ccEmails.join(','),
+            subject: subject,
+            htmlBody: htmlBody,
+            attachments: [receiptPDF],
+            name: 'Kings Equestrian Foundation'
+        });
+
+        // Update current row with existing receipt info
+        paymentSheet.getRange(currentRow, CONFIG.PAYMENT_COLS.PAYMENT_RECEIPT_NO + 1)
+            .setValue(existingReceiptNumber);
+        
+        paymentSheet.getRange(currentRow, CONFIG.PAYMENT_COLS.PAYMENT_RECEIPT_DRIVER_LINK + 1)
+            .setValue(existingDriveLink);
+        
+        paymentSheet.getRange(currentRow, CONFIG.PAYMENT_COLS.RECEIPT_SENT_TIMESTAMP + 1)
+            .setValue(new Date())
+            .setNumberFormat('dd-MMM-yyyy HH:mm:ss');
+
+        Logger.log(`Existing receipt ${existingReceiptNumber} resent to: ${email}`);
+        return true;
+
+    } catch (error) {
+        Logger.log(`Error resending existing receipt: ${error.message}`);
+        return false;
     }
 }
 
@@ -418,8 +523,7 @@ function sendWelcomeEmail(data) {
     // Simple service list HTML (no pricing breakdown)
     const servicesHTML = serviceList.map(s => `<li>${s}</li>`).join('');
 
-    const serviceDetailsHTML = `
-        <div style="margin: 15px 0; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+    const serviceDetailsHTML = ` <div style="margin: 15px 0; padding: 15px; background: #f9f9f9; border-radius: 8px;">
       <h3 style="color: #2c5f2d; margin: 0 0 10px 0;">Selected Services</h3>
       <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
                 ${servicesHTML}
@@ -569,15 +673,15 @@ Karnataka, India
     // Get CC recipients for welcome emails
     const ccEmails = getCCRecipients('Welcome Mail');
 
-  MailApp.sendEmail({
-    to: data.email,
-    cc: ccEmails.join(','),
-    subject: subject,
-    body: plainBody,
-    htmlBody: htmlBody,
-    attachments: attachments,
-    name: 'Kings Equestrian Foundation'
-  });
+    MailApp.sendEmail({
+        to: data.email,
+        cc: ccEmails.join(','),
+        subject: subject,
+        body: plainBody,
+        htmlBody: htmlBody,
+        attachments: attachments,
+        name: 'Kings Equestrian Foundation'
+    });
 
     // Update BOOKING sheet email status
     if (data.sheet && data.row) {
@@ -896,15 +1000,9 @@ function sendReceiptForRow(rowIndex) {
         const transactionVerified = row[CONFIG.PAYMENT_COLS.TRANSACTION_VERIFIED];
         const preferredDate = row[CONFIG.PAYMENT_COLS.PREFERRED_SERVICE_DATE];
         const preferredTimeSlots = row[CONFIG.PAYMENT_COLS.PREFERRED_TIME_SLOT];
-        const paymentDate = row[CONFIG.PAYMENT_COLS.PAYMENT_DATE];
-        const timeStamp = row[CONFIG.PAYMENT_COLS.TIMESTAMP];
+
         if (String(transactionVerified || '').toLowerCase() !== 'yes') {
             throw new Error('Transaction not verified. Please verify first.');
-        }
-
-        // Check for duplicate before proceeding
-        if (isDuplicateReceipt(referenceNumber, amount, paymentDate, timeStamp)) {
-            throw new Error('Duplicate receipt detected. Receipt already sent for this registration, amount, and date.');
         }
 
         // Find and update Payment Log entry
@@ -1341,13 +1439,12 @@ function generateConsentPDF(name, email, phone, bookingDate) {
         if (!dateValue) return null;
 
         if (typeof dateValue === 'string') {
-            // Try to parse if it's a string
             try {
                 const parsed = new Date(dateValue);
                 if (!isNaN(parsed.getTime())) {
                     dateValue = parsed;
                 } else {
-                    return dateValue; // Return as-is if can't parse
+                    return dateValue;
                 }
             } catch (e) {
                 return dateValue;
@@ -1363,8 +1460,6 @@ function generateConsentPDF(name, email, phone, bookingDate) {
 
         return dateValue.toString();
     }
-
-    /* ========= HEADER WITH LOGO ========= */
 
     const logoUrl = 'https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg';
     let logoBlob;
@@ -1384,64 +1479,33 @@ function generateConsentPDF(name, email, phone, bookingDate) {
         logoPara.setSpacingAfter(20);
     }
 
-    /* ========= TITLE ========= */
-
     paragraph('KINGS EQUESTRIAN FOUNDATION', 16, true, 5, DocumentApp.HorizontalAlignment.CENTER);
     paragraph('Acknowledgement & Consent Form – Horse Riding Participants', 13, true, 3, DocumentApp.HorizontalAlignment.CENTER);
     paragraph('(Applicable for Individual / Group / Family Participants)', 10, false, 25, DocumentApp.HorizontalAlignment.CENTER);
 
-    /* ========= CONTENT ========= */
+    paragraph('Kings Equestrian Foundation offers horse riding programs and related activities, which may include casual riding, dressage, jumping, workshops, clinics, and equine interaction.', 11, false, 12);
 
-    paragraph(
-        'Kings Equestrian Foundation offers horse riding programs and related activities, which may include casual riding, dressage, jumping, workshops, clinics, and equine interaction.',
-        11, false, 12
-    );
+    paragraph('I/we understand and acknowledge that participation in equestrian activities involves inherent risks, including but not limited to falls, bruises, muscle strain, fractures, head injuries, or other serious injuries. I/we further acknowledge that horses are live animals and their behaviour can be unpredictable.', 11, false, 12);
 
-    paragraph(
-        'I/we understand and acknowledge that participation in equestrian activities involves inherent risks, including but not limited to falls, bruises, muscle strain, fractures, head injuries, or other serious injuries. I/we further acknowledge that horses are live animals and their behaviour can be unpredictable.',
-        11, false, 12
-    );
-
-    paragraph(
-        'I/we also acknowledge that Kings Equestrian Foundation follows reasonable safety precautions, provides trained supervision, and enforces established safety guidelines. However, despite all precautions, accidents may occasionally occur.',
-        11, false, 20
-    );
-
-    /* ========= SEPARATOR ========= */
+    paragraph('I/we also acknowledge that Kings Equestrian Foundation follows reasonable safety precautions, provides trained supervision, and enforces established safety guidelines. However, despite all precautions, accidents may occasionally occur.', 11, false, 20);
 
     let sepPara = body.appendParagraph('⸻');
     sepPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
     sepPara.setSpacingAfter(20);
 
-    /* ========= MEDICAL FITNESS & INSURANCE ========= */
-
     paragraph('Medical Fitness & Insurance Declaration', 12, true, 12);
 
-    paragraph(
-        'I/we hereby declare that I / my child / all participants covered under this consent are medically fit to participate in horse riding and equestrian-related activities. To the best of my/our knowledge, there are no undisclosed medical conditions, injuries, or health concerns that would prevent safe participation, except those disclosed in writing to Kings Equestrian Foundation prior to participation.',
-        11, false, 12
-    );
+    paragraph('I/we hereby declare that I / my child / all participants covered under this consent are medically fit to participate in horse riding and equestrian-related activities. To the best of my/our knowledge, there are no undisclosed medical conditions, injuries, or health concerns that would prevent safe participation, except those disclosed in writing to Kings Equestrian Foundation prior to participation.', 11, false, 12);
 
-    paragraph(
-        'I/we further confirm that I / my child / all participants are covered by valid medical and/or personal accident insurance, which will cover any injuries, medical treatment, or emergencies arising from participation.',
-        11, false, 12
-    );
+    paragraph('I/we further confirm that I / my child / all participants are covered by valid medical and/or personal accident insurance, which will cover any injuries, medical treatment, or emergencies arising from participation.', 11, false, 12);
 
-    paragraph(
-        'I/we understand and agree that Kings Equestrian Foundation is not responsible for medical expenses, and all such costs shall be borne by the participant(s) or covered under their insurance.',
-        11, false, 20
-    );
-
-    /* ========= SEPARATOR ========= */
+    paragraph('I/we understand and agree that Kings Equestrian Foundation is not responsible for medical expenses, and all such costs shall be borne by the participant(s) or covered under their insurance.', 11, false, 20);
 
     sepPara = body.appendParagraph('⸻');
     sepPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
     sepPara.setSpacingAfter(20);
 
-    /* ========= ACKNOWLEDGEMENT & AGREEMENT ========= */
-
     paragraph('Acknowledgement & Agreement', 12, true, 12);
-
     paragraph('I/we confirm that:', 11, false, 8);
 
     const bulletPoints = [
@@ -1462,18 +1526,11 @@ function generateConsentPDF(name, email, phone, bookingDate) {
 
     body.appendParagraph('').setSpacingAfter(8);
 
-    paragraph(
-        'I/we agree that Kings Equestrian Foundation, its trainers, staff, and associates shall not be held responsible for injuries arising from participation, except in cases of proven negligence.',
-        11, false, 20
-    );
-
-    /* ========= SEPARATOR ========= */
+    paragraph('I/we agree that Kings Equestrian Foundation, its trainers, staff, and associates shall not be held responsible for injuries arising from participation, except in cases of proven negligence.', 11, false, 20);
 
     sepPara = body.appendParagraph('⸻');
     sepPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
     sepPara.setSpacingAfter(20);
-
-    /* ========= PRIMARY CONTACT DETAILS ========= */
 
     paragraph('Primary Contact / Parent / Guardian Details', 12, true, 12);
 
@@ -1501,13 +1558,9 @@ function generateConsentPDF(name, email, phone, bookingDate) {
     if (email) formatValue(t, emailLine, emailSpaced);
     p.setSpacingAfter(25);
 
-    /* ========= SEPARATOR ========= */
-
     sepPara = body.appendParagraph('⸻');
     sepPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
     sepPara.setSpacingAfter(25);
-
-    /* ========= SIGNATURE SECTION ========= */
 
     p = body.appendParagraph('');
     t = p.editAsText();
@@ -1517,7 +1570,6 @@ function generateConsentPDF(name, email, phone, bookingDate) {
     const signatureLine = `Signature of Participant / Parent / Guardian: ${signatureSpaced}     Date: ${dateSpaced}`;
     t.setText(signatureLine).setFontFamily(LABEL_FONT).setFontSize(11);
 
-    // Apply Dancing Script font to signature (name)
     if (name) {
         const sigStart = signatureLine.indexOf(signatureSpaced);
         if (sigStart !== -1) {
@@ -1531,19 +1583,11 @@ function generateConsentPDF(name, email, phone, bookingDate) {
         }
     }
 
-    // Format the date
     if (dateFormatted) formatValue(t, signatureLine, dateSpaced);
     p.setSpacingAfter(30);
 
-    /* ========= FOOTER ========= */
-
-    const footerPara = paragraph(
-        'Kings Equestrian Foundation | Karnataka, India | +91-9980895533 | info@kingsequestrian.com',
-        9, false, 0, DocumentApp.HorizontalAlignment.CENTER
-    );
+    const footerPara = paragraph('Kings Equestrian Foundation | Karnataka, India | +91-9980895533 | info@kingsequestrian.com', 9, false, 0, DocumentApp.HorizontalAlignment.CENTER);
     footerPara.editAsText().setForegroundColor('#666666');
-
-    /* ========= SAVE ========= */
 
     doc.saveAndClose();
 
@@ -1568,7 +1612,6 @@ function getKingsFarmFolder() {
         mainFolder = mainFolder.next();
     }
 
-    // Create year subfolder
     const yearFolders = mainFolder.getFoldersByName(year.toString());
     if (yearFolders.hasNext()) {
         return yearFolders.next();
@@ -1616,19 +1659,16 @@ function onOpen() {
 }
 
 function setupTriggers() {
-    // Delete existing triggers
     const triggers = ScriptApp.getProjectTriggers();
     triggers.forEach(trigger => ScriptApp.deleteTrigger(trigger));
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // Create trigger for booking form submissions
     ScriptApp.newTrigger('onBookingFormSubmit')
         .forSpreadsheet(ss)
         .onFormSubmit()
         .create();
 
-    // Create trigger for payment form submissions
     ScriptApp.newTrigger('onPaymentFormSubmit')
         .forSpreadsheet(ss)
         .onFormSubmit()
@@ -1637,7 +1677,7 @@ function setupTriggers() {
     SpreadsheetApp.getUi().alert('✅ Triggers set up successfully!\n\n' +
         'The system will now automatically:\n' +
         '- Generate reference numbers and send welcome emails on booking\n' +
-        '- Auto-verify and send receipts when payment form is submitted\n' +
-        '- Prevent duplicate receipts\n' +
+        '- Auto-send receipts when payment form is submitted\n' +
+        '- Resend existing receipts for duplicate submissions (same ref + amount + date)\n' +
         '- Store receipts in Google Drive');
 }
