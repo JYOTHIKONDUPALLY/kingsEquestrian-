@@ -7,31 +7,32 @@
 const SCHOOL_CONFIG = {
     SHEET_NAME: 'SchoolRegistration',
 
-    // Column indices (0-based) — adjust if your sheet differs
+    // Column indices (0-based) — matches SchoolRegistration sheet
     COLS: {
-        SR_NO: 0,                  // A - Sr. No (used for sequence)
+        SR_NO: 0,                  // A
         STUDENT_NAME: 1,           // B
-        GRADE_SECTION: 2,// C  e.g. "Grade 5 - A"
-        LOCATION:3,
-        PARENT_NAME: 4,            
-        CONTACT_NUMBER: 5,
-        CONCENT_FORM:6,
-        REGISTRATION_FEES: 7, 
-        DATE_OF_PAYMENT: 8,        
-        MODE_OF_PAYMENT: 9,
-        PAN_AADHAAR:10,  
-        ADDRESS:11,      
-        PAYMENT_STATUS: 12,         // J  "Paid" / "Due"
-        RECEIPT_NO: 13,            // L  ← written back after generation
-        RECEIPT_DRIVE_LINK: 14     // M  ← written back after generation
+        GRADE_SECTION: 2,          // C  e.g. "Grade 5 - A"
+        LOCATION: 3,               // D
+        PARENT_NAME: 4,            // E
+        CONTACT_NUMBER: 5,         // F
+        CONCENT_FORM: 6,           // G
+        REGISTRATION_FEES: 7,      // H  numeric amount
+        DATE_OF_PAYMENT: 8,        // I
+        MODE_OF_PAYMENT: 9,        // J  e.g. UPI / Cash / Cheque
+        PAN_AADHAAR: 10,           // K
+        ADDRESS: 11,               // L
+        PAYMENT_STATUS: 12,        // M  "Paid" / "Due"
+        RECEIPT_NO: 13,            // N  ← written back after generation
+        RECEIPT_DRIVE_LINK: 14,    // O  ← written back after generation
+        PARENT_EMAIL: 15           // P  parent/guardian email for sending receipt
     },
 
     // Google Drive folder name for all school receipts
     ROOT_FOLDER: 'Kings Equestrian - School Receipts',
 
     // Drive file IDs reused from the main script
-    STAMP_FILE_ID: '1ReTtpLb8gNVKMaqdQuUgJVnMA64SJbJQ',
-    SIGN_FILE_ID:  '1_zCecmE02RSevbKvnUlY3Y14B1RV9k9o',
+    STAMP_FILE_ID: '1kkDoebRZYYJDW76jYNZT1rWX65_DjSMs',
+    SIGN_FILE_ID:  '1z8rGx3HkgyBb-nqIXIT-_BgY8cqiQDRR',
     LOGO_URL: 'https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg'
 };
 
@@ -43,6 +44,7 @@ function onOpen_School() {
     SpreadsheetApp.getUi()
         .createMenu('🏫 School Registration')
         .addItem('🧾 Generate Receipt(s) for Selected Rows', 'generateSchoolReceiptsForSelection')
+        .addItem('📧 Generate & Email Receipt(s) for Selected Rows', 'generateAndEmailSchoolReceiptsForSelection')
         .addToUi();
 }
 
@@ -135,8 +137,6 @@ function generateSchoolReceiptForRow(sheet, rowIndex) {
     const paymentStatus = String(row[C.PAYMENT_STATUS] || 'Paid').trim();
     const dateOfPayment = row[C.DATE_OF_PAYMENT];
     const amount        = Number(row[C.REGISTRATION_FEES]);
-
-    console.log("amount", amount)
 
     if (!studentName) throw new Error('Student name is missing');
     if (!parentName)  throw new Error('Parent name is missing');
@@ -482,6 +482,9 @@ function buildSchoolReceiptHTML(
             <div class="section-title">Donor Details</div>
             <div class="detail-row"><span class="detail-label">Name of Donor:</span> ${parentName}</div>
             <div class="detail-row"><span class="detail-label">PAN / Aadhaar:</span> ${pan}</div>
+            <div class="detail-row"><span class="detail-label">Contact Number:</span> ${contactNumber}</div>
+            <div class="detail-row"><span class="detail-label">Address:</span> ${address}</div>
+            <div class="detail-row"><span class="detail-label">Date of Payment:</span> ${formattedDate}</div>
         </div>
     </div>
 
@@ -636,4 +639,286 @@ function schoolNumberToWords(num) {
     }
 
     return convert(Math.round(num)).trim() + ' Rupees Only';
+}
+
+
+// -----------------------------------------------
+// GENERATE & EMAIL RECEIPTS FOR SELECTED ROWS
+// -----------------------------------------------
+
+function generateAndEmailSchoolReceiptsForSelection() {
+    const ui = SpreadsheetApp.getUi();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SCHOOL_CONFIG.SHEET_NAME);
+
+    if (!sheet) {
+        ui.alert(`❌ Sheet "${SCHOOL_CONFIG.SHEET_NAME}" not found.`);
+        return;
+    }
+
+    // Must be on the correct tab
+    const activeSheet = ss.getActiveSheet();
+    if (activeSheet.getName() !== SCHOOL_CONFIG.SHEET_NAME) {
+        ui.alert(
+            '⚠️ Wrong Tab',
+            `Please switch to the "${SCHOOL_CONFIG.SHEET_NAME}" tab first, ` +
+            `select the rows you want, then click this menu again.`,
+            ui.ButtonSet.OK
+        );
+        return;
+    }
+
+    const selection = sheet.getActiveRange();
+    if (!selection || selection.getRow() <= 1) {
+        ui.alert('⚠️ Please select one or more data rows first (not the header row).');
+        return;
+    }
+
+    const startRow = selection.getRow();
+    const numRows  = selection.getNumRows();
+
+    const confirm = ui.alert(
+        '📧 Generate & Email School Receipts',
+        `Generate receipts and send emails for ${numRows} selected row(s)?`,
+        ui.ButtonSet.YES_NO
+    );
+    if (confirm !== ui.Button.YES) return;
+
+    // Fetch CC recipients once for all emails
+    const ccEmails = getSchoolCCRecipients();
+
+    let successCount = 0;
+    let failCount    = 0;
+    const errors     = [];
+
+    for (let i = 0; i < numRows; i++) {
+        const rowIndex = startRow + i;
+        try {
+            generateAndEmailSchoolReceiptForRow(sheet, rowIndex, ccEmails);
+            successCount++;
+            Utilities.sleep(1000);
+        } catch (err) {
+            failCount++;
+            errors.push(`Row ${rowIndex}: ${err.message}`);
+            Logger.log(`School email receipt failed at row ${rowIndex}: ${err.message}`);
+        }
+    }
+
+    let msg = `✅ Sent: ${successCount}   ❌ Failed: ${failCount}`;
+    if (errors.length > 0) {
+        msg += '\n\nErrors:\n' + errors.slice(0, 5).join('\n');
+        if (errors.length > 5) msg += `\n…and ${errors.length - 5} more`;
+    }
+    ui.alert(msg);
+}
+
+// -----------------------------------------------
+// CORE — generate receipt + send email for one row
+// -----------------------------------------------
+
+function generateAndEmailSchoolReceiptForRow(sheet, rowIndex, ccEmails) {
+    const C   = SCHOOL_CONFIG.COLS;
+    const row = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+    // ── Read fields ───────────────────────────────────────────────────────────
+    const studentName   = String(row[C.STUDENT_NAME]    || '').trim();
+    const gradeSection  = String(row[C.GRADE_SECTION]   || '').trim();
+    const parentName    = String(row[C.PARENT_NAME]     || '').trim();
+    const contactNumber = String(row[C.CONTACT_NUMBER]  || '').trim();
+    const address       = String(row[C.ADDRESS]         || '').trim();
+    const panAadhaar    = String(row[C.PAN_AADHAAR]     || '').trim();
+    const modeOfPayment = String(row[C.MODE_OF_PAYMENT] || '').trim();
+    const paymentStatus = String(row[C.PAYMENT_STATUS]  || 'Paid').trim();
+    const dateOfPayment = row[C.DATE_OF_PAYMENT];
+    const amount        = Number(row[C.REGISTRATION_FEES]);
+    const existingLink  = String(row[C.RECEIPT_DRIVE_LINK] || '').trim();
+    const existingReceiptNo = String(row[C.RECEIPT_NO]  || '').trim();
+
+    // Contact number is used as the recipient identifier —
+    // email must come from a separate EMAIL col if you add one later.
+    // For now we require an EMAIL column; add PARENT_EMAIL to COLS if needed.
+    // We read it from C.PARENT_EMAIL (index 16 by default — see note below).
+    const parentEmail = String(row[C.PARENT_EMAIL]      || '').trim();
+
+    if (!studentName)  throw new Error('Student name is missing');
+    if (!parentName)   throw new Error('Parent name is missing');
+    if (!parentEmail)  throw new Error('Parent email is missing — please fill column ' + (C.PARENT_EMAIL + 1));
+    if (!amount || isNaN(amount)) throw new Error('Valid registration fee is required');
+
+    // ── Receipt number: reuse existing or generate fresh ──────────────────────
+    const receiptNumber = existingReceiptNo || generateSchoolReceiptNumber(gradeSection, rowIndex);
+
+    // ── Generate PDF ──────────────────────────────────────────────────────────
+    Logger.log(`Generating school receipt (email) for ${studentName} — ${receiptNumber}`);
+    const receiptPDF = generateSchoolReceiptPDF(
+        studentName, gradeSection, parentName, contactNumber,
+        address, panAadhaar, modeOfPayment, paymentStatus,
+        dateOfPayment, amount, receiptNumber
+    );
+
+    // ── Store in Drive only if link column is empty ───────────────────────────
+    let driveUrl = existingLink;
+    if (!existingLink) {
+        const driveInfo = storeSchoolReceiptInDrive(receiptPDF, studentName, gradeSection, receiptNumber);
+        if (driveInfo) {
+            driveUrl = driveInfo.fileUrl;
+            sheet.getRange(rowIndex, C.RECEIPT_NO + 1).setValue(receiptNumber);
+            sheet.getRange(rowIndex, C.RECEIPT_DRIVE_LINK + 1).setValue(driveUrl);
+            Logger.log(`Drive link saved for row ${rowIndex}: ${driveUrl}`);
+        }
+    } else {
+        Logger.log(`Drive link already exists for row ${rowIndex}, skipping Drive upload.`);
+        // Still write receipt number if it was missing
+        if (!existingReceiptNo) {
+            sheet.getRange(rowIndex, C.RECEIPT_NO + 1).setValue(receiptNumber);
+        }
+    }
+
+    // ── Build email HTML ──────────────────────────────────────────────────────
+    const subject  = `Payment Receipt — ${studentName} | ${gradeSection} | Kings Equestrian Foundation`;
+    const htmlBody = buildSchoolEmailHTML(
+        studentName, gradeSection, parentName, contactNumber,
+        modeOfPayment, paymentStatus, dateOfPayment,
+        amount, receiptNumber, driveUrl
+    );
+
+    // ── Send email ────────────────────────────────────────────────────────────
+    const mailOptions = {
+        to:          parentEmail,
+        subject:     subject,
+        htmlBody:    htmlBody,
+        attachments: [receiptPDF],
+        name:        'Kings Equestrian Foundation'
+    };
+    if (ccEmails && ccEmails.length > 0) {
+        mailOptions.cc = ccEmails.join(',');
+    }
+
+    MailApp.sendEmail(mailOptions);
+    Logger.log(`School receipt email sent to ${parentEmail} for ${studentName} (${receiptNumber})`);
+    return true;
+}
+
+// -----------------------------------------------
+// EMAIL HTML TEMPLATE
+// -----------------------------------------------
+
+function buildSchoolEmailHTML(
+    studentName, gradeSection, parentName, contactNumber,
+    modeOfPayment, paymentStatus, dateOfPayment,
+    amount, receiptNumber, driveUrl
+) {
+    const isPaid        = String(paymentStatus).toLowerCase() === 'paid';
+    const formattedDate = schoolFormatDate(dateOfPayment);
+    const statusColor   = isPaid ? '#155724' : '#856404';
+    const statusBg      = isPaid ? '#d4edda'  : '#fff3cd';
+    const statusLabel   = isPaid ? '✔ Paid'   : '⏳ Due';
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; color: #333; }
+    .container { max-width: 650px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #1f4e3d 0%, #4f9c7a 100%); padding: 30px; text-align: center; color: #fff; }
+    .header img { width: 70px; height: 70px; border-radius: 10%; margin-bottom: 10px; }
+    .header h1 { margin: 0; font-size: 24px; }
+    .header p  { margin: 6px 0 0; font-size: 13px; opacity: 0.9; }
+    .content { padding: 30px; }
+    .greeting { font-size: 17px; font-weight: 600; margin-bottom: 14px; color: #1f4e3d; }
+    .info-box { background: #f0f8f4; border-left: 4px solid #1f4e3d; padding: 16px; margin: 18px 0; border-radius: 6px; font-size: 14px; line-height: 1.8; }
+    .info-box strong { display: inline-block; min-width: 155px; }
+    .status-pill { display: inline-block; padding: 2px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; background: ${statusBg}; color: ${statusColor}; }
+    .drive-btn { display: inline-block; margin-top: 18px; padding: 11px 24px; background: #1f4e3d; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; }
+    .note { margin-top: 20px; font-size: 13px; color: #555; }
+    .footer { background-color: #1f4e3d; color: #fff; padding: 22px; text-align: center; font-size: 13px; }
+    .footer p { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" alt="Kings Equestrian Logo">
+      <h1>Kings Equestrian Foundation</h1>
+      <p>Where horses don't just carry you — they change you</p>
+    </div>
+
+    <div class="content">
+      <div class="greeting">Dear ${parentName},</div>
+
+      <p>
+        Thank you for registering <strong>${studentName}</strong> for the
+        Kings Equestrian Foundation School Outreach Programme.<br>
+        Please find the official registration receipt attached to this email.
+      </p>
+
+      <div class="info-box">
+        <strong>Student Name:</strong> ${studentName}<br>
+        <strong>Grade &amp; Section:</strong> ${gradeSection}<br>
+        <strong>Receipt No:</strong> ${receiptNumber}<br>
+        <strong>Amount Paid:</strong> ₹${amount.toLocaleString('en-IN')} &nbsp;<span class="status-pill">${statusLabel}</span><br>
+        <strong>Mode of Payment:</strong> ${modeOfPayment || '—'}<br>
+        <strong>Date of Payment:</strong> ${formattedDate}<br>
+        <strong>Contact Number:</strong> ${contactNumber || '—'}
+      </div>
+
+      <p style="font-size:14px;">
+        Your receipt (80G) is attached to this email and can also be accessed from Google Drive using the button below.
+      </p>
+
+      ${driveUrl ? `<a href="${driveUrl}" class="drive-btn">📄 View Receipt in Drive</a>` : ''}
+
+      <p class="note">
+        This receipt is eligible for <strong>Section 80G</strong> tax deduction as applicable.<br>
+        Please retain it for your records.
+      </p>
+
+      <p class="note">
+        We look forward to an enriching experience for ${studentName} at Kings Equestrian Foundation.
+        If you have any questions, feel free to reach out to us.
+      </p>
+    </div>
+
+    <div class="footer">
+      <p><strong>Kings Equestrian Foundation</strong></p>
+      <p>Karnataka, India</p>
+      <p>+91-9980895533 | info@kingsequestrian.com</p>
+    </div>
+
+  </div>
+</body>
+</html>`;
+}
+
+// -----------------------------------------------
+// CC RECIPIENTS — reads from Mail Info tab
+// matches type containing "School" or "Receipt Mail"
+// -----------------------------------------------
+
+function getSchoolCCRecipients() {
+    try {
+        const ss            = SpreadsheetApp.getActiveSpreadsheet();
+        const mailInfoSheet = ss.getSheetByName('Mail Info');
+        if (!mailInfoSheet) {
+            Logger.log('Mail Info sheet not found — no CC will be added');
+            return [];
+        }
+        const data     = mailInfoSheet.getDataRange().getValues();
+        const ccEmails = [];
+        for (let i = 1; i < data.length; i++) {
+            const email = String(data[i][0] || '').trim();
+            const type  = String(data[i][1] || '').trim().toLowerCase();
+            // Include if type contains "school" or "receipt mail"
+            if (email && (type.includes('school') || type.includes('receipt mail'))) {
+                ccEmails.push(email);
+            }
+        }
+        Logger.log(`School CC recipients: ${ccEmails.join(', ')}`);
+        return ccEmails;
+    } catch (err) {
+        Logger.log('Error fetching CC recipients: ' + err);
+        return [];
+    }
 }

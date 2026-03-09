@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+    @page { size: A4; margin: 0; }
+
+    body {
+        font-family: "Times New Roman", serif;
+        margin: 0;
+        padding: 25px;
+        background: #fff;
+    }
+
+    .receipt-container {
+        border: 2px solid #000;
+        border-radius: 35px;
+        padding: 25px 30px;
+        max-width: 800px;
+        margin: auto;
+        position: relative;
+    }
+
+    /* HEADER */
+    .header {
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .logo-section {
+        width: 140px;
+        text-align: center;
+    }
+
+    .logo-img {
+        width: 110px;
+    }
+
+    .header-center {
+        flex: 1;
+        text-align: center;
+    }
+
+    .org-name {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .registration-info {
+        font-size: 13px;
+    }
+
+    .registration-subdetails {
+        font-size: 13px;
+        margin-top: 3px;
+    }
+
+    .subtext {
+        margin-top: 10px;
+        font-style: italic;
+        font-weight: bold;
+        text-decoration: underline;
+    }
+
+    /* RECEIPT NUMBER */
+    .receipt-number {
+        position: absolute;
+        right: 30px;
+        top: 15px;
+        font-size: 20px;
+        font-weight: bold;
+        color: red;
+    }
+
+    /* RECEIPT TITLE BOX */
+    .receipt-box {
+        border: 2px solid #000;
+        border-radius: 12px;
+        text-align: center;
+        padding: 10px;
+        margin: 20px 0 10px;
+    }
+
+    .receipt-title {
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    .receipt-subtitle {
+        font-size: 12px;
+    }
+
+    .date-row {
+        text-align: right;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+
+    /* SECTION HEADINGS */
+    .section-title {
+        font-weight: bold;
+        margin: 12px 0 6px;
+        font-size: 15px;
+    }
+
+    /* TWO COLUMN LAYOUT */
+    .main-content {
+        display: flex;
+        gap: 30px;
+        margin-top: 10px;
+    }
+
+    .left-column,
+    .right-column {
+        flex: 1;
+        font-size: 14px;
+    }
+
+    /* CHECKBOX */
+    .checkbox-item {
+        margin: 5px 0;
+    }
+
+    .checkbox {
+        display: inline-block;
+        width: 13px;
+        height: 13px;
+        border: 1px solid #000;
+        margin-right: 6px;
+        vertical-align: middle;
+    }
+
+    .checkbox.checked {
+        background: #000;
+        position: relative;
+    }
+
+    .checkbox.checked::after {
+        content: "✓";
+        color: #fff;
+        font-size: 11px;
+        position: absolute;
+        left: 1px;
+        top: -2px;
+    }
+
+    /* DONOR DETAILS */
+    .detail-row {
+        margin: 8px 0;
+    }
+
+    .detail-label {
+        font-weight: bold;
+    }
+
+    /* AMOUNT BOX */
+    .amount-section {
+        border: 2px solid #000;
+        margin: 20px 0;
+        padding: 18px;
+        position: relative;
+        text-align: center;
+    }
+
+    .rupee-symbol {
+        position: absolute;
+        left: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 40px;
+        color: goldenrod;
+        font-weight: bold;
+    }
+
+    .amount-value {
+        font-size: 34px;
+        font-weight: bold;
+    }
+
+    /* PAYMENT */
+    .payment-mode {
+        font-size: 14px;
+        margin-top: 10px;
+    }
+
+    /* DECLARATION */
+    .declaration-section {
+        margin-top: 15px;
+        font-size: 13px;
+        text-align: justify;
+    }
+
+    /* SIGNATURE */
+    .signature-section {
+        margin-top: 40px;
+        text-align: right;
+    }
+
+    .org-label {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .stamp-and-sign {
+        position: relative;
+        height: 120px;
+    }
+
+    .sign-img {
+        /* position: absolute;
+        top: 0;
+        right: 30px; */
+        width: 110px;
+    }
+
+    .stamp-img {
+        /* position: absolute;
+        bottom: ;
+        right: 0; */
+        width: 120px;
+    }
+
+    .authorized-text {
+        margin-top: 90px;
+        text-decoration: underline;
+        font-size: 14px;
+    }
+
+</style>
+</head>
+
+<body>
+<div class="receipt-container">
+
+    <div class="receipt-number">${receiptNumber}</div>
+
+    <div class="header">
+        <div class="logo-section">
+            <img src="${logoBase64}" class="logo-img" />
+        </div>
+
+        <div class="header-center">
+            <div class="org-name">Kings Equestrian Foundation</div>
+            <div class="registration-info">
+                Registered u/s 80G of Income-tax Act Rg no:AAJCK7191GE20231, 1961, PAN: AAJCK7191G
+            </div>
+            <div class="registration-subdetails">
+                K202, Tower-6, Jacaranda Block, Devarabisanahalli, Bellandur S.O, Bengaluru – 560103 Karnataka, India
+                <br>
+                kingsequestrianfoundation@gmail.com, kingsequestrianfoundation.com
+            </div>
+            <div class="subtext">
+                We gratefully acknowledge your generous contribution in support of our programmes promoting education,
+                well-being, and personal development through sport and experiential learning.
+            </div>
+        </div>
+    </div>
+
+    <div class="receipt-box">
+        <div class="receipt-title">Receipt</div>
+        <div class="receipt-subtitle">
+            This receipt is issued in compliance with Rule 18AB and Form 10BD requirements
+        </div>
+    </div>
+
+    <div class="date-row">
+        <strong>Date:</strong> ${currentDate}
+    </div>
+
+    <div class="main-content">
+        <div class="left-column">
+            <div class="section-title">Donor Category (✓ Tick Applicable)</div>
+            <div class="checkbox-item">
+                <span class="checkbox checked"></span> Resident Indian Donor
+            </div>
+            <div class="checkbox-item">
+                <span class="checkbox"></span> Non-Resident Indian (NRI)
+            </div>
+        </div>
+
+        <div class="right-column">
+            <div class="section-title">Donor Details</div>
+            <div class="detail-row"><span class="detail-label">Name of Donor:</span> ${donorName}</div>
+            <div class="detail-row"><span class="detail-label">PAN / Aadhaar:</span> ${pan}</div>
+            <div class="detail-row"><span class="detail-label">Amount in Words:</span> ${amountInWords}</div>
+        </div>
+    </div>
+
+    <div class="amount-section">
+        <span class="rupee-symbol">₹</span>
+        <div class="amount-value">${amount.toLocaleString('en-IN')}</div>
+    </div>
+
+    <div class="payment-mode">
+        <strong>Mode of Payment:</strong> Cheque / DD / NEFT / RTGS / UPI (Cash not eligible u/s 80G)<br><br>
+        ${transactionRef && transactionRef !== 'N/A' ? `Transaction Reference No.: <strong>${transactionRef}</strong><br><br>` : ''}
+        <strong>Amount in Words:</strong> ${amountInWords}
+    </div>
+
+    <div class="declaration-section">
+        Certified that the above donation is received by trust for charitable purposes only.
+        This donation is eligible for deduction under Section 80G of the Income Tax Act, 1961.
+        This receipt will be reported in Form 10BD and Form 10BE will be issued to the donor.
+    </div>
+
+    <div class="signature-section">
+        <div class="org-label">For Kings Equestrian Foundation</div>
+        <div class="tamp-and-signs">
+            <img src="${signBase64}" class="sign-img" />
+            <img src="${stampBase64}" class="stamp-img" />
+            <div class="authorized-text">Authorized Signatory</div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
