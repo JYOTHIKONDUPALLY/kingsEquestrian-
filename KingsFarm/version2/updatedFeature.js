@@ -90,8 +90,8 @@ function createBookingCalendarEvent(bookingData) {
             {
                 description  : description,
                 location     : 'Kings Equestrian Foundation, Karnataka, India',
-                guests       : bookingData.email,   // customer added as guest
-                sendInvites  : true                 // sends calendar invite email
+                guests       : bookingData.email,   // customer added as guest (can see event)
+                sendInvites  : false                // NO invite email — calendar handles reminders only
             }
         );
 
@@ -329,9 +329,42 @@ function getAttendanceAppHtml() {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="KE Attendance">
+<meta name="application-name" content="KE Attendance">
 <meta name="theme-color" content="#1f4e3d">
+<meta name="msapplication-TileColor" content="#1f4e3d">
+<meta name="msapplication-TileImage" content="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg">
+<!-- iOS home screen icon -->
+<link rel="apple-touch-icon" href="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg">
+<link rel="apple-touch-icon" sizes="152x152" href="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg">
+<link rel="apple-touch-icon" sizes="167x167" href="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg">
+<link rel="apple-touch-icon" sizes="180x180" href="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg">
+<!-- Android / Chrome home screen icon via inline manifest blob -->
+<script>
+(function(){
+  const manifest = {
+    name: "KE Attendance",
+    short_name: "KE Attendance",
+    description: "Kings Equestrian Foundation — Staff Attendance",
+    start_url: window.location.href,
+    display: "standalone",
+    background_color: "#1f4e3d",
+    theme_color: "#1f4e3d",
+    orientation: "portrait",
+    icons: [
+      { src: "https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg", sizes: "192x192", type: "image/jpeg", purpose: "any maskable" },
+      { src: "https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg", sizes: "512x512", type: "image/jpeg", purpose: "any maskable" }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const link = document.createElement('link');
+  link.rel   = 'manifest';
+  link.href  = url;
+  document.head.appendChild(link);
+})();
+</script>
 <title>KE Attendance</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -939,7 +972,7 @@ function setupNewFeaturesTriggers() {
     } catch (err) {
         ui.alert('Error setting up triggers: ' + err.message);
     }
-    }
+}
 
 /**
  * Manual test — call from editor to preview today's summary without emailing.
