@@ -166,7 +166,12 @@ function getCCRecipients(mailType) {
 function onBookingFormSubmit(e) {
     try {
         const sheet = e.range.getSheet();
+        if (sheet.getName() !== CONFIG.SHEETS.BOOKING_FORM) {
+            Logger.log('onBookingFormSubmit: Skipping — wrong sheet: ' + sheet.getName());
+            return;
+        }
         const row = e.range.getRow();
+        
 
         const name = sheet.getRange(row, CONFIG.BOOKING_COLS.NAME + 1).getValue();
         const email = sheet.getRange(row, CONFIG.BOOKING_COLS.EMAIL_ID + 1).getValue();
@@ -212,6 +217,10 @@ function onBookingFormSubmit(e) {
 function onPaymentFormSubmit(e) {
     try {
         const sheet = e.range.getSheet();
+         if (sheet.getName() !== CONFIG.SHEETS.PAYMENT_FORM) {
+            Logger.log('onPaymentFormSubmit: Skipping — wrong sheet: ' + sheet.getName());
+            return;
+        }
         const row = e.range.getRow();
 
         Logger.log(`Payment form submitted at row ${row}`);
@@ -663,9 +672,9 @@ function generate80GReceipt(riderName, pan, amount, transactionRef, receiptNumbe
     Logger.log('Converting logo to base64...');
     const logoBase64 = getImageFromUrlAsBase64('https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg');
     Logger.log('Converting stamp to base64...');
-    const stampBase64 = getImageAsBase64('1kkDoebRZYYJDW76jYNZT1rWX65_DjSMs');
+    const stampBase64 = getImageAsBase64('1fQVqA1ABWCaTJs4uJVxiNqIGhl5iWugJ');
     Logger.log('Converting signature to base64...');
-    const signBase64 = getImageAsBase64('1z8rGx3HkgyBb-nqIXIT-_BgY8cqiQDRR');
+    const signBase64 = getImageAsBase64('1CI6H0JgysxanA0RimUwu7QwSSRospSwc');
 
     const htmlContent = createReceiptHTML(riderName, pan, amount, transactionRef, receiptNumber, logoBase64, stampBase64, signBase64);
 
@@ -718,7 +727,7 @@ function createReceiptHTML(donorName, pan, amount, transactionRef, receiptNumber
     .amount-value { font-size: 34px; font-weight: bold; }
     .payment-mode { font-size: 14px; margin-top: 10px; }
     .declaration-section { margin-top: 15px; font-size: 13px; text-align: justify; }
-    .signature-section { margin-top: 40px; text-align: right; }
+    .signature-section { margin-top: 36px; text-align: right; }
     .org-label { font-weight: bold; margin-bottom: 5px; }
     .stamp-and-sign { position: relative; height: 120px; }
     .sign-img { width: 110px; }
@@ -946,7 +955,7 @@ function sendReceiptForRow(rowIndex) {
         // Create calendar event
         if (preferredDate && preferredTimeSlots) {
             try {
-                const calendarEventId = createCalendarEvent({
+                const calendarEventId = createBookingCalendarEvent({
                     name: riderName,
                     email: email,
                     phone: phone,
@@ -1399,7 +1408,11 @@ function onOpen() {
         .addItem('🧾 Send Payment Receipt', 'SendPaymentReceipt')
         .addSeparator()
         .addItem('⚙️ Setup Triggers', 'setupTriggers')
-        .addToUi();
+.addSeparator()
+.addItem('📅 Send Daily Summary Now', 'testSendDailySummaryNow')
+.addItem('🧪 Test Summary (Dry Run)', 'testDailySummaryDryRun')
+.addItem('⚙️ Setup New Feature Triggers', 'setupNewFeaturesTriggers')
+.addToUi();
 }
 
 function setupTriggers() {

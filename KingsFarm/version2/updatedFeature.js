@@ -1,17 +1,9 @@
 // ============================================================
-// KINGS EQUESTRIAN - EXTENDED FEATURES MODULE
-// File: KingsEquestrian_NewFeatures.gs
 //
 // Features:
 //   1. Calendar event creation after booking (with guest + reminders)
 //   2. Daily Operations Attendance Web App (mobile-friendly PWA)
 //   3. Daily Admin Summary Email (PDF + Drive storage)
-//
-// HOW TO USE:
-//   - Add this file as a new script file in your Apps Script project
-//   - The main CONFIG object is shared from your existing Code.gs file
-//   - Run setupNewFeaturesTriggers() ONCE to register all time-based triggers
-//   - Run deployAttendanceApp() to get the Web App URL for mobile icon
 // ============================================================
 
 
@@ -303,6 +295,13 @@ function saveAttendance(rowIndex, status, note) {
             attCell.setBackground('#ffffff').setFontColor('#333333').setFontWeight('normal');
         }
 
+        // ── NEW: Send acknowledgment email when marked Present ──────
+        if (status === 'Present') {
+            const rowData = bookingSheet.getRange(rowIndex, 1, 1, bookingSheet.getLastColumn()).getValues()[0];
+            sendAttendanceAcknowledgmentEmail(rowData);
+        }
+        // ────────────────────────────────────────────────────────────
+
         // Write notes
         if (note !== undefined && note !== null) {
             bookingSheet.getRange(rowIndex, notesColIndex + 1).setValue(note);
@@ -521,7 +520,7 @@ function renderBookings(data) {
     <div class="card \${attClass}" id="card-\${idx}">
       <div class="card-top">
         <div>
-          <div class="name">🧑 \${b.name} \${b.participants > 1 ? '(×'+b.participants+')' : ''}</div>
+          <div class="name">🧑 \${b.name} \${b.participants > 1 ? '( 👥  ×'+b.participants+')' : ''}</div>
           <div class="time-slot">🕐 \${b.timeSlot || 'Time TBD'}</div>
           <div class="service" title="\${b.services}">\${b.services}</div>
         </div>
@@ -1019,4 +1018,177 @@ function addExtendedMenuItems(menu) {
         .addItem('📅 Send Daily Summary Now',    'testSendDailySummaryNow')
         .addItem('🧪 Test Summary (Dry Run)',     'testDailySummaryDryRun')
         .addItem('⚙️  Setup New Features Triggers', 'setupNewFeaturesTriggers');
+}
+
+
+/**
+ * Sends a warm acknowledgment email to the customer when their
+ * attendance is marked as "Present" by staff.
+ *
+ * @param {Array} rowData  - Full row values array from the Booking sheet
+ */
+function sendAttendanceAcknowledgmentEmail(rowData) {
+    try {
+        const customerEmail = String(rowData[CONFIG.BOOKING_COLS.EMAIL] || '').trim();
+        if (!customerEmail || !customerEmail.includes('@')) {
+            Logger.log('Attendance email skipped — no valid email for this booking.');
+            return;
+        }
+ 
+        const customerName  = String(rowData[CONFIG.BOOKING_COLS.NAME]                  || 'Valued Guest').trim();
+        const reference     = String(rowData[CONFIG.BOOKING_COLS.REFERENCE]              || '').trim();
+        const services      = String(rowData[CONFIG.BOOKING_COLS.OUR_SERVICES]           || 'our session').trim();
+        const timeSlot      = String(rowData[CONFIG.BOOKING_COLS.PREFERRED_TIME_SLOT]    || '').trim();
+        const participants  = rowData[CONFIG.BOOKING_COLS.NUMBER_OF_PARTICIPANTS] || 1;
+ 
+        const tz            = Session.getScriptTimeZone();
+        const todayLabel    = Utilities.formatDate(new Date(), tz, 'EEEE, dd MMM yyyy');
+        const firstName     = customerName.split(' ')[0];
+ 
+        const subject = `🐴 Welcome to Kings Equestrian — Attendance Confirmed! (${reference})`;
+ 
+        const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="margin:0;padding:0;background:#f4f6f4;font-family:'Segoe UI',Arial,sans-serif;color:#333">
+<div style="max-width:600px;margin:24px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.08)">
+ 
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:28px 30px;text-align:center">
+    <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg"
+         style="width:72px;height:72px;border-radius:50%;border:3px solid rgba(255,255,255,.4);display:block;margin:0 auto 12px"
+         alt="Kings Equestrian">
+    <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700">Welcome, ${firstName}! 🐴</h1>
+    <p style="margin:8px 0 0;color:rgba(255,255,255,.88);font-size:14px">Your attendance has been confirmed</p>
+  </div>
+ 
+  <!-- Body -->
+  <div style="padding:30px">
+ 
+    <!-- Confirmation banner -->
+    <div style="background:#d4edda;border-left:4px solid #28a745;border-radius:6px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;gap:14px">
+      <span style="font-size:28px">✅</span>
+      <div>
+        <div style="font-weight:700;color:#155724;font-size:15px">Attendance Marked — Present</div>
+        <div style="color:#1e7e34;font-size:13px;margin-top:2px">${todayLabel}</div>
+      </div>
+    </div>
+ 
+    <p style="font-size:15px;line-height:1.7;margin:0 0 20px">
+      Hi <strong>${customerName}</strong>,<br><br>
+      We're delighted to have you with us today at <strong>Kings Equestrian Foundation</strong>!
+      Our staff has recorded your arrival and your session is all set to begin.
+    </p>
+ 
+    <!-- Booking details card -->
+    <div style="background:#f8faf8;border:1px solid #e0ebe0;border-radius:8px;padding:18px 20px;margin-bottom:24px">
+      <h3 style="margin:0 0 14px;color:#1f4e3d;font-size:15px;font-weight:700">📋 Your Booking Details</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <tr>
+          <td style="padding:6px 0;color:#666;width:38%">Reference</td>
+          <td style="padding:6px 0;font-weight:600;color:#1f4e3d">${reference}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#666">Service</td>
+          <td style="padding:6px 0;font-weight:600">${services}</td>
+        </tr>
+        ${timeSlot ? `
+        <tr>
+          <td style="padding:6px 0;color:#666">Time Slot</td>
+          <td style="padding:6px 0;font-weight:600">${timeSlot}</td>
+        </tr>` : ''}
+        ${participants > 1 ? `
+        <tr>
+          <td style="padding:6px 0;color:#666">Participants</td>
+          <td style="padding:6px 0;font-weight:600">${participants} people</td>
+        </tr>` : ''}
+        <tr>
+          <td style="padding:6px 0;color:#666">Date</td>
+          <td style="padding:6px 0;font-weight:600">${todayLabel}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#666">Status</td>
+          <td style="padding:6px 0">
+            <span style="background:#d4edda;color:#155724;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">✅ Present</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+ 
+    <!-- Tips for today -->
+    <div style="background:#fff8e6;border-left:4px solid #f0a500;border-radius:6px;padding:16px 20px;margin-bottom:24px">
+      <h4 style="margin:0 0 10px;color:#7a5000;font-size:14px;font-weight:700">🌟 Tips for Today</h4>
+      <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.9;color:#555">
+        <li>Listen carefully to your instructor's guidance at all times</li>
+        <li>Stay calm and gentle around the horses — they respond to your energy</li>
+        <li>Wear your provided safety helmet for the entire session</li>
+        <li>Stay hydrated — water is available at the stables</li>
+        <li>Feel free to ask our staff any questions — we're here to help!</li>
+      </ul>
+    </div>
+ 
+    <p style="font-size:14px;line-height:1.7;color:#555;margin:0 0 20px">
+      We hope you have a wonderful experience today. If you need any assistance during your visit,
+      please don't hesitate to approach our staff on the premises.
+    </p>
+ 
+    <!-- CTA -->
+    <div style="text-align:center;margin:24px 0">
+      <a href="mailto:info@kingsequestrian.com"
+         style="display:inline-block;background:#1f4e3d;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px">
+        📧 Contact Us
+      </a>
+    </div>
+ 
+  </div>
+ 
+  <!-- Footer -->
+  <div style="background:#1f4e3d;color:#fff;padding:20px 30px;text-align:center;font-size:12px;line-height:1.8">
+    <strong style="font-size:14px">Kings Equestrian Foundation</strong><br>
+    Karnataka, India<br>
+    📞 +91-9980895533 &nbsp;|&nbsp; ✉️ info@kingsequestrian.com<br>
+    <span style="opacity:.6;font-size:11px;margin-top:6px;display:block">
+      This is an automated message from the Kings Equestrian booking system.
+    </span>
+  </div>
+ 
+</div>
+</body>
+</html>`;
+ 
+        // Plain-text fallback
+        const plainBody = [
+            `Hi ${customerName},`,
+            '',
+            `Your attendance has been confirmed at Kings Equestrian Foundation for today (${todayLabel}).`,
+            '',
+            `Booking Reference : ${reference}`,
+            `Service           : ${services}`,
+            timeSlot ? `Time Slot         : ${timeSlot}` : '',
+            participants > 1 ? `Participants      : ${participants}` : '',
+            '',
+            'We hope you have a wonderful experience today!',
+            '',
+            'Kings Equestrian Foundation',
+            'Karnataka, India | +91-9980895533 | info@kingsequestrian.com'
+        ].filter(l => l !== null).join('\n');
+ 
+        MailApp.sendEmail({
+            to       : customerEmail,
+            subject  : subject,
+            body     : plainBody,
+            htmlBody : htmlBody,
+            name     : 'Kings Equestrian Foundation'
+        });
+ 
+        Logger.log(`Attendance acknowledgment sent to: ${customerEmail} (${reference})`);
+ 
+    } catch (err) {
+        // Non-fatal — attendance is already saved. Just log it.
+        Logger.log('sendAttendanceAcknowledgmentEmail error: ' + err);
+    }
 }
