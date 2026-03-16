@@ -43,11 +43,12 @@ const CONFIG = {
         PAYMENT_DATE: 5,
         TRANSACTION_REFERENCE_NUMBER: 6,
         PAN_AADHAAR: 7,
-        TRANSACTION_VERIFIED: 8,
-        RECEIPT_SENT: 9,
-        RECEIPT_SENT_TIMESTAMP: 10,
-        PAYMENT_RECEIPT_NO: 11,
-        PAYMENT_RECEIPT_DRIVER_LINK: 12
+        PHONE_NUMBER: 8,          // ← newly added column
+        TRANSACTION_VERIFIED: 9,
+        RECEIPT_SENT: 10,
+        RECEIPT_SENT_TIMESTAMP: 11,
+        PAYMENT_RECEIPT_NO: 12,
+        PAYMENT_RECEIPT_DRIVER_LINK: 13
     }
 };
 
@@ -161,6 +162,29 @@ function getCCRecipients(mailType) {
     }
 }
 
+// --------------- BOOKING LOOKUP BY PHONE (latest first) ---------------
+
+/**
+ * Finds the most recent booking row matching the given phone number.
+ * Iterates from the last data row upward so we always get the latest booking.
+ * Returns { rowIndex, row } or null if not found.
+ */
+function findLatestBookingByPhone(phoneNumber, bookingValues) {
+    const normalizedPhone = String(phoneNumber || '').trim().replace(/\D/g, '');
+    if (!normalizedPhone) return null;
+
+    // Iterate descending (skip header at index 0)
+    for (let j = bookingValues.length - 1; j >= 1; j--) {
+        const rowPhone = String(bookingValues[j][CONFIG.BOOKING_COLS.PHONE_NUMBER] || '')
+            .trim()
+            .replace(/\D/g, '');
+        if (rowPhone === normalizedPhone) {
+            return { rowIndex: j + 1, row: bookingValues[j] };
+        }
+    }
+    return null;
+}
+
 // --------------- MAIN FORM SUBMIT HANDLER ---------------
 
 function onBookingFormSubmit(e) {
@@ -171,7 +195,6 @@ function onBookingFormSubmit(e) {
             return;
         }
         const row = e.range.getRow();
-        
 
         const name = sheet.getRange(row, CONFIG.BOOKING_COLS.NAME + 1).getValue();
         const email = sheet.getRange(row, CONFIG.BOOKING_COLS.EMAIL_ID + 1).getValue();
@@ -217,7 +240,7 @@ function onBookingFormSubmit(e) {
 function onPaymentFormSubmit(e) {
     try {
         const sheet = e.range.getSheet();
-         if (sheet.getName() !== CONFIG.SHEETS.PAYMENT_FORM) {
+        if (sheet.getName() !== CONFIG.SHEETS.PAYMENT_FORM) {
             Logger.log('onPaymentFormSubmit: Skipping — wrong sheet: ' + sheet.getName());
             return;
         }
@@ -225,23 +248,24 @@ function onPaymentFormSubmit(e) {
 
         Logger.log(`Payment form submitted at row ${row}`);
 
-        const referenceNumber = sheet.getRange(row, CONFIG.PAYMENT_COLS.REGISTRATION_NO + 1).getValue();
+        // Primary lookup key is now phone number
+        const phoneNumber = sheet.getRange(row, CONFIG.PAYMENT_COLS.PHONE_NUMBER + 1).getValue();
         const amount = Number(sheet.getRange(row, CONFIG.PAYMENT_COLS.AMOUNT_PAID + 1).getValue());
         const paymentDate = sheet.getRange(row, CONFIG.PAYMENT_COLS.PAYMENT_DATE + 1).getValue();
         const timestamp = sheet.getRange(row, CONFIG.PAYMENT_COLS.TIMESTAMP + 1).getValue();
 
-        if (!referenceNumber) {
-            Logger.log('No registration number found in payment form submission');
+        if (!phoneNumber) {
+            Logger.log('No phone number found in payment form submission');
             return;
         }
 
-        Logger.log(`Processing payment for reference: ${referenceNumber}, amount: ${amount}`);
+        Logger.log(`Processing payment for phone: ${phoneNumber}, amount: ${amount}`);
 
         // Check if this is a duplicate submission
-        const duplicateInfo = findDuplicateReceipt(referenceNumber, amount, paymentDate, timestamp);
+        const duplicateInfo = findDuplicateReceipt(phoneNumber, amount, paymentDate, timestamp);
         
         if (duplicateInfo.isDuplicate) {
-            Logger.log(`Duplicate receipt detected for ${referenceNumber}. Resending existing receipt.`);
+            Logger.log(`Duplicate receipt detected for phone ${phoneNumber}. Resending existing receipt.`);
             
             sheet.getRange(row, CONFIG.PAYMENT_COLS.RECEIPT_SENT + 1)
                 .setValue('Duplicate - Resent')
@@ -272,7 +296,11 @@ function onPaymentFormSubmit(e) {
 
 // --------------- DUPLICATE DETECTION ---------------
 
-function findDuplicateReceipt(referenceNumber, amount, paymentDate, currentTimestamp) {
+/**
+ * Checks for a previous payment row with the same phone, amount, and payment date
+ * where a receipt has already been sent.
+ */
+function findDuplicateReceipt(phoneNumber, amount, paymentDate, currentTimestamp) {
     try {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const paymentSheet = ss.getSheetByName(CONFIG.SHEETS.PAYMENT_FORM);
@@ -284,19 +312,23 @@ function findDuplicateReceipt(referenceNumber, amount, paymentDate, currentTimes
         const data = paymentSheet.getDataRange().getValues();
         const normalizedDate = normalizeDate(paymentDate);
         const normalizedCurrentTimestamp = normalizeDate(currentTimestamp);
+        const normalizedPhone = String(phoneNumber || '').trim().replace(/\D/g, '');
         
         for (let i = 1; i < data.length; i++) {
-            const rowRef = String(data[i][CONFIG.PAYMENT_COLS.REGISTRATION_NO] || '').trim();
+            const rowPhone = String(data[i][CONFIG.PAYMENT_COLS.PHONE_NUMBER] || '')
+                .trim()
+                .replace(/\D/g, '');
             const rowAmount = Number(data[i][CONFIG.PAYMENT_COLS.AMOUNT_PAID]);
             const rowDate = data[i][CONFIG.PAYMENT_COLS.PAYMENT_DATE];
             const rowTimestamp = data[i][CONFIG.PAYMENT_COLS.TIMESTAMP];
             const rowReceiptSent = String(data[i][CONFIG.PAYMENT_COLS.RECEIPT_SENT] || '').trim();
             
+            // Skip the current row itself
             if (normalizeDate(rowTimestamp) === normalizedCurrentTimestamp) {
                 continue;
             }
             
-            if (rowRef === String(referenceNumber).trim() && 
+            if (rowPhone === normalizedPhone &&
                 rowAmount === amount &&
                 normalizeDate(rowDate) === normalizedDate &&
                 rowReceiptSent.toLowerCase() === 'yes') {
@@ -343,24 +375,20 @@ function resendExistingReceipt(currentRow, existingRow) {
         const existingDriveLink = existingData[CONFIG.PAYMENT_COLS.PAYMENT_RECEIPT_DRIVER_LINK];
         
         const currentData = paymentSheet.getRange(currentRow, 1, 1, paymentSheet.getLastColumn()).getValues()[0];
-        const referenceNumber = currentData[CONFIG.PAYMENT_COLS.REGISTRATION_NO];
+        const phoneNumber = String(currentData[CONFIG.PAYMENT_COLS.PHONE_NUMBER] || '').trim();
         const amount = Number(currentData[CONFIG.PAYMENT_COLS.AMOUNT_PAID]);
         const transactionId = currentData[CONFIG.PAYMENT_COLS.TRANSACTION_REFERENCE_NUMBER] || '';
         const pan = currentData[CONFIG.PAYMENT_COLS.PAN_AADHAAR] || '';
 
+        // Look up booking by phone (latest booking first)
         const bookingValues = bookingSheet.getDataRange().getValues();
-        let bookingMatch = null;
-        for (let j = 1; j < bookingValues.length; j++) {
-            if (String(bookingValues[j][CONFIG.BOOKING_COLS.REFERENCE] || '').trim() === String(referenceNumber || '').trim()) {
-                bookingMatch = { rowIndex: j + 1, row: bookingValues[j] };
-                break;
-            }
-        }
+        const bookingMatch = findLatestBookingByPhone(phoneNumber, bookingValues);
 
-        if (!bookingMatch) throw new Error(`Booking not found for reference ${referenceNumber}`);
+        if (!bookingMatch) throw new Error(`Booking not found for phone ${phoneNumber}`);
 
         const riderName = bookingMatch.row[CONFIG.BOOKING_COLS.NAME];
         const email = bookingMatch.row[CONFIG.BOOKING_COLS.EMAIL_ID];
+        const referenceNumber = bookingMatch.row[CONFIG.BOOKING_COLS.REFERENCE];
         const preferredDate = bookingMatch.row[CONFIG.BOOKING_COLS.PREFERRED_SERVICE_DATE];
         const preferredTimeSlots = bookingMatch.row[CONFIG.BOOKING_COLS.PREFERRED_TIME_SLOT];
 
@@ -420,21 +448,14 @@ function sendWelcomeEmail(data) {
 
     const pricingData = getPricingData();
 
-    // Google Forms returns a single cell with the selected option as-is.
-    // Service names themselves contain commas (e.g. "Photography (Brand promos , Model Shoots , Pre wedding Shoots)")
-    // so we CANNOT split by comma. Instead, match the raw value against every
-    // known key in the Pricing sheet — whichever keys appear in the raw string
-    // are the selected services.
     const rawServices = Array.isArray(data.services)
         ? data.services.join(', ')
         : String(data.services || '');
 
-    // Match each pricing key against the raw services string (case-insensitive)
     const serviceList = Object.keys(pricingData).filter(key =>
         rawServices.toLowerCase().includes(key.toLowerCase())
     );
 
-    // Attach PDF for each matched service
     serviceList.forEach(key => {
         const pricing = pricingData[key];
         if (pricing && pricing.docId) {
@@ -599,7 +620,6 @@ Karnataka, India
         name: 'Kings Equestrian Foundation'
     });
 
-    // Update BOOKING sheet email status
     if (data.sheet && data.row) {
         data.sheet.getRange(data.row, CONFIG.BOOKING_COLS.WELCOME_EMAIL_SENT + 1)
             .setValue('Yes')
@@ -786,7 +806,6 @@ function createReceiptHTML(donorName, pan, amount, transactionRef, receiptNumber
         <div class="stamp-and-sign">
             <img src="${signBase64}" class="sign-img" />
             <img src="${stampBase64}" class="stamp-img" />
-           
         </div>
     </div>
 </div>
@@ -811,24 +830,18 @@ function sendReceiptForRow(rowIndex) {
     const bookingValues = bookingSheet.getDataRange().getValues();
 
     let email = '';
-    let referenceNumber = '';
+    let phoneNumber = '';
 
     try {
         const row = paymentSheet.getRange(rowIndex, 1, 1, paymentSheet.getLastColumn()).getValues()[0];
-        referenceNumber = row[CONFIG.PAYMENT_COLS.REGISTRATION_NO];
+        phoneNumber = String(row[CONFIG.PAYMENT_COLS.PHONE_NUMBER] || '').trim();
 
-        if (!referenceNumber) throw new Error('Reference number missing');
+        if (!phoneNumber) throw new Error('Phone number missing in payment form');
 
-        // Find booking match
-        let bookingMatch = null;
-        for (let j = 1; j < bookingValues.length; j++) {
-            if (String(bookingValues[j][CONFIG.BOOKING_COLS.REFERENCE] || '').trim() === String(referenceNumber || '').trim()) {
-                bookingMatch = { rowIndex: j + 1, row: bookingValues[j] };
-                break;
-            }
-        }
+        // Find the most recent booking for this phone number
+        const bookingMatch = findLatestBookingByPhone(phoneNumber, bookingValues);
 
-        if (!bookingMatch) throw new Error(`Booking not found for reference ${referenceNumber}`);
+        if (!bookingMatch) throw new Error(`Booking not found for phone ${phoneNumber}`);
 
         const riderName = bookingMatch.row[CONFIG.BOOKING_COLS.NAME];
         email = bookingMatch.row[CONFIG.BOOKING_COLS.EMAIL_ID];
@@ -837,6 +850,7 @@ function sendReceiptForRow(rowIndex) {
         const participants = bookingMatch.row[CONFIG.BOOKING_COLS.NUMBER_OF_PARTICIPANTS] || 1;
         const preferredDate = bookingMatch.row[CONFIG.BOOKING_COLS.PREFERRED_SERVICE_DATE];
         const preferredTimeSlots = bookingMatch.row[CONFIG.BOOKING_COLS.PREFERRED_TIME_SLOT];
+        const referenceNumber = bookingMatch.row[CONFIG.BOOKING_COLS.REFERENCE];
 
         if (!email) throw new Error('Email not found in booking');
 
@@ -851,7 +865,7 @@ function sendReceiptForRow(rowIndex) {
             throw new Error('Transaction not verified. Please verify first.');
         }
 
-        // Generate receipt
+        // Generate receipt using the booking's reference number
         const receiptNumber = generateReceiptNumber(referenceNumber);
         const receiptPDF = generate80GReceipt(riderName, pan, amount, transactionId, receiptNumber);
 
@@ -973,11 +987,11 @@ function sendReceiptForRow(rowIndex) {
             }
         }
 
-        Logger.log(`Receipt sent to: ${email} for ${referenceNumber} with CC to: ${ccEmails.join(', ')}`);
+        Logger.log(`Receipt sent to: ${email} for phone ${phoneNumber} (ref: ${referenceNumber}) with CC to: ${ccEmails.join(', ')}`);
         return true;
 
     } catch (error) {
-        Logger.log(`Receipt failed for row ${rowIndex} (Ref: ${referenceNumber || 'N/A'}, Email: ${email || 'N/A'}): ${error.message}`);
+        Logger.log(`Receipt failed for row ${rowIndex} (Phone: ${phoneNumber || 'N/A'}, Email: ${email || 'N/A'}): ${error.message}`);
         throw error;
     }
 }
@@ -1408,11 +1422,11 @@ function onOpen() {
         .addItem('🧾 Send Payment Receipt', 'SendPaymentReceipt')
         .addSeparator()
         .addItem('⚙️ Setup Triggers', 'setupTriggers')
-.addSeparator()
-.addItem('📅 Send Daily Summary Now', 'testSendDailySummaryNow')
-.addItem('🧪 Test Summary (Dry Run)', 'testDailySummaryDryRun')
-.addItem('⚙️ Setup New Feature Triggers', 'setupNewFeaturesTriggers')
-.addToUi();
+        .addSeparator()
+        .addItem('📅 Send Daily Summary Now', 'testSendDailySummaryNow')
+        .addItem('🧪 Test Summary (Dry Run)', 'testDailySummaryDryRun')
+        .addItem('⚙️ Setup New Feature Triggers', 'setupNewFeaturesTriggers')
+        .addToUi();
 }
 
 function setupTriggers() {
