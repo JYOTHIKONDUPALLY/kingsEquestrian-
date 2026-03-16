@@ -8,7 +8,7 @@ const CONFIG = {
     UPI_ID: "vyapar.176548151976@hdfcbank",
     BUSINESS_NAME: "KingsEquestrian",
     PAYMENT_FORM_LINK: "https://forms.gle/WxskpjCcDQWkA7L57",
-    EMAIL_TEMPLATE_DOC_ID: "1bUTpk9QCR4n1uUmMuoSRRcflTShG3jawuhemE28aTio",
+    EMAIL_TEMPLATE_DOC_ID: "d/17t23GLXC8g8MkdCDx4BmMswuzrdYM_x0",
     TERMS_CONDITIONS_DOC_ID: "1QbJHA5keyTLvgw-5stTY74i92BQ89TYya-NvtJ4YGx4",
     ADVANCE_BOOKING_AMOUNT: 1000,
     webAppUrl: "https://script.google.com/macros/s/AKfycbxGNi137N_vvd6kFWe0CL2clALwKLp7QKsLgiWUd9fGcvYhTlaeQIy15n2vai_1g-PIig/exec",
@@ -65,6 +65,16 @@ function generateReference() {
 
 function createUPILink(amount, reference) {
     return `upi://pay?pa=${CONFIG.UPI_ID}&pn=${encodeURIComponent(CONFIG.BUSINESS_NAME)}&am=${amount}&cu=INR&tn=${encodeURIComponent(reference)}`;
+}
+function getPdfTemplate() {
+  try {
+    const file = DriveApp.getFileById(CONFIG.EMAIL_TEMPLATE_PDF_ID);
+    const blob = file.getBlob();
+    return blob;
+  } catch (error) {
+    Logger.log('Error fetching PDF template: ' + error);
+    return null;
+  }
 }
 
 function createQRCode(link) {
@@ -435,6 +445,9 @@ function sendWelcomeEmail(data) {
 
     const termsPDF = getTermsAndConditionsPDF();
     if (termsPDF) attachments.push(termsPDF);
+
+    const detailsPdf = getPdfTemplate();
+    if (detailsPdf) attachments.push(detailsPdf);
 
     try {
         const consentPDF = generateConsentPDF(data.name, data.email, data.phone, data.bookingDate);
