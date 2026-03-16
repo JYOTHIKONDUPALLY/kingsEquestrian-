@@ -1029,7 +1029,7 @@ function addExtendedMenuItems(menu) {
  */
 function sendAttendanceAcknowledgmentEmail(rowData) {
     try {
-        const customerEmail = String(rowData[CONFIG.BOOKING_COLS.EMAIL] || '').trim();
+        const customerEmail = String(rowData[CONFIG.BOOKING_COLS.EMAIL_ID] || '').trim();
         if (!customerEmail || !customerEmail.includes('@')) {
             Logger.log('Attendance email skipped — no valid email for this booking.');
             return;
