@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="My Rides">
+<meta name="theme-color" content="#04342C">
+<link rel="apple-touch-icon" href="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg">
+<title>My Rides · Kings Equestrian</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Jost:wght@300;400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g9:#04342C;--g8:#085041;--g7:#0F6E56;--g6:#1D9E75;--g4:#5DCAA5;--g2:#9FE1CB;--g1:#C8EFE3;--g05:#E1F5EE;
+  --gold:#BA7517;--gold-l:#FEF4E2;
+  --surface:#F3F5F2;--white:#FFFFFF;
+  --border:rgba(15,110,86,.13);--border-md:rgba(15,110,86,.24);
+  --r:12px;--r-sm:8px;
+}
+html,body{min-height:100%;-webkit-font-smoothing:antialiased}
+body{font-family:'Jost',sans-serif;background:var(--surface);color:#1a2e1e}
+
+/* ── LOGIN ── */
+#login-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.25rem 3rem;background:var(--white)}
+.brand-crest{width:80px;height:80px;border-radius:50%;overflow:hidden;margin-bottom:1.25rem;border:2px solid rgba(93,202,165,.25)}
+.brand-crest img{width:100%;height:100%;object-fit:cover}
+.login-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--g9);text-align:center;line-height:1.1;margin-bottom:4px}
+.login-sub{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#7a9a7e;text-align:center;margin-bottom:2rem}
+.login-card{width:100%;max-width:360px;background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;box-shadow:0 4px 20px rgba(4,52,44,.08)}
+.fl{display:block;font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:#5a7a61;margin-bottom:6px}
+.fi{width:100%;padding:10px 12px;border:1px solid var(--border-md);border-radius:var(--r-sm);font-family:'Jost',sans-serif;font-size:14px;color:var(--g9);background:var(--surface);outline:none;-webkit-appearance:none;transition:border-color .15s,box-shadow .15s}
+.fi:focus{border-color:var(--g6);box-shadow:0 0 0 3px rgba(29,158,117,.12);background:var(--white)}
+.fi::placeholder{color:#aac8b0}
+.btn-primary{width:100%;margin-top:1rem;padding:12px;border-radius:var(--r-sm);background:var(--g9);color:var(--g1);border:none;font-family:'Jost',sans-serif;font-size:14px;font-weight:500;cursor:pointer;letter-spacing:.03em}
+.btn-primary:active{opacity:.85}
+.login-note{font-size:11px;color:#aac8b0;text-align:center;margin-top:.875rem;line-height:1.6}
+.login-err{font-size:12px;color:#c62828;text-align:center;margin-top:.75rem;display:none;padding:8px;background:#fdecea;border-radius:6px}
+
+/* ── DASHBOARD ── */
+#dashboard{display:none;min-height:100vh}
+
+/* Header */
+.dh{background:var(--g9);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:10}
+.dh-l{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--g6),var(--g4));display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:700;color:#fff;flex-shrink:0;border:1.5px solid rgba(93,202,165,.3)}
+.dh-name{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:var(--g1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dh-phone{font-size:10px;color:var(--g4);letter-spacing:.04em}
+.btn-lo{background:none;border:1px solid rgba(93,202,165,.25);color:var(--g4);padding:4px 10px;border-radius:14px;font-size:10px;font-family:'Jost',sans-serif;cursor:pointer;flex-shrink:0}
+
+/* Program strip */
+.prog-strip{background:var(--g8);padding:10px 16px;border-bottom:1px solid rgba(93,202,165,.1);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.prog-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--g1)}
+.prog-sub{font-size:10px;color:var(--g4);margin-top:2px}
+.chip-active{display:inline-flex;align-items:center;gap:4px;background:rgba(29,158,117,.28);color:var(--g2);font-size:10px;font-weight:500;padding:3px 9px;border-radius:12px}
+.cdot{width:5px;height:5px;border-radius:50%;background:var(--g4);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Stats grid */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);background:var(--white);border-bottom:1px solid var(--border)}
+.stt{padding:10px 4px;text-align:center;border-right:1px solid var(--border)}
+.stt:last-child{border-right:none}
+.sn{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;line-height:1;color:#1a2e1e}
+.sn.g{color:var(--g7)}.sn.amber{color:var(--gold)}
+.sl{font-size:9px;color:#7a9a7e;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+
+/* Progress */
+.psec{background:var(--white);padding:8px 16px 10px;border-bottom:1px solid var(--border)}
+.phdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.plbl{font-size:11px;color:#5a7a61}
+.ppct{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:var(--g7)}
+.ptrack{height:4px;background:var(--g05);border-radius:3px;overflow:hidden}
+.pfill{height:100%;background:linear-gradient(90deg,var(--g8),var(--g6),var(--g4));border-radius:3px;transition:width .8s ease}
+
+/* Balance row */
+.bal-row{display:grid;grid-template-columns:1fr 1fr;background:var(--white);border-bottom:1px solid var(--border)}
+.bal-cell{padding:9px 14px;display:flex;align-items:center;justify-content:space-between}
+.bal-cell:first-child{border-right:1px solid var(--border)}
+.bal-lbl{font-size:9px;color:#7a9a7e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.bal-amt{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;line-height:1}
+.bal-paid{color:var(--g7)}.bal-due{color:var(--gold)}
+
+/* Tabs */
+.tabs{display:flex;background:var(--white);border-bottom:1px solid var(--border);position:sticky;top:60px;z-index:9}
+.tb{flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;font-family:'Jost',sans-serif;font-size:12px;color:#7a9a7e;cursor:pointer;transition:all .15s}
+.tb.on{color:var(--g7);border-bottom-color:var(--g7);font-weight:500}
+
+/* Tab content */
+.tc{display:none;padding:12px 14px}.tc.on{display:block}
+.sh{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:#1a2e1e;margin-bottom:2px}
+.ss2{font-size:11px;color:#7a9a7e;margin-bottom:12px}
+
+/* Payment banner */
+.pay-banner{background:var(--gold-l);border:1px solid #f0c05a;border-radius:var(--r-sm);padding:10px 12px;margin-bottom:12px;font-size:12px;color:#7a5000}
+.pay-banner a{color:var(--gold);font-weight:600;text-decoration:none}
+
+/* Form elements */
+.fcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.fcard .fl{margin-top:10px}.fcard .fl:first-child{margin-top:0}
+.sel-wrap{position:relative}
+.sel-wrap::after{content:'';position:absolute;right:10px;top:50%;transform:translateY(-50%);border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #7a9a7e;pointer-events:none}
+.fi-ta{resize:vertical;min-height:52px;padding:8px 10px;line-height:1.5}
+.btn-g{width:100%;margin-top:10px;padding:10px;border-radius:var(--r-sm);background:var(--g7);color:#fff;border:none;font-family:'Jost',sans-serif;font-size:13px;font-weight:500;cursor:pointer}
+.btn-g:active{background:var(--g9)}
+.btn-outline{width:100%;margin-top:6px;padding:9px;border-radius:var(--r-sm);background:transparent;border:1px solid var(--g6);color:var(--g7);font-family:'Jost',sans-serif;font-size:12px;cursor:pointer}
+.result-msg{margin-top:10px;padding:10px 12px;border-radius:var(--r-sm);font-size:12px;font-weight:500;display:none}
+.result-ok{background:#d4edda;color:#155724;border:1px solid #9FE1CB}
+.result-err{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+
+/* Class rows */
+.cl-list{display:flex;flex-direction:column;gap:7px}
+.cr{display:flex;align-items:center;gap:10px;background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;cursor:pointer}
+.cr:active,.cr.sel{border-color:var(--g6);background:var(--g05)}
+.db{background:var(--g9);border-radius:6px;padding:6px 8px;text-align:center;flex-shrink:0;min-width:38px}
+.dd{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:var(--g2);line-height:1}
+.dm{font-size:9px;color:var(--g4);letter-spacing:.05em;text-transform:uppercase}
+.ci{flex:1;min-width:0}
+.cn{font-size:12px;font-weight:500;color:#1a2e1e}
+.ct2{font-size:11px;color:#7a9a7e;margin-top:1px}
+.cno{font-size:10px;color:var(--g6);font-weight:500;margin-top:2px}
+.badge{font-size:9px;font-weight:500;padding:3px 7px;border-radius:10px;flex-shrink:0}
+.b-sched{background:var(--g05);color:var(--g7);border:1px solid var(--g1)}
+.b-done{background:#f2f2f2;color:#888;border:1px solid #ddd}
+.b-resched{background:var(--gold-l);color:var(--gold);border:1px solid #fac775}
+.b-req{background:#e8f4fd;color:#1565c0;border:1px solid #bbdefb}
+
+/* One-time cards */
+.section-div{display:flex;align-items:center;gap:8px;margin:16px 0 12px;color:#aac8b0;font-size:10px;letter-spacing:.09em;text-transform:uppercase}
+.section-div::before,.section-div::after{content:'';flex:1;height:1px;background:var(--border)}
+.ot-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;margin-bottom:8px}
+.ot-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px}
+.ot-service{font-size:13px;font-weight:500;color:#1a2e1e}
+.ot-ref{font-size:10px;color:#aac8b0;margin-top:1px}
+.ot-date{font-size:11px;color:#5a7a61;margin-bottom:6px}
+.ot-btn{padding:6px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--g1);background:var(--g05);color:var(--g7);font-family:'Jost',sans-serif}
+.ot-btn:active{background:var(--g7);color:#fff}
+.mini-form{margin-top:10px;padding:12px;background:var(--surface);border-radius:var(--r-sm);border:1px solid var(--border);display:none}
+.mini-form.open{display:block}
+
+/* Pay badges */
+.b-paid{background:var(--g05);color:var(--g7);border:1px solid var(--g1)}
+.b-partial{background:#e8f4fd;color:#1565c0;border:1px solid #bbdefb}
+.b-pending{background:var(--gold-l);color:var(--gold);border:1px solid #fac775}
+
+/* Resched form panel */
+#resched-panel{display:none;margin-top:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+.from-lbl{font-size:12px;color:#5a7a61;margin-bottom:10px}
+.from-lbl strong{color:#1a2e1e}
+
+/* Empty / loading */
+.empty{text-align:center;padding:24px 10px;color:#aac8b0;font-size:12px;line-height:1.8}
+.loading-msg{text-align:center;padding:32px;color:var(--g7);font-size:13px}
+
+/* Toast */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--g9);color:var(--g2);font-size:12px;padding:9px 18px;border-radius:20px;opacity:0;transition:all .3s ease;pointer-events:none;white-space:nowrap;z-index:999;border:1px solid rgba(93,202,165,.2)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Footer */
+.pfooter{text-align:center;padding:14px;font-size:10px;color:#aac8b0;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="brand-crest">
+    <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" alt="Kings Equestrian">
+  </div>
+  <div class="login-title">My Rides</div>
+  <div class="login-sub">Kings Equestrian Foundation</div>
+  <div class="login-card">
+    <label class="fl" for="inp-phone">Registered Phone Number</label>
+    <input type="tel" class="fi" id="inp-phone" placeholder="10-digit number" maxlength="15" inputmode="numeric"
+           onkeydown="if(event.key==='Enter') doLogin()">
+    <button class="btn-primary" onclick="doLogin()">View My Rides</button>
+    <div class="login-err" id="login-err">No account found. Contact us at +91 99807 71166.</div>
+    <p class="login-note">No password required.<br>Enter your registered phone number.</p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="dh">
+    <div class="dh-l">
+      <div class="av" id="d-av">KE</div>
+      <div>
+        <div class="dh-name" id="d-name">Loading…</div>
+        <div class="dh-phone" id="d-phone"></div>
+      </div>
+    </div>
+    <button class="btn-lo" onclick="doLogout()">Sign out</button>
+  </div>
+  <div id="dash-body"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── globals ──────────────────────────────────────────────────
+var SD = null;          // student data from server
+var selReschedRow = 0;  // selected schedule row for reschedule
+var PAYMENT_LINK = '<?= paymentFormLink ?>';
+var LS_KEY_PHONE = 'KE_RIDER_PHONE';
+
+// ── login ────────────────────────────────────────────────────
+function doLogin() {
+  var phone = document.getElementById('inp-phone').value.trim();
+  if (!phone || phone.replace(/\D/g,'').length < 10) {
+    showErr('Please enter a valid 10-digit number.');
+    return;
+  }
+  var btn = document.querySelector('#login-screen .btn-primary');
+  btn.textContent = 'Looking up\u2026';
+  btn.disabled = true;
+  document.getElementById('login-err').style.display = 'none';
+
+  google.script.run
+    .withSuccessHandler(function(data) {
+      btn.textContent = 'View My Rides';
+      btn.disabled = false;
+      if (!data || !data.found) {
+        showErr('No account found for this number. Contact us at +91 99807 71166.');
+        return;
+      }
+      SD = data;
+      // Persist login so reload stays on dashboard
+      try { localStorage.setItem(LS_KEY_PHONE, String(phone).replace(/\D/g,'').slice(-10)); } catch(e) {}
+      renderDash();
+    })
+    .withFailureHandler(function(e) {
+      btn.textContent = 'View My Rides';
+      btn.disabled = false;
+      showErr('Something went wrong. Please try again.');
+    })
+    .getStudentData(phone);
+}
+
+function showErr(msg) {
+  var el = document.getElementById('login-err');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function doLogout() {
+  SD = null;
+  selReschedRow = 0;
+  try { localStorage.removeItem(LS_KEY_PHONE); } catch(e) {}
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('inp-phone').value = '';
+  document.getElementById('login-err').style.display = 'none';
+  window.scrollTo(0, 0);
+}
+
+// ── render dashboard ─────────────────────────────────────────
+function renderDash() {
+  var d = SD;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+
+  var initials = d.name.split(' ').map(function(w){ return (w[0]||''); }).join('').toUpperCase().slice(0,2) || 'KE';
+  document.getElementById('d-av').textContent   = initials;
+  document.getElementById('d-name').textContent = d.name;
+  document.getElementById('d-phone').textContent = d.phone;
+
+  var html = '';
+
+  if (d.riderType === 'regular' || d.riderType === 'both') {
+    html += buildRegularHeader(d.regular);
+    html += buildTabs();
+    html += '<div id="tc-schedule" class="tc on">' + buildScheduleContent(d) + '</div>';
+    html += '<div id="tc-book" class="tc">' + buildBookContent(d.regular) + '</div>';
+    html += '<div id="tc-reschedule" class="tc">' + buildReschedContent(d.regular) + '</div>';
+  } else {
+    // one-time only
+    html += '<div class="tc on" style="display:block;padding:14px">' + buildOneTimeContent(d.oneTimeBookings, false) + '</div>';
+  }
+
+  html += '<div class="pfooter">Kings Equestrian Foundation &middot; Karnataka &middot; +91 99807 71166</div>';
+  document.getElementById('dash-body').innerHTML = html;
+
+  // set min dates on all date inputs
+  var tmr = new Date();
+  tmr.setDate(tmr.getDate() + 1);
+  var minDate = tmr.toISOString().split('T')[0];
+  var dateInputs = document.querySelectorAll('input[type=date]');
+  for (var di = 0; di < dateInputs.length; di++) {
+    dateInputs[di].min = minDate;
+  }
+
+  window.scrollTo(0, 0);
+}
+
+// ── regular header ───────────────────────────────────────────
+function buildRegularHeader(reg) {
+  var pct = reg.totalClasses > 0 ? Math.round((reg.classesDone / reg.totalClasses) * 100) : 0;
+  var h = '';
+  h += '<div class="prog-strip">';
+  h +=   '<div>';
+  h +=     '<div class="prog-name">' + esc(reg.program) + '</div>';
+  h +=     '<div class="prog-sub">Enrolled ' + esc(reg.enrolledOn) + ' &middot; ' + esc(reg.regNo) + '</div>';
+  h +=   '</div>';
+  h +=   '<span class="chip-active"><span class="cdot"></span>' + esc(reg.status) + '</span>';
+  h += '</div>';
+  h += '<div class="stats">';
+  h +=   '<div class="stt"><div class="sn">' + reg.totalClasses + '</div><div class="sl">Total</div></div>';
+  h +=   '<div class="stt"><div class="sn g">' + reg.classesDone + '</div><div class="sl">Done</div></div>';
+  h +=   '<div class="stt"><div class="sn amber">' + reg.classesRemaining + '</div><div class="sl">Left</div></div>';
+  // Rescheduled classes are still "booked" (slot exists, date changed)
+  var booked = reg.schedule.filter(function(s){
+    return s.status === 'Scheduled' || s.status === 'Requested' || s.status === 'Rescheduled';
+  }).length;
+  h +=   '<div class="stt"><div class="sn">' + booked + '</div><div class="sl">Booked</div></div>';
+  h += '</div>';
+  h += '<div class="psec">';
+  h +=   '<div class="phdr"><span class="plbl">Progress</span><span class="ppct">' + pct + '%</span></div>';
+  h +=   '<div class="ptrack"><div class="pfill" style="width:' + pct + '%"></div></div>';
+  h += '</div>';
+  h += '<div class="bal-row">';
+  h +=   '<div class="bal-cell"><div><div class="bal-lbl">Paid</div><div class="bal-amt bal-paid">&#8377;' + fmt(reg.amountPaid) + '</div></div></div>';
+  h +=   '<div class="bal-cell"><div><div class="bal-lbl">Balance Due</div><div class="bal-amt bal-due">&#8377;' + fmt(reg.balanceDue) + '</div></div></div>';
+  h += '</div>';
+  return h;
+}
+
+function buildTabs() {
+  return '<div class="tabs">'
+    + '<button class="tb on" onclick="kTab(\'schedule\',this)">Schedule</button>'
+    + '<button class="tb" onclick="kTab(\'book\',this)">Book Class</button>'
+    + '<button class="tb" onclick="kTab(\'reschedule\',this)">Reschedule</button>'
+    + '</div>';
+}
+
+// ── schedule tab ─────────────────────────────────────────────
+function buildScheduleContent(d) {
+  var reg = d.regular;
+  var h = '';
+  h += '<div class="sh">My Schedule</div>';
+  h += '<div class="ss2">All classes for ' + esc(reg.program) + '</div>';
+
+  if (reg.paymentStatus !== 'Paid') {
+    h += '<div class="pay-banner">&#9888;&#65039; ';
+    h += reg.paymentStatus === 'Pending'
+      ? 'Payment pending.'
+      : 'Partial payment. Balance: &#8377;' + fmt(reg.balanceDue) + '.';
+    h += ' <a href="' + PAYMENT_LINK + '" target="_blank">Pay Now &rarr;</a></div>';
+  }
+
+  var upcoming  = reg.schedule.filter(function(s){ return s.status !== 'Completed' && s.status !== 'Cancelled'; });
+  var completed = reg.schedule.filter(function(s){ return s.status === 'Completed'; });
+
+  if (upcoming.length > 0) {
+    h += '<div style="font-size:10px;font-weight:500;color:#5a7a61;text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px">Upcoming</div>';
+    h += '<div class="cl-list">';
+    for (var u = 0; u < upcoming.length; u++) { h += schedRow(upcoming[u]); }
+    h += '</div>';
+  }
+
+  if (completed.length > 0) {
+    h += '<div style="font-size:10px;font-weight:500;color:#5a7a61;text-transform:uppercase;letter-spacing:.06em;margin:13px 0 7px">Completed</div>';
+    h += '<div class="cl-list">';
+    for (var c = 0; c < completed.length; c++) { h += schedRow(completed[c]); }
+    h += '</div>';
+  }
+
+  if (!upcoming.length && !completed.length) {
+    h += '<div class="empty">No classes booked yet.<br>Use Book Class tab to request a slot.</div>';
+  }
+
+  // one-time history (for 'both' type riders)
+  if (d.riderType === 'both' && d.oneTimeBookings && d.oneTimeBookings.length > 0) {
+    h += buildOneTimeContent(d.oneTimeBookings, true);
+  }
+
+  return h;
+}
+
+function schedRow(s) {
+  var parts = (s.scheduledDate || '').split(' ');
+  var day = parts[0] || '?';
+  var mon = parts[1] || '---';
+  var bCls = s.status === 'Completed' ? 'b-done'
+           : s.status === 'Rescheduled' ? 'b-resched'
+           : s.status === 'Requested'   ? 'b-req' : 'b-sched';
+  var lbl  = s.status === 'Completed' ? 'Attended' : (s.status || 'Scheduled');
+  return '<div class="cr">'
+    + '<div class="db"><div class="dd">' + day + '</div><div class="dm">' + mon + '</div></div>'
+    + '<div class="ci">'
+    +   '<div class="cn">' + esc(s.scheduledDate || 'TBC') + '</div>'
+    +   '<div class="ct2">' + esc(s.timeSlot || 'Time TBD') + '</div>'
+    +   '<div class="cno">Class ' + esc(String(s.classNo)) + '</div>'
+    + '</div>'
+    + '<span class="badge ' + bCls + '">' + lbl + '</span>'
+    + '</div>';
+}
+
+// ── book tab ─────────────────────────────────────────────────
+function buildBookContent(reg) {
+  var h = '<div class="sh">Book a Class</div>';
+  h += '<div class="ss2">' + reg.classesRemaining + ' classes remaining</div>';
+
+  if (reg.classesRemaining <= 0) {
+    return h + '<div class="empty">No remaining classes in this program.</div>';
+  }
+
+  h += '<div class="fcard">';
+  h += '<label class="fl">Preferred Date</label>';
+  h += '<input type="date" class="fi" id="book-date">';
+  h += '<label class="fl">Time Slot</label>';
+  h += '<div class="sel-wrap"><select class="fi" id="book-time"><option value="">Select time</option>';
+  h += buildTimeOptions();
+  h += '</select></div>';
+  h += '<label class="fl">Notes (optional)</label>';
+  h += '<textarea class="fi fi-ta" id="book-notes" placeholder="Any preferences\u2026"></textarea>';
+  h += '<button class="btn-g" onclick="submitBook()">Request This Slot</button>';
+  h += '<div id="book-result" class="result-msg"></div>';
+  h += '</div>';
+  return h;
+}
+
+function buildTimeOptions() {
+  // Booking windows:
+  // Morning   06:30 - 12:00
+  // Afternoon 14:30 - 18:30
+  // Slot length: 60 minutes (start times step every 30 minutes)
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+  function addOpts(label, startH, startM, endH, endM) {
+    var html = '<optgroup label="' + label + '">';
+    var cur = startH * 60 + startM;
+    var end = endH * 60 + endM;
+    while (cur + 60 <= end) {
+      var sh = Math.floor(cur / 60), sm = cur % 60;
+      var eh = Math.floor((cur + 60) / 60), em = (cur + 60) % 60;
+      html += '<option>' + pad2(sh) + ':' + pad2(sm) + ' - ' + pad2(eh) + ':' + pad2(em) + '</option>';
+      cur += 30;
+    }
+    html += '</optgroup>';
+    return html;
+  }
+
+  return ''
+    + addOpts('Morning',   6, 30, 12, 0)
+    + addOpts('Afternoon', 14, 30, 18, 30);
+}
+
+// ── restore login on reload ───────────────────────────────────
+(function restoreLogin(){
+  var saved = '';
+  try { saved = localStorage.getItem(LS_KEY_PHONE) || ''; } catch(e) {}
+  saved = String(saved || '').replace(/\D/g,'').slice(-10);
+  if (!saved || saved.length < 10) return;
+
+  document.getElementById('inp-phone').value = saved;
+  var btn = document.querySelector('#login-screen .btn-primary');
+  btn.textContent = 'Restoring\u2026';
+  btn.disabled = true;
+  document.getElementById('login-err').style.display = 'none';
+
+  google.script.run
+    .withSuccessHandler(function(data) {
+      btn.textContent = 'View My Rides';
+      btn.disabled = false;
+      if (!data || !data.found) {
+        try { localStorage.removeItem(LS_KEY_PHONE); } catch(e) {}
+        return;
+      }
+      SD = data;
+      renderDash();
+    })
+    .withFailureHandler(function() {
+      btn.textContent = 'View My Rides';
+      btn.disabled = false;
+    })
+    .getStudentData(saved);
+})();
+
+// ── reschedule tab ───────────────────────────────────────────
+function buildReschedContent(reg) {
+  var eligible = reg.schedule.filter(function(s) {
+    return s.status === 'Scheduled' || s.status === 'Rescheduled' || s.status === 'Requested';
+  });
+
+  var h = '<div class="sh">Reschedule</div>';
+  h += '<div class="ss2">Tap a class to move it to a new date.</div>';
+
+  if (eligible.length === 0) {
+    return h + '<div class="empty">No upcoming classes to reschedule.</div>';
+  }
+
+  h += '<div class="cl-list">';
+  for (var i = 0; i < eligible.length; i++) {
+    var s = eligible[i];
+    var parts = (s.scheduledDate || '').split(' ');
+    var bCls  = s.status === 'Rescheduled' ? 'b-resched' : 'b-sched';
+    h += '<div class="cr" id="rsrow-' + s.rowIndex + '" onclick="selectResched(' + s.rowIndex + ',\'' + esc(s.scheduledDate||'') + '\',\'' + esc(s.timeSlot||'') + '\')">'
+      + '<div class="db"><div class="dd">' + (parts[0]||'?') + '</div><div class="dm">' + (parts[1]||'---') + '</div></div>'
+      + '<div class="ci"><div class="cn">' + esc(s.scheduledDate||'TBC') + '</div>'
+      + '<div class="ct2">' + esc(s.timeSlot||'TBD') + '</div>'
+      + '<div class="cno">Class ' + esc(String(s.classNo)) + ' &middot; tap to select</div></div>'
+      + '<span class="badge ' + bCls + '">' + s.status + '</span>'
+      + '</div>';
+  }
+  h += '</div>';
+
+  h += '<div id="resched-panel">';
+  h += '<div class="from-lbl">Moving: <strong id="resched-from">&#8212;</strong></div>';
+  h += '<label class="fl">New Date</label><input type="date" class="fi" id="resched-date">';
+  h += '<label class="fl">New Time Slot</label>';
+  h += '<div class="sel-wrap"><select class="fi" id="resched-time"><option value="">Select time</option>' + buildTimeOptions() + '</select></div>';
+  h += '<label class="fl">Reason</label>';
+  h += '<textarea class="fi fi-ta" id="resched-reason" placeholder="Travel, work, illness\u2026"></textarea>';
+  h += '<button class="btn-g" onclick="submitResched()">Confirm Reschedule</button>';
+  h += '<button class="btn-outline" onclick="cancelResched()">Cancel</button>';
+  h += '<div id="resched-result" class="result-msg"></div>';
+  h += '</div>';
+  return h;
+}
+
+// ── one-time section ─────────────────────────────────────────
+function buildOneTimeContent(bookings, asSection) {
+  var h = '';
+  if (asSection) {
+    h += '<div class="section-div">One-Time Booking History</div>';
+  } else {
+    h += '<div class="sh">Your Bookings</div>';
+    h += '<div class="ss2">All your Kings Equestrian sessions</div>';
+  }
+
+  if (!bookings || bookings.length === 0) {
+    return h + '<div class="empty">No bookings found.</div>';
+  }
+
+  for (var i = 0; i < bookings.length; i++) {
+    var b = bookings[i];
+    var pCls = b.paymentStatus === 'Paid' ? 'b-paid' : b.paymentStatus === 'Partial' ? 'b-partial' : 'b-pending';
+    var attTxt = b.attendance ? ' &middot; ' + b.attendance : '';
+
+    h += '<div class="ot-card">';
+    h += '<div class="ot-top">';
+    h += '<div><div class="ot-service">' + esc(b.services) + '</div><div class="ot-ref">Ref: ' + esc(b.reference) + ' &middot; Booked: ' + esc(b.timestamp) + '</div></div>';
+    h += '<span class="badge ' + pCls + '">' + esc(b.paymentStatus) + '</span>';
+    h += '</div>';
+    if (b.date) {
+      h += '<div class="ot-date">&#128197; ' + esc(b.date)
+        + (b.timeSlot ? ' &middot; ' + esc(b.timeSlot) : '')
+        + (b.participants > 1 ? ' &middot; ' + b.participants + ' pax' : '')
+        + attTxt + '</div>';
+    }
+    if (b.receiptNo) {
+      h += '<div style="font-size:10px;color:#aac8b0">Receipt: ' + esc(b.receiptNo) + '</div>';
+    }
+    if (b.isFuture && b.paymentStatus === 'Paid') {
+      h += '<div style="margin-top:8px">';
+      h += '<button class="ot-btn" onclick="toggleMiniForm(\'mf-' + b.rowIndex + '\')">&#128260; Request Reschedule</button>';
+      h += '</div>';
+      h += '<div class="mini-form" id="mf-' + b.rowIndex + '">';
+      h += '<label class="fl">New Date</label><input type="date" class="fi" id="otr-date-' + b.rowIndex + '">';
+      h += '<label class="fl">New Time</label>';
+      h += '<div class="sel-wrap"><select class="fi" id="otr-time-' + b.rowIndex + '"><option value="">Select time</option>' + buildTimeOptions() + '</select></div>';
+      h += '<label class="fl">Reason</label>';
+      h += '<textarea class="fi fi-ta" id="otr-reason-' + b.rowIndex + '" placeholder="Travel, work\u2026"></textarea>';
+      h += '<button class="btn-g" onclick="submitOTResched(' + b.rowIndex + ',\'' + esc(b.reference) + '\',\'' + esc(b.date||'') + '\',\'' + esc(b.timeSlot||'') + '\')">Send Request</button>';
+      h += '<div id="otr-result-' + b.rowIndex + '" class="result-msg"></div>';
+      h += '</div>';
+    }
+    h += '</div>';
+  }
+  return h;
+}
+
+// ── tab switch ───────────────────────────────────────────────
+function kTab(name, btn) {
+  var tabs = document.querySelectorAll('.tb');
+  var tcs  = document.querySelectorAll('.tc');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('on');
+  for (var j = 0; j < tcs.length; j++)  tcs[j].classList.remove('on');
+  btn.classList.add('on');
+  var tc = document.getElementById('tc-' + name);
+  if (tc) tc.classList.add('on');
+}
+
+// ── book a class ─────────────────────────────────────────────
+function submitBook() {
+  var date  = document.getElementById('book-date').value;
+  var time  = document.getElementById('book-time').value;
+  var notes = document.getElementById('book-notes').value;
+  if (!date) { toast('Please pick a date'); return; }
+  if (!time) { toast('Please select a time slot'); return; }
+
+  var btn = document.querySelector('#tc-book .btn-g');
+  btn.textContent = 'Submitting\u2026';
+  btn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      btn.textContent = 'Request This Slot';
+      btn.disabled = false;
+      showResult('book-result', res.success, res.message || res.error || 'Done');
+      if (res.success) {
+        document.getElementById('book-date').value = '';
+        document.getElementById('book-time').value = '';
+        document.getElementById('book-notes').value = '';
+      }
+    })
+    .withFailureHandler(function(e) {
+      btn.textContent = 'Request This Slot';
+      btn.disabled = false;
+      showResult('book-result', false, 'Error: ' + e.message);
+    })
+    .submitClassBookingRequest(SD.phone, date, time, notes);
+}
+
+// ── reschedule (regular) ─────────────────────────────────────
+function selectResched(rowIndex, dateLabel, timeLabel) {
+  selReschedRow = rowIndex;
+  var rows = document.querySelectorAll('.cr');
+  for (var i = 0; i < rows.length; i++) rows[i].classList.remove('sel');
+  var row = document.getElementById('rsrow-' + rowIndex);
+  if (row) row.classList.add('sel');
+  document.getElementById('resched-from').textContent = dateLabel + ' \u00B7 ' + timeLabel;
+  var panel = document.getElementById('resched-panel');
+  panel.style.display = 'block';
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function cancelResched() {
+  selReschedRow = 0;
+  var rows = document.querySelectorAll('.cr');
+  for (var i = 0; i < rows.length; i++) rows[i].classList.remove('sel');
+  document.getElementById('resched-panel').style.display = 'none';
+  document.getElementById('resched-date').value = '';
+  document.getElementById('resched-time').value = '';
+  document.getElementById('resched-reason').value = '';
+  var res = document.getElementById('resched-result');
+  if (res) res.style.display = 'none';
+}
+
+function submitResched() {
+  if (!selReschedRow) { toast('Select a class first'); return; }
+  var date   = document.getElementById('resched-date').value;
+  var time   = document.getElementById('resched-time').value;
+  var reason = document.getElementById('resched-reason').value;
+  if (!date) { toast('Please pick a new date'); return; }
+  if (!time) { toast('Please pick a new time'); return; }
+
+  var btn = document.querySelector('#resched-panel .btn-g');
+  btn.textContent = 'Submitting\u2026';
+  btn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      btn.textContent = 'Confirm Reschedule';
+      btn.disabled = false;
+      showResult('resched-result', res.success, res.message || res.error || 'Done');
+      if (res.success) cancelResched();
+    })
+    .withFailureHandler(function(e) {
+      btn.textContent = 'Confirm Reschedule';
+      btn.disabled = false;
+      showResult('resched-result', false, 'Error: ' + e.message);
+    })
+    .submitRescheduleRequest(SD.phone, selReschedRow, date, time, reason);
+}
+
+// ── one-time reschedule ───────────────────────────────────────
+function toggleMiniForm(id) {
+  var el = document.getElementById(id);
+  if (el) el.classList.toggle('open');
+}
+
+function submitOTResched(rowIndex, reference, curDate, curTime) {
+  var date   = document.getElementById('otr-date-'   + rowIndex).value;
+  var time   = document.getElementById('otr-time-'   + rowIndex).value;
+  var reason = document.getElementById('otr-reason-' + rowIndex).value;
+  if (!date || !time) { toast('Please fill date and time'); return; }
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      showResult('otr-result-' + rowIndex, res.success, res.message || res.error || 'Done');
+    })
+    .withFailureHandler(function(e) {
+      showResult('otr-result-' + rowIndex, false, 'Error: ' + e.message);
+    })
+    .submitOneTimeRescheduleRequest(SD.phone, reference, curDate, curTime, date, time, reason);
+}
+
+// ── helpers ──────────────────────────────────────────────────
+function showResult(id, ok, msg) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'result-msg ' + (ok ? 'result-ok' : 'result-err');
+  el.style.display = 'block';
+}
+
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2800);
+}
+
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function fmt(n) {
+  return Number(n || 0).toLocaleString('en-IN');
+}
+</script>
+</body>
+</html>
