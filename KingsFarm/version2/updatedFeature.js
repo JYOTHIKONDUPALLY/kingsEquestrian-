@@ -197,6 +197,7 @@ function getBookingsForDate(dateStr) {
         const pData = paymentSheet.getDataRange().getValues();
         for (let i = 1; i < pData.length; i++) {
             if (String(pData[i][CONFIG.PAYMENT_COLS.RECEIPT_SENT] || '').toLowerCase() === 'yes') {
+                // ── FIX: use REGISTRATION_NO (col 2) not a non-existent column ──
                 paidRefs.add(String(pData[i][CONFIG.PAYMENT_COLS.REGISTRATION_NO] || '').trim());
             }
         }
@@ -295,7 +296,7 @@ function saveAttendance(rowIndex, status, note) {
             attCell.setBackground('#ffffff').setFontColor('#333333').setFontWeight('normal');
         }
 
-        // ── NEW: Send acknowledgment email when marked Present ──────
+        // ── Send acknowledgment email when marked Present ──────
         if (status === 'Present') {
             const rowData = bookingSheet.getRange(rowIndex, 1, 1, bookingSheet.getLastColumn()).getValues()[0];
             sendAttendanceAcknowledgmentEmail(rowData);
@@ -550,7 +551,7 @@ function markAttendance(idx, status) {
   
   // Optimistic UI update
   b.attendance = status;
-  const card = document.getElementById('card-\${idx}');
+  const card = document.getElementById('card-' + idx);
   if (card) {
     card.className = 'card ' + (status === 'Present' ? 'present' : status === 'No-Show' ? 'no-show' : status === 'Rescheduled' ? 'rescheduled' : '');
   }
@@ -616,8 +617,6 @@ function sendDailyAdminSummary() {
         const today   = new Date();
         const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1);
 
-        const todayStr    = Utilities.formatDate(today,    tz, 'yyyy-MM-dd');
-        const tomorrowStr = Utilities.formatDate(tomorrow, tz, 'yyyy-MM-dd');
         const todayLabel  = Utilities.formatDate(today,    tz, 'EEEE, dd MMM yyyy');
         const tmrwLabel   = Utilities.formatDate(tomorrow, tz, 'EEEE, dd MMM yyyy');
 
@@ -946,7 +945,6 @@ function setupNewFeaturesTriggers() {
     const ui = SpreadsheetApp.getUi();
 
     try {
-        const ss              = SpreadsheetApp.getActiveSpreadsheet();
         const existingTriggers = ScriptApp.getProjectTriggers().map(t => t.getHandlerFunction());
 
         // Daily Admin Summary — 7:00 AM every day
@@ -977,10 +975,6 @@ function setupNewFeaturesTriggers() {
  * Manual test — call from editor to preview today's summary without emailing.
  */
 function testDailySummaryDryRun() {
-    const today    = new Date();
-    const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1);
-    const tz       = Session.getScriptTimeZone();
-
     const todayBookings    = getBookingsForDate('today');
     const tomorrowBookings = getBookingsForDate('tomorrow');
 
@@ -1000,18 +994,8 @@ function testSendDailySummaryNow() {
 
 // ─────────────────────────────────────────────
 // SECTION 5 — MENU ADDITIONS
-// (Merge these items into your existing onOpen() in Code.gs)
 // ─────────────────────────────────────────────
 
-/**
- * Call this from within your existing onOpen() in Code.gs by adding:
- *
- *   addExtendedMenuItems(menu);
- *
- * after the existing .addItem() calls, before .addToUi().
- *
- * OR simply add these items directly to your onOpen() menu chain.
- */
 function addExtendedMenuItems(menu) {
     menu
         .addSeparator()
@@ -1029,24 +1013,25 @@ function addExtendedMenuItems(menu) {
  */
 function sendAttendanceAcknowledgmentEmail(rowData) {
     try {
+        // ── FIX: use EMAIL_ID (col 3) not the non-existent EMAIL key ──
         const customerEmail = String(rowData[CONFIG.BOOKING_COLS.EMAIL_ID] || '').trim();
         if (!customerEmail || !customerEmail.includes('@')) {
             Logger.log('Attendance email skipped — no valid email for this booking.');
             return;
         }
- 
+
         const customerName  = String(rowData[CONFIG.BOOKING_COLS.NAME]                  || 'Valued Guest').trim();
         const reference     = String(rowData[CONFIG.BOOKING_COLS.REFERENCE]              || '').trim();
         const services      = String(rowData[CONFIG.BOOKING_COLS.OUR_SERVICES]           || 'our session').trim();
         const timeSlot      = String(rowData[CONFIG.BOOKING_COLS.PREFERRED_TIME_SLOT]    || '').trim();
         const participants  = rowData[CONFIG.BOOKING_COLS.NUMBER_OF_PARTICIPANTS] || 1;
- 
+
         const tz            = Session.getScriptTimeZone();
         const todayLabel    = Utilities.formatDate(new Date(), tz, 'EEEE, dd MMM yyyy');
         const firstName     = customerName.split(' ')[0];
- 
+
         const subject = `🐴 Welcome to Kings Equestrian — Attendance Confirmed! (${reference})`;
- 
+
         const htmlBody = `
 <!DOCTYPE html>
 <html>
@@ -1160,7 +1145,6 @@ function sendAttendanceAcknowledgmentEmail(rowData) {
 </body>
 </html>`;
  
-        // Plain-text fallback
         const plainBody = [
             `Hi ${customerName},`,
             '',
