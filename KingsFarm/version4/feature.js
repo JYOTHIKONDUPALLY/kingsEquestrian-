@@ -1186,8 +1186,11 @@ function sendAttendanceAcknowledgmentEmail(rowData) {
             'Karnataka, India | +91-9980895533 | info@kingsequestrian.com'
         ].filter(l => l !== null).join('\n');
  
+        const ccEmails = getCCRecipients('Welcome Mail');
+
         MailApp.sendEmail({
             to       : customerEmail,
+            cc       : ccEmails.join(','),
             subject  : subject,
             body     : plainBody,
             htmlBody : htmlBody,
@@ -1199,5 +1202,103 @@ function sendAttendanceAcknowledgmentEmail(rowData) {
     } catch (err) {
         // Non-fatal — attendance is already saved. Just log it.
         Logger.log('sendAttendanceAcknowledgmentEmail error: ' + err);
+    }
+}
+
+/**
+ * Sends attendance acknowledgment for regular schedule classes (marked Present).
+ * @param {Object} details
+ *  { email, name, regNo, program, classNo, scheduledDateLabel, timeSlot }
+ */
+function sendRegularAttendanceAcknowledgmentEmail(details) {
+    try {
+        const customerEmail = String(details.email || '').trim();
+        if (!customerEmail || !customerEmail.includes('@')) {
+            Logger.log('Regular attendance email skipped — no valid email.');
+            return;
+        }
+
+        const customerName = String(details.name || 'Valued Rider').trim();
+        const regNo = String(details.regNo || '').trim();
+        const program = String(details.program || 'your program').trim();
+        const classNo = String(details.classNo || '').trim();
+        const scheduledDateLabel = String(details.scheduledDateLabel || '').trim();
+        const timeSlot = String(details.timeSlot || '').trim();
+        const firstName = customerName.split(' ')[0];
+
+        const subject = `🐴 Thanks for riding with us! Attendance Confirmed (${regNo || 'Regular'})`;
+
+        const htmlBody = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f6f4;font-family:'Segoe UI',Arial,sans-serif;color:#333">
+<div style="max-width:600px;margin:24px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.08)">
+  <div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:28px 30px;text-align:center">
+    <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg"
+         style="width:72px;height:72px;border-radius:50%;border:3px solid rgba(255,255,255,.4);display:block;margin:0 auto 12px"
+         alt="Kings Equestrian">
+    <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700">Thank you, ${firstName}! 🐴</h1>
+    <p style="margin:8px 0 0;color:rgba(255,255,255,.88);font-size:14px">We’ve marked your class as attended</p>
+  </div>
+  <div style="padding:30px">
+    <div style="background:#d4edda;border-left:4px solid #28a745;border-radius:6px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px">
+      <span style="font-size:28px">✅</span>
+      <div>
+        <div style="font-weight:700;color:#155724;font-size:15px">Attendance Marked — Present</div>
+        <div style="color:#1e7e34;font-size:13px;margin-top:2px">${scheduledDateLabel || ''}</div>
+      </div>
+    </div>
+    <p style="font-size:15px;line-height:1.7;margin:0 0 18px">
+      Hi <strong>${customerName}</strong>,<br><br>
+      Thank you for coming in today. We hope you enjoyed your session at <strong>Kings Equestrian Foundation</strong>.
+    </p>
+    <div style="background:#f8faf8;border:1px solid #e0ebe0;border-radius:8px;padding:18px 20px;margin-bottom:18px">
+      <h3 style="margin:0 0 12px;color:#1f4e3d;font-size:15px;font-weight:700">📋 Class Details</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        ${regNo ? `<tr><td style="padding:6px 0;color:#666;width:38%">Reg No</td><td style="padding:6px 0;font-weight:600;color:#1f4e3d">${regNo}</td></tr>` : ''}
+        <tr><td style="padding:6px 0;color:#666">Program</td><td style="padding:6px 0;font-weight:600">${program}</td></tr>
+        ${classNo ? `<tr><td style="padding:6px 0;color:#666">Class</td><td style="padding:6px 0;font-weight:600">${classNo}</td></tr>` : ''}
+        ${timeSlot ? `<tr><td style="padding:6px 0;color:#666">Time Slot</td><td style="padding:6px 0;font-weight:600">${timeSlot}</td></tr>` : ''}
+        ${scheduledDateLabel ? `<tr><td style="padding:6px 0;color:#666">Date</td><td style="padding:6px 0;font-weight:600">${scheduledDateLabel}</td></tr>` : ''}
+      </table>
+    </div>
+    <p style="font-size:13px;line-height:1.7;color:#555;margin:0">
+      We look forward to seeing you again soon.
+    </p>
+  </div>
+  <div style="background:#1f4e3d;color:#fff;padding:20px 30px;text-align:center;font-size:12px;line-height:1.8">
+    <strong style="font-size:14px">Kings Equestrian Foundation</strong><br>
+    Karnataka, India<br>
+    📞 +91-9980895533 &nbsp;|&nbsp; ✉️ info@kingsequestrian.com
+  </div>
+</div>
+</body></html>`;
+
+        const plainBody = [
+            `Hi ${customerName},`,
+            '',
+            `Thank you for coming in today. We have marked your class as Present.`,
+            '',
+            regNo ? `Reg No  : ${regNo}` : '',
+            `Program : ${program}`,
+            classNo ? `Class   : ${classNo}` : '',
+            scheduledDateLabel ? `Date    : ${scheduledDateLabel}` : '',
+            timeSlot ? `Time    : ${timeSlot}` : '',
+            '',
+            'Kings Equestrian Foundation',
+            'Karnataka, India | +91-9980895533 | info@kingsequestrian.com'
+        ].filter(Boolean).join('\n');
+
+        const ccEmails = getCCRecipients('Welcome Mail');
+        MailApp.sendEmail({
+            to: customerEmail,
+            cc: ccEmails.join(','),
+            subject: subject,
+            body: plainBody,
+            htmlBody: htmlBody,
+            name: 'Kings Equestrian Foundation'
+        });
+
+        Logger.log(`Regular attendance acknowledgment sent to: ${customerEmail} (${regNo})`);
+    } catch (err) {
+        Logger.log('sendRegularAttendanceAcknowledgmentEmail error: ' + err);
     }
 }

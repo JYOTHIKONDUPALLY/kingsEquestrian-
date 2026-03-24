@@ -395,6 +395,30 @@ function _saveRegularAttendance(ss, rowIndex, status, note, regNo) {
         statusCell.setValue('Completed').setBackground('#d4edda').setFontColor('#155724').setFontWeight('bold');
         // Increment classes completed for this student
         if (regNo) _incrementClassesCompleted(ss, regNo);
+
+        // Send acknowledgment email to regular rider (non-fatal)
+        try {
+            var rowData = schedSheet.getRange(rowIndex, 1, 1, schedSheet.getLastColumn()).getValues()[0];
+            var tz = Session.getScriptTimeZone();
+            var dateLabel = '';
+            try {
+                if (rowData[SCHED_COLS_V2.SCHEDULED_DATE]) {
+                    dateLabel = Utilities.formatDate(new Date(rowData[SCHED_COLS_V2.SCHEDULED_DATE]), tz, 'EEEE, dd MMM yyyy');
+                }
+            } catch (e) {}
+
+            sendRegularAttendanceAcknowledgmentEmail({
+                email: rowData[SCHED_COLS_V2.EMAIL] || '',
+                name: rowData[SCHED_COLS_V2.STUDENT_NAME] || '',
+                regNo: String(rowData[SCHED_COLS_V2.REG_NO] || regNo || '').trim(),
+                program: rowData[SCHED_COLS_V2.PROGRAM] || '',
+                classNo: rowData[SCHED_COLS_V2.CLASS_NO] || '',
+                scheduledDateLabel: dateLabel,
+                timeSlot: rowData[SCHED_COLS_V2.TIME_SLOT] || ''
+            });
+        } catch (e) {
+            Logger.log('Regular acknowledgment email failed (non-fatal): ' + e);
+        }
     } else if (status === 'No-Show') {
         statusCell.setValue('No-Show').setBackground('#f8d7da').setFontColor('#721c24').setFontWeight('bold');
     }

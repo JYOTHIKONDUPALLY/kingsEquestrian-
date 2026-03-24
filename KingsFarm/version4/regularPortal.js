@@ -287,7 +287,7 @@ function submitClassBookingRequest(phone, date, timeSlot, notes) {
             for (var s = 1; s < scData.length; s++) {
                 if (String(scData[s][SCHED_COLS_V2.REG_NO] || '').trim() === regNo) {
                     var st = String(scData[s][SCHED_COLS_V2.STATUS] || '').toLowerCase();
-                    if (st === 'scheduled' || st === 'requested' || st === 'rescheduled') bookedCount++;
+                    if (st === 'scheduled' || st === 'requested'|| st === 'rescheduled') bookedCount++;
                 }
             }
         }
@@ -326,7 +326,7 @@ function submitClassBookingRequest(phone, date, timeSlot, notes) {
             .setNumberFormat('dd-MMM-yyyy');
 
         // Notify admin
-        _notifyAdminClassRequest(name, email, regNo, program, date, timeSlot, classNo, totalCls, notes);
+        // _notifyAdminClassRequest(name, email, regNo, program, date, timeSlot, classNo, totalCls, notes);
 
         // Confirm to student
         _sendBookingRequestConfirmation(name, email, regNo, program, date, timeSlot, classNo, totalCls);

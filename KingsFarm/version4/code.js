@@ -37,6 +37,9 @@ const CONFIG = {
         REFERENCE: 10,
         WELCOME_EMAIL_SENT: 11,
         WELCOME_EMAIL_TIMESTAMP: 12,
+        CALANDER_EVENT_ID:13,
+        ATTENDANCE:14,
+        STAFF_NOTES:15
     },
     
     PAYMENT_COLS: {
