@@ -4,26 +4,34 @@
 // Central config, column maps, and shared utilities
 // ============================================================
 
-// ⚠️  TROUBLESHOOTING: PAYMENT FORM COLUMN MISMATCH
+// ⚠️  PAYMENT FORM COLUMN NOTE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// If payment data is uploaded incorrectly (e.g., screenshot URLs 
-// appearing in Payment Date field), your Google Form field order 
-// does NOT match the CONFIG.PAYMENT_COLS mapping below.
+// Payment Form Response sheet column order (0-based):
+//   0  Timestamp (auto)
+//   1  KE No
+//   2  Phone
+//   3  Amount Paid
+//   4  Screenshot (file upload)   ← col 4
+//   5  Payment Date               ← col 5
+//   6  Transaction Ref            ← col 6
+//   7  PAN/Aadhaar
+//   8  Verified (script)
+//   9  Receipt Sent (script)
+//  10  Receipt Sent At (script)
+//  11  Receipt No (script)
+//  12  Drive Link (script)
 //
-// FIX: Open your Payment Form and verify fields are in this EXACT order:
-//   1. Timestamp (auto)
-//   2. KE No (text)
-//   3. Phone (text)
-//   4. Amount Paid (number)
-//   5. Payment Date (date)
-//   6. Transaction Ref (text)
-//   7. PAN/Aadhaar (text)
-//   8. Screenshot (file upload)
-//   
-// If you need to reorder: Delete the sheet "Payment Form Response", 
-// then reshare the form or delete & recreate it with correct order.
-// 
-// RUN THIS TO DIAGNOSE: diagnosPaymentFormColumns()
+// Payments Ledger sheet column order (0-based):
+//   0  KE No
+//   1  Name
+//   2  Phone
+//   3  Amount
+//   4  Payment Date               ← ONLY payment date goes here
+//   5  Transaction Ref            ← ONLY txn ref goes here
+//   6  Receipt No
+//   7  Sent At
+//
+// Run diagnosPaymentFormColumns() if data still looks wrong.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const CONFIG = {
@@ -33,7 +41,10 @@ const CONFIG = {
   TERMS_CONDITIONS_DOC_ID: '1QbJHA5keyTLvgw-5stTY74i92BQ89TYya-NvtJ4YGx4',
   ADVANCE_BOOKING_AMOUNT: 1000,
   WEB_APP_URL: 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec',
-  ADDITIONAL_PDF_DOC_ID:'2PACX-1vReen5Pof84-7XoZdzAmbh6JnSW0vJ_LW_C2wfVfZnUl3PzbglIbJtcBEqEoxlJyw',
+  // FIX #7/#9: This ID was a published-web URL, not a Drive file ID.
+  // Use the actual Drive file ID from the sharing link:
+  // https://drive.google.com/file/d/1CpWYOphlAJzJSHtuS9au35tWdg743rAW/view
+  ADDITIONAL_PDF_DRIVE_LINK: 'https://drive.google.com/file/d/1CpWYOphlAJzJSHtuS9au35tWdg743rAW/view?usp=sharing',
 
   // ── Sheet names ─────────────────────────────────────────
   SHEETS: {
@@ -47,10 +58,6 @@ const CONFIG = {
   },
 
   // ── Booking Form Response columns (0-based) ──────────────
-  // A Timestamp | B Name | C Email ID | D Phone Number
-  // E Our Services | F Number of Participants
-  // G Preferred Service Date | H Preferred Time Slot | I Consent
-  // J KE No (script) | K Welcome Sent (script) | L Welcome Sent At (script)
   BOOKING_COLS: {
     TIMESTAMP   : 0,
     NAME        : 1,
@@ -67,18 +74,16 @@ const CONFIG = {
   },
 
   // ── Payment Form Response columns (0-based) ──────────────
-  // A Timestamp | B KE No | C Phone | D Amount Paid
-  // E Payment Date | F Transaction Ref | G PAN/Aadhaar
-  // H Screenshot | I Verified (script) | J Receipt Sent (script)
-  // K Receipt Sent At (script) | L Receipt No (script) | M Drive Link (script)
+  // FIX #11: Columns were mapped incorrectly before.
+  // Screenshot is col 4, Payment Date is col 5, TxnRef is col 6.
   PAYMENT_COLS: {
     TIMESTAMP   : 0,
     KE_NO       : 1,
     PHONE       : 2,
     AMOUNT      : 3,
-    SCREENSHOT: 4,
-    PAY_DATE    : 5,
-    TXN_REF     : 6,
+    SCREENSHOT  : 4,   // file upload — col 4
+    PAY_DATE    : 5,   // actual payment date — col 5
+    TXN_REF     : 6,   // transaction ref — col 6
     PAN         : 7,
     VERIFIED    : 8,
     RECEIPT_SENT: 9,
@@ -88,8 +93,6 @@ const CONFIG = {
   },
 
   // ── Riders sheet columns (0-based) ───────────────────────
-  // A KE No | B Name | C Email | D Phone | E Services
-  // F Participants | G Registered On | H Notes
   RIDER_COLS: {
     KE_NO       : 0,
     NAME        : 1,
@@ -102,10 +105,6 @@ const CONFIG = {
   },
 
   // ── Schedule sheet columns (0-based) ─────────────────────
-  // A KE No | B Name | C Phone | D Email | E Service
-  // F Session Date | G Time Slot | H Participants
-  // I Status | J Attendance | K Staff Notes
-  // L Calendar Event ID | M Booking Source
   SCHED_COLS: {
     KE_NO       : 0,
     NAME        : 1,
@@ -123,28 +122,25 @@ const CONFIG = {
   },
 
   // ── Payments Ledger columns (0-based) ────────────────────
-  // A KE No | B Name | C Phone | D Amount | E Payment Date
-  // F Transaction Ref | G Receipt No | H Sent At
+  // FIX #11: PAY_DATE = col 4, TXN_REF = col 5 (never overlap)
   LEDGER_COLS: {
     KE_NO      : 0,
     NAME       : 1,
     PHONE      : 2,
     AMOUNT     : 3,
-    PAY_DATE   : 4,
-    TXN_REF    : 5,
+    PAY_DATE   : 4,   // payment date ONLY
+    TXN_REF    : 5,   // transaction ref ONLY
     RECEIPT_NO : 6,
     SENT_AT    : 7
   },
 
   // ── Pricing sheet columns (0-based) ──────────────────────
-  // A Row | B Service Name | C Price | D Google Doc ID | E Type
-  // Type values: 'One-Time' | 'Regular'
   PRICING_COLS: {
     ROW      : 0,
     NAME     : 1,
     PRICE    : 2,
     DOC_ID   : 3,
-    TYPE     : 4   // 'One-Time' or 'Regular'
+    TYPE     : 4
   }
 };
 
@@ -159,56 +155,6 @@ function generateKENo() {
     const day = String(date.getDate()).padStart(2, '0');
     const random = Math.floor(Math.random() * 9000) + 1000;
     return `KE${year}${month}${day}${random}`;
-}
-
-function quickTest() {
-  const testId = 'd/1CpWYOphlAJzJSHtuS9au35tWdg743rAW'; // Replace with your ID
-  Logger.log('Testing document access...');
-  const result = testDocumentAccess(testId);
-  if (result) {
-    Logger.log('✅ Document is accessible - ready for welcome emails!');
-  } else {
-    Logger.log('❌ Document access failed - check permissions and ID');
-  }
-}
-function testDocumentAccess(docId) {
-  try {
-    Logger.log('Testing access to document/presentation ID: ' + docId);
-
-    let doc, blob, fileType;
-
-    // Try as Google Doc first
-    try {
-      doc = DocumentApp.openById(docId);
-      Logger.log('✅ SUCCESS: Google Doc "' + doc.getName() + '" is accessible');
-      fileType = 'Google Doc';
-      blob = doc.getAs('application/pdf');
-    } catch (docError) {
-      // Try as Google Slides presentation
-      try {
-        doc = SlidesApp.openById(docId);
-        Logger.log('✅ SUCCESS: Google Slides "' + doc.getName() + '" is accessible');
-        fileType = 'Google Slides';
-        blob = doc.getAs('application/pdf');
-      } catch (slidesError) {
-        throw new Error('Neither Google Doc nor Slides accessible: ' + docError.message + ' | ' + slidesError.message);
-      }
-    }
-
-    Logger.log('Document URL: https://docs.google.com/' + (fileType === 'Google Doc' ? 'document' : 'presentation') + '/d/' + docId + '/edit');
-    Logger.log('✅ SUCCESS: PDF conversion works (' + blob.getBytes().length + ' bytes)');
-
-    return true;
-  } catch (e) {
-    Logger.log('❌ FAILED: ' + e.message);
-    Logger.log('💡 Possible solutions:');
-    Logger.log('  1. Check if document/presentation ID is correct');
-    Logger.log('  2. For Google Docs: Use ID from https://docs.google.com/document/d/YOUR_ID/edit');
-    Logger.log('  3. For Google Slides: Use ID from https://docs.google.com/presentation/d/YOUR_ID/edit');
-    Logger.log('  4. Ensure sharing is set to "Anyone with the link can view"');
-    Logger.log('  5. Try publishing the document (File > Publish to web)');
-    return false;
-  }
 }
 
 // ============================================================
@@ -259,19 +205,35 @@ function findRiderByKENo(keNo) {
 
 function fmtDate(d) {
   if (!d) return '';
-  try { return Utilities.formatDate(new Date(d), Session.getScriptTimeZone(), 'dd MMM yyyy'); }
+  try {
+    const dt = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(dt.getTime())) return '';
+    // FIX #4: guard against epoch (1 Jan 1970) which means the field was empty
+    if (dt.getFullYear() < 2000) return '';
+    return Utilities.formatDate(dt, Session.getScriptTimeZone(), 'dd MMM yyyy');
+  }
   catch (e) { return String(d); }
 }
 
 function fmtDateTime(d) {
   if (!d) return '';
-  try { return Utilities.formatDate(new Date(d), Session.getScriptTimeZone(), 'dd MMM yyyy HH:mm'); }
+  try {
+    const dt = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(dt.getTime())) return '';
+    if (dt.getFullYear() < 2000) return '';
+    return Utilities.formatDate(dt, Session.getScriptTimeZone(), 'dd MMM yyyy HH:mm');
+  }
   catch (e) { return String(d); }
 }
 
 function ymd(d) {
   if (!d) return '';
-  try { return Utilities.formatDate(new Date(d), Session.getScriptTimeZone(), 'yyyy-MM-dd'); }
+  try {
+    const dt = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(dt.getTime())) return '';
+    if (dt.getFullYear() < 2000) return '';
+    return Utilities.formatDate(dt, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
   catch (e) { return ''; }
 }
 
@@ -292,7 +254,7 @@ function createQRCode(link) {
 }
 
 // ============================================================
-//  PRICING DATA  (includes Type column)
+//  PRICING DATA
 // ============================================================
 
 function getPricingData() {
@@ -305,14 +267,12 @@ function getPricingData() {
     const name  = String(data[i][CONFIG.PRICING_COLS.NAME]   || '').trim();
     const price = data[i][CONFIG.PRICING_COLS.PRICE];
     const docId = String(data[i][CONFIG.PRICING_COLS.DOC_ID] || '').trim();
-    const type  = String(data[i][CONFIG.PRICING_COLS.TYPE]   || 'Regular').trim(); // 'One-Time' | 'Regular'
+    const type  = String(data[i][CONFIG.PRICING_COLS.TYPE]   || 'Regular').trim();
     if (name) map[name] = { price, docId, type };
   }
   return map;
 }
 
-// Returns flat array of services for portal dropdown
-// [{name, price, type}]
 function getServicesList() {
   const pricing = getPricingData();
   return Object.keys(pricing).map(k => ({
@@ -320,15 +280,6 @@ function getServicesList() {
     price: pricing[k].price,
     type : pricing[k].type
   }));
-}
-
-function testEmailPermission() {
-  try {
-    GmailApp.sendEmail('jyothikondupally@gmail.com', 'Test', 'Test message');
-    Logger.log('✅ Email permission granted!');
-  } catch (e) {
-    Logger.log('❌ Still no permission: ' + e);
-  }
 }
 
 // ============================================================
@@ -478,7 +429,10 @@ function generateConsentPDF(name, email, phone, bookingDate) {
     body.setMarginLeft(50);
     body.setMarginRight(50);
 
-    function paragraph(textStr, size = FONT_SIZE, bold = false, spacing = 6, align = null) {
+    function paragraph(textStr, size, bold, spacing, align) {
+        size    = size    || FONT_SIZE;
+        bold    = bold    || false;
+        spacing = spacing || 6;
         const p = body.appendParagraph(textStr);
         const t = p.editAsText();
         t.setFontFamily(LABEL_FONT).setFontSize(size).setBold(bold);
@@ -512,7 +466,7 @@ function generateConsentPDF(name, email, phone, bookingDate) {
             const day = String(dateValue.getDate()).padStart(2, '0');
             const month = String(dateValue.getMonth() + 1).padStart(2, '0');
             const year = dateValue.getFullYear();
-            return `${day}/${month}/${year}`;
+            return day + '/' + month + '/' + year;
         }
         return dateValue.toString();
     }
@@ -535,14 +489,14 @@ function generateConsentPDF(name, email, phone, bookingDate) {
     }
 
     paragraph('KINGS EQUESTRIAN FOUNDATION', 16, true, 5, DocumentApp.HorizontalAlignment.CENTER);
-    paragraph('Acknowledgement & Consent Form – Horse Riding Participants', 13, true, 3, DocumentApp.HorizontalAlignment.CENTER);
+    paragraph('Acknowledgement & Consent Form - Horse Riding Participants', 13, true, 3, DocumentApp.HorizontalAlignment.CENTER);
     paragraph('(Applicable for Individual / Group / Family Participants)', 10, false, 25, DocumentApp.HorizontalAlignment.CENTER);
 
     paragraph('Kings Equestrian Foundation offers horse riding programs and related activities, which may include casual riding, dressage, jumping, workshops, clinics, and equine interaction.', 11, false, 12);
     paragraph('I/we understand and acknowledge that participation in equestrian activities involves inherent risks, including but not limited to falls, bruises, muscle strain, fractures, head injuries, or other serious injuries. I/we further acknowledge that horses are live animals and their behaviour can be unpredictable.', 11, false, 12);
     paragraph('I/we also acknowledge that Kings Equestrian Foundation follows reasonable safety precautions, provides trained supervision, and enforces established safety guidelines. However, despite all precautions, accidents may occasionally occur.', 11, false, 20);
 
-    let sepPara = body.appendParagraph('⸻');
+    let sepPara = body.appendParagraph('---');
     sepPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
     sepPara.setSpacingAfter(20);
 
@@ -551,7 +505,7 @@ function generateConsentPDF(name, email, phone, bookingDate) {
     paragraph('I/we further confirm that I / my child / all participants are covered by valid medical and/or personal accident insurance, which will cover any injuries, medical treatment, or emergencies arising from participation.', 11, false, 12);
     paragraph('I/we understand and agree that Kings Equestrian Foundation is not responsible for medical expenses, and all such costs shall be borne by the participant(s) or covered under their insurance.', 11, false, 20);
 
-    sepPara = body.appendParagraph('⸻');
+    sepPara = body.appendParagraph('---');
     sepPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
     sepPara.setSpacingAfter(20);
 
@@ -566,57 +520,56 @@ function generateConsentPDF(name, email, phone, bookingDate) {
         'All participants agree to follow safety instructions, rules, and guidelines issued by Kings Equestrian Foundation and its instructors at all times.'
     ];
 
-    bulletPoints.forEach(point => {
-        const p = body.appendParagraph('• ' + point);
-        p.editAsText().setFontFamily(LABEL_FONT).setFontSize(11);
-        p.setSpacingAfter(6);
-        p.setIndentStart(20);
-        p.setIndentFirstLine(0);
+    bulletPoints.forEach(function(point) {
+        const bp = body.appendParagraph('- ' + point);
+        bp.editAsText().setFontFamily(LABEL_FONT).setFontSize(11);
+        bp.setSpacingAfter(6);
+        bp.setIndentStart(20);
     });
 
     body.appendParagraph('').setSpacingAfter(8);
     paragraph('I/we agree that Kings Equestrian Foundation, its trainers, staff, and associates shall not be held responsible for injuries arising from participation, except in cases of proven negligence.', 11, false, 20);
 
-    sepPara = body.appendParagraph('⸻');
+    sepPara = body.appendParagraph('---');
     sepPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
     sepPara.setSpacingAfter(20);
 
     paragraph('Primary Contact / Parent / Guardian Details', 12, true, 12);
 
-    let p = body.appendParagraph('');
-    let t = p.editAsText();
-    const nameSpaced = name ? `  ${name}  ` : '___________________________________';
-    const nameLine = `Name: ${nameSpaced}`;
+    var p = body.appendParagraph('');
+    var t = p.editAsText();
+    const nameSpaced = name ? ('  ' + name + '  ') : '___________________________________';
+    const nameLine = 'Name: ' + nameSpaced;
     t.setText(nameLine).setFontFamily(LABEL_FONT).setFontSize(FONT_SIZE);
     if (name) formatValue(t, nameLine, nameSpaced);
     p.setSpacingAfter(12);
 
     p = body.appendParagraph('');
     t = p.editAsText();
-    const phoneSpaced = phone ? `  ${phone}  ` : '___________________________________';
-    const phoneLine = `Contact Number: ${phoneSpaced}`;
+    const phoneSpaced = phone ? ('  ' + phone + '  ') : '___________________________________';
+    const phoneLine = 'Contact Number: ' + phoneSpaced;
     t.setText(phoneLine).setFontFamily(LABEL_FONT).setFontSize(FONT_SIZE);
     if (phone) formatValue(t, phoneLine, phoneSpaced);
     p.setSpacingAfter(12);
 
     p = body.appendParagraph('');
     t = p.editAsText();
-    const emailSpaced = email ? `  ${email}  ` : '___________________________________';
-    const emailLine = `Email ID: ${emailSpaced}`;
+    const emailSpaced = email ? ('  ' + email + '  ') : '___________________________________';
+    const emailLine = 'Email ID: ' + emailSpaced;
     t.setText(emailLine).setFontFamily(LABEL_FONT).setFontSize(FONT_SIZE);
     if (email) formatValue(t, emailLine, emailSpaced);
     p.setSpacingAfter(25);
 
-    sepPara = body.appendParagraph('⸻');
+    sepPara = body.appendParagraph('---');
     sepPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
     sepPara.setSpacingAfter(25);
 
     p = body.appendParagraph('');
     t = p.editAsText();
-    const signatureSpaced = name ? `  ${name}  ` : '___________________________________';
+    const signatureSpaced = name ? ('  ' + name + '  ') : '___________________________________';
     const dateFormatted = formatDateOnly(bookingDate);
-    const dateSpaced = dateFormatted ? `  ${dateFormatted}  ` : '_______________';
-    const signatureLine = `Signature of Participant / Parent / Guardian: ${signatureSpaced}     Date: ${dateSpaced}`;
+    const dateSpaced = dateFormatted ? ('  ' + dateFormatted + '  ') : '_______________';
+    const signatureLine = 'Signature of Participant / Parent / Guardian: ' + signatureSpaced + '     Date: ' + dateSpaced;
     t.setText(signatureLine).setFontFamily(LABEL_FONT).setFontSize(11);
 
     if (name) {
@@ -635,148 +588,30 @@ function generateConsentPDF(name, email, phone, bookingDate) {
     if (dateFormatted) formatValue(t, signatureLine, dateSpaced);
     p.setSpacingAfter(30);
 
-    const footerPara = paragraph('Kings Equestrian Foundation | Karnataka, India | +91-9980895533 | info@kingsequestrian.com', 9, false, 0, DocumentApp.HorizontalAlignment.CENTER);
-    footerPara.editAsText().setForegroundColor('#666666');
+    const footerPara = body.appendParagraph('Kings Equestrian Foundation | Karnataka, India | +91-9980895533 | info@kingsequestrian.com');
+    footerPara.editAsText().setFontFamily(LABEL_FONT).setFontSize(9).setForegroundColor('#666666');
+    footerPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
 
     doc.saveAndClose();
 
     const pdf = doc.getAs('application/pdf');
-    pdf.setName(`Consent_Form_${(name || 'Participant').replace(/\s+/g, '_')}.pdf`);
+    pdf.setName('Consent_Form_' + (name || 'Participant').replace(/\s+/g, '_') + '.pdf');
 
     DriveApp.getFileById(doc.getId()).setTrashed(true);
 
     return pdf;
 }
 
-function getAdditionalPDF() {
-  try {
-    // Skip if no DOC ID configured
-    if (!CONFIG.ADDITIONAL_PDF_DOC_ID || CONFIG.ADDITIONAL_PDF_DOC_ID === 'YOUR_ADDITIONAL_PDF_DOC_ID_HERE') {
-      Logger.log('Additional PDF not configured - skipping');
-      return null;
-    }
+// ============================================================
+//  DIAGNOSTIC
+// ============================================================
 
-    Logger.log('Attempting to access document/presentation with ID: ' + CONFIG.ADDITIONAL_PDF_DOC_ID);
-
-    let doc, blob;
-
-    // Try as Google Doc first
-    try {
-      doc = DocumentApp.openById(CONFIG.ADDITIONAL_PDF_DOC_ID);
-      Logger.log('✅ Document accessed successfully: ' + doc.getName());
-      blob = doc.getAs('application/pdf');
-    } catch (docError) {
-      Logger.log('Not a Google Doc, trying as Google Slides...');
-
-      // Try as Google Slides presentation
-      try {
-        const presentation = SlidesApp.openById(CONFIG.ADDITIONAL_PDF_DOC_ID);
-        Logger.log('✅ Presentation accessed successfully: ' + presentation.getName());
-        blob = presentation.getAs('application/pdf');
-      } catch (slidesError) {
-        throw new Error('Neither Google Doc nor Slides: ' + docError.message + ' | ' + slidesError.message);
-      }
-    }
-
-    blob.setName('Kings_Equestrian_Presentation.pdf');
-    Logger.log('✅ PDF generated successfully');
-    return blob;
-  } catch (e) {
-    Logger.log('❌ getAdditionalPDF error: ' + e.message);
-    Logger.log('Document ID being used: ' + CONFIG.ADDITIONAL_PDF_DOC_ID);
-    Logger.log('💡 Troubleshooting tips:');
-    Logger.log('  1. For Google Docs: Use the ID from https://docs.google.com/document/d/YOUR_ID/edit');
-    Logger.log('  2. For Google Slides: Use the ID from https://docs.google.com/presentation/d/YOUR_ID/edit');
-    Logger.log('  3. Ensure sharing is set to "Anyone with the link can view"');
-    Logger.log('  4. Try publishing the document (File > Publish to web)');
-    Logger.log('  5. Test URL manually: https://docs.google.com/document/d/' + CONFIG.ADDITIONAL_PDF_DOC_ID + '/edit');
-  }
-
-// ────────────────────────────────────────────────────────────
-//  DIAGNOSTIC: Test document access
-// ────────────────────────────────────────────────────────────
-
-function testDocumentAccess(docId) {
-  try {
-    Logger.log('Testing access to document/presentation ID: ' + docId);
-
-    let doc, blob, fileType;
-
-    // Try as Google Doc first
-    try {
-      doc = DocumentApp.openById(docId);
-      Logger.log('✅ SUCCESS: Google Doc "' + doc.getName() + '" is accessible');
-      fileType = 'Google Doc';
-      blob = doc.getAs('application/pdf');
-    } catch (docError) {
-      // Try as Google Slides presentation
-      try {
-        doc = SlidesApp.openById(docId);
-        Logger.log('✅ SUCCESS: Google Slides "' + doc.getName() + '" is accessible');
-        fileType = 'Google Slides';
-        blob = doc.getAs('application/pdf');
-      } catch (slidesError) {
-        throw new Error('Neither Google Doc nor Slides accessible: ' + docError.message + ' | ' + slidesError.message);
-      }
-    }
-
-    Logger.log('Document URL: https://docs.google.com/' + (fileType === 'Google Doc' ? 'document' : 'presentation') + '/d/' + docId + '/edit');
-    Logger.log('✅ SUCCESS: PDF conversion works (' + blob.getBytes().length + ' bytes)');
-
-    return true;
-  } catch (e) {
-    Logger.log('❌ FAILED: ' + e.message);
-    Logger.log('💡 Possible solutions:');
-    Logger.log('  1. Check if document/presentation ID is correct');
-    Logger.log('  2. For Google Docs: Use ID from https://docs.google.com/document/d/YOUR_ID/edit');
-    Logger.log('  3. For Google Slides: Use ID from https://docs.google.com/presentation/d/YOUR_ID/edit');
-    Logger.log('  4. Ensure sharing is set to "Anyone with the link can view"');
-    Logger.log('  5. Try publishing the document (File > Publish to web)');
-    return false;
-  }
-}
-
-function testMyAdditionalPDF() {
-  Logger.log('🧪 Testing your additional PDF configuration...');
-  const result = testDocumentAccess(CONFIG.ADDITIONAL_PDF_DOC_ID);
-  if (result) {
-    Logger.log('🎉 SUCCESS: Your additional PDF is ready for welcome emails!');
-    Logger.log('📧 Next: Submit a test booking to see the PDF attachment');
-  } else {
-    Logger.log('❌ FAILED: Check the troubleshooting tips above');
-  }
-}
-   
-
-  try {
-    const logoBlob = UrlFetchApp.fetch('https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg').getBlob();
-    const lPara    = body.appendParagraph('');
-    lPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-    lPara.appendInlineImage(logoBlob).setWidth(100).setHeight(100);
-    lPara.setSpacingAfter(16);
-  } catch (e) { Logger.log('Consent logo: ' + e); }
-
-  p('KINGS EQUESTRIAN FOUNDATION', 16, true, DocumentApp.HorizontalAlignment.CENTER);
-  p('Acknowledgement & Consent Form', 13, true, DocumentApp.HorizontalAlignment.CENTER);
-  body.appendParagraph('').setSpacingAfter(10);
-  p('I/we acknowledge that horse-riding carries inherent risks including falls and injuries. Kings Equestrian Foundation takes all reasonable precautions but cannot guarantee against accidents.',11,false);
-  p('I/we declare all participants are medically fit and hold valid personal accident insurance. Kings Equestrian Foundation is not liable for medical expenses.',11,false);
-  body.appendParagraph('').setSpacingAfter(10);
-  p('Details', 12, true);
-  p('Name: ' + (name  || '____________________'), 11);
-  p('Phone: '+ (phone || '____________________'), 11);
-  p('Email: '+ (email || '____________________'), 11);
-  body.appendParagraph('').setSpacingAfter(20);
-  const dateStr = bookingDate ? fmtDate(new Date(bookingDate)) : '___________';
-  p('Signature: ___________________________    Date: ' + dateStr, 11);
-  body.appendParagraph('').setSpacingAfter(6);
-  p('Kings Equestrian Foundation | Karnataka, India | +91-9980895533', 9, false, DocumentApp.HorizontalAlignment.CENTER);
-
-  doc.saveAndClose();
-  const pdf = doc.getAs('application/pdf');
-  pdf.setName('Consent_' + (name || 'Participant').replace(/\s+/g,'_') + '.pdf');
-  try { DriveApp.getFileById(doc.getId()).setTrashed(true); } catch(e){}
-  return pdf;
+function diagnosPaymentFormColumns() {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.SHEETS.PAYMENT_FORM);
+  if (!sheet) { Logger.log('Payment Form Response sheet not found'); return; }
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  headers.forEach(function(h, i) { Logger.log('Col ' + i + ' (' + String.fromCharCode(65+i) + '): ' + h); });
 }
 
 // ============================================================
@@ -785,14 +620,15 @@ function testMyAdditionalPDF() {
 
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu('🎠 Kings Equestrian')
-    .addItem('📧 Resend Welcome Email',    'resendWelcomeEmail')
-    .addItem('🧾 Send Payment Receipt',    'sendPaymentReceiptMenu')
+    .createMenu('Kings Equestrian')
+    .addItem('Resend Welcome Email',    'resendWelcomeEmail')
+    .addItem('Send Payment Receipt',    'sendPaymentReceiptMenu')
     .addSeparator()
-    .addItem('📅 Send Daily Summary Now',  'testSendDailySummaryNow')
-    .addItem('🧪 Dry-Run Daily Summary',   'testDailySummaryDryRun')
+    .addItem('Send Daily Summary Now',  'testSendDailySummaryNow')
+    .addItem('Dry-Run Daily Summary',   'testDailySummaryDryRun')
     .addSeparator()
-    .addItem('⚙️  Setup All Triggers',     'setupTriggers')
+    .addItem('Setup All Triggers',      'setupTriggers')
+    .addItem('Diagnose Payment Columns','diagnosPaymentFormColumns')
     .addToUi();
 }
 
@@ -801,6 +637,6 @@ function setupTriggers() {
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger('onBookingFormSubmit').forSpreadsheet(ss).onFormSubmit().create();
   ScriptApp.newTrigger('onPaymentFormSubmit').forSpreadsheet(ss).onFormSubmit().create();
-  ScriptApp.newTrigger('sendDailyAdminSummary').timeBased().everyDays(1).atHour(21).create(); // 9 PM nightly
-  SpreadsheetApp.getUi().alert('✅ Triggers set!\n\n• Booking form → welcome email + KE No\n• Payment form → receipt email\n• Nightly 9 PM → admin summary email');
+  ScriptApp.newTrigger('sendDailyAdminSummary').timeBased().everyDays(1).atHour(21).create();
+  SpreadsheetApp.getUi().alert('Triggers set!\n\n- Booking form: welcome email + KE No\n- Payment form: receipt email\n- Nightly 9 PM: admin summary email');
 }

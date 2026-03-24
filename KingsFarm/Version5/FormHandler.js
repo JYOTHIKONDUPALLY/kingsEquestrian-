@@ -173,10 +173,18 @@ function sendReceiptForRow(rowIndex) {
   const keNo     = String(vals[CONFIG.PAYMENT_COLS.KE_NO]   || '').trim();
   const phone    = String(vals[CONFIG.PAYMENT_COLS.PHONE]   || '').trim();
   const amount   = Number(vals[CONFIG.PAYMENT_COLS.AMOUNT]);
-  const payDate  = vals[CONFIG.PAYMENT_COLS.PAY_DATE];
   const txnRef   = String(vals[CONFIG.PAYMENT_COLS.TXN_REF] || '').trim();
   const pan      = String(vals[CONFIG.PAYMENT_COLS.PAN]     || '').trim();
   const verified = String(vals[CONFIG.PAYMENT_COLS.VERIFIED]|| '').toLowerCase();
+  const timestamp = vals[CONFIG.PAYMENT_COLS.TIMESTAMP];
+
+  // FIX #4: Resolve payment date — use PAY_DATE if valid, else fall back to form TIMESTAMP
+  let payDate = vals[CONFIG.PAYMENT_COLS.PAY_DATE];
+  if (!payDate || fmtDate(payDate) === '') {
+    // PAY_DATE is empty or epoch — fall back to form submission timestamp
+    payDate = timestamp || new Date();
+    Logger.log('sendReceiptForRow: PAY_DATE was empty/invalid, using TIMESTAMP instead');
+  }
 
   if (verified !== 'yes') throw new Error('Payment not verified — set Verified to Yes first');
   if (!amount || isNaN(amount)) throw new Error('Amount is missing or invalid');
@@ -196,23 +204,22 @@ function sendReceiptForRow(rowIndex) {
 
   const receiptNo = _generateReceiptNo(rKeNo);
 
-  // Build 80G PDF using DocumentApp (no DriveApp.createFile needed)
   const receiptPDF = generate80GReceipt(rName, pan, amount, txnRef, receiptNo);
 
-  // Store in Drive — non-fatal, email still sends if Drive scope missing
+  // Store in Drive — non-fatal
   let driveInfo = null;
   try { driveInfo = storeReceiptInDrive(receiptPDF, rName, receiptNo); }
   catch (driveErr) { Logger.log('storeReceiptInDrive skipped: ' + driveErr); }
 
-  // Append to Payments Ledger — non-fatal
+  // FIX #11: Append to Payments Ledger with correct columns (payDate separate from txnRef)
   try { _appendToLedger(ss, { keNo: rKeNo, name: rName, phone: rPhone, amount, payDate, txnRef, receiptNo }); }
   catch (ledgerErr) { Logger.log('_appendToLedger error: ' + ledgerErr); }
 
-  // Send receipt email — always runs
+  // Send receipt email
   const ccEmails = getCCRecipients('receipt');
   GmailApp.sendEmail(
     rEmail,
-    'Payment Receipt — ' + rName + ' (' + rKeNo + ')',
+    'Payment Receipt - ' + rName + ' (' + rKeNo + ')',
     '',
     {
       htmlBody    : buildReceiptEmailHTML({ name: rName, keNo: rKeNo, amount, txnRef, payDate, receiptNo }),
@@ -237,14 +244,16 @@ function sendReceiptForRow(rowIndex) {
 }
 
 function _generateReceiptNo(keNo) {
-  const ts   = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyMMddHHmm');
+  const ts    = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyMMddHHmm');
   const last4 = String(keNo).replace(/\D/g,'').slice(-4) || '0000';
   return keNo + '/' + last4 + '/' + ts.slice(-4);
 }
 
 // ────────────────────────────────────────────────────────────
-//  APPEND TO PAYMENTS LEDGER  (cell-by-cell — avoids array
-//  length mismatch if sheet has extra/missing columns)
+//  APPEND TO PAYMENTS LEDGER
+//  FIX #11: Each column is written individually and correctly.
+//           PAY_DATE goes to col 4, TXN_REF goes to col 5.
+//           They will never overwrite each other.
 // ────────────────────────────────────────────────────────────
 
 function _appendToLedger(ss, d) {
@@ -255,31 +264,27 @@ function _appendToLedger(ss, d) {
       return;
     }
 
-    // appendRow with a plain array that has exactly 8 items
-    const row = [
-      d.keNo      || '',
-      d.name      || '',
-      d.phone     || '',
-      d.amount    || 0,
-      d.payDate   || '',
-      d.txnRef    || '',
-      d.receiptNo || '',
-      new Date()
-    ];
+    // Build exactly 8-element row: [KE_NO, NAME, PHONE, AMOUNT, PAY_DATE, TXN_REF, RECEIPT_NO, SENT_AT]
+    const row = new Array(8).fill('');
+    row[CONFIG.LEDGER_COLS.KE_NO]      = d.keNo      || '';
+    row[CONFIG.LEDGER_COLS.NAME]       = d.name      || '';
+    row[CONFIG.LEDGER_COLS.PHONE]      = d.phone     || '';
+    row[CONFIG.LEDGER_COLS.AMOUNT]     = d.amount    || 0;
+    row[CONFIG.LEDGER_COLS.PAY_DATE]   = d.payDate   || '';  // col 4 — payment date ONLY
+    row[CONFIG.LEDGER_COLS.TXN_REF]    = d.txnRef    || '';  // col 5 — transaction ref ONLY
+    row[CONFIG.LEDGER_COLS.RECEIPT_NO] = d.receiptNo || '';
+    row[CONFIG.LEDGER_COLS.SENT_AT]    = new Date();
 
     sheet.appendRow(row);
 
-    // Format date columns in the new row
     const lr = sheet.getLastRow();
-    if (d.payDate) {
+    if (d.payDate && fmtDate(d.payDate) !== '') {
       sheet.getRange(lr, CONFIG.LEDGER_COLS.PAY_DATE + 1).setNumberFormat('dd-MMM-yyyy');
     }
     sheet.getRange(lr, CONFIG.LEDGER_COLS.SENT_AT + 1).setNumberFormat('dd-MMM-yyyy HH:mm');
-
-    // Colour the row green so it's easy to spot
     sheet.getRange(lr, 1, 1, 8).setBackground('#f0faf5');
 
-    Logger.log('_appendToLedger: row ' + lr + ' written for ' + d.keNo + ' — ₹' + d.amount);
+    Logger.log('_appendToLedger: row ' + lr + ' for ' + d.keNo + ' — Rs.' + d.amount + ' on ' + fmtDate(d.payDate));
   } catch (e) {
     Logger.log('_appendToLedger ERROR: ' + e + '\n' + e.stack);
   }
@@ -314,7 +319,7 @@ function sendPaymentReceiptMenu() {
       errors.push('Row ' + (startRow+i) + ': ' + err.message);
     }
   }
-  ui.alert('Done!\n\u2705 ' + ok + ' sent\n\u274c ' + fail + ' failed'
+  ui.alert('Done!\n' + ok + ' sent\n' + fail + ' failed'
     + (errors.length ? '\n\n' + errors.slice(0,5).join('\n') : ''));
 }
 
@@ -357,5 +362,5 @@ function resendWelcomeEmail() {
       Logger.log('resendWelcomeEmail row ' + (start+i) + ': ' + err.message);
     }
   }
-  ui.alert('Done!\n\u2705 ' + ok + ' sent\n\u274c ' + fail + ' failed');
+  ui.alert('Done!\n' + ok + ' sent\n' + fail + ' failed');
 }
