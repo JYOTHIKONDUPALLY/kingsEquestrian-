@@ -801,6 +801,6 @@ function setupTriggers() {
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger('onBookingFormSubmit').forSpreadsheet(ss).onFormSubmit().create();
   ScriptApp.newTrigger('onPaymentFormSubmit').forSpreadsheet(ss).onFormSubmit().create();
-  ScriptApp.newTrigger('sendDailyAdminSummary').timeBased().everyDays(1).atHour(7).create();
-  SpreadsheetApp.getUi().alert('✅ Triggers set!\n\n• Booking form → welcome email + KE No\n• Payment form → receipt email\n• Daily 7 AM → admin summary email');
+  ScriptApp.newTrigger('sendDailyAdminSummary').timeBased().everyDays(1).atHour(21).create(); // 9 PM nightly
+  SpreadsheetApp.getUi().alert('✅ Triggers set!\n\n• Booking form → welcome email + KE No\n• Payment form → receipt email\n• Nightly 9 PM → admin summary email');
 }

@@ -1,30 +1,24 @@
 // ============================================================
 // KINGS EQUESTRIAN — NEW SYSTEM
 // File: 8_RiderPortalHTML.gs
-//
-// ARCHITECTURE NOTE:
-//   All JavaScript is stored as an array of plain GAS strings
-//   (one JS statement per array element) then joined with \n.
-//   This means:
-//     - No \uXXXX escapes inside GAS strings (use HTML entities
-//       in the HTML part, plain chars in the JS part)
-//     - No inline onclick="fn('arg')" -- all handlers use
-//       data-* attributes read inside the function
-//     - No nested quote hell
+// Changes:
+//   Change 1: Time slots in 30-min increments
+//   Change 6: Multi-profile picker when phone matches multiple riders
+//   Change 7: Participants field shown only for One-Time services
 // ============================================================
 
 function getRiderPortalHtml() {
-  var paymentLink = CONFIG.PAYMENT_FORM_LINK || '#';
+  var paymentLink  = CONFIG.PAYMENT_FORM_LINK || '#';
   var servicesList = [];
   try { servicesList = getServicesList(); } catch(e) { Logger.log('getServicesList: ' + e); }
 
-  // Build safe JSON for services - sanitise any quotes in names
   var safeServices = servicesList.map(function(s) {
     return {
-      name : String(s.name  || '').replace(/"/g, '&quot;'),
-      price: Number(s.price || 0),
-      type : String(s.type  || 'Regular').replace(/"/g, '&quot;'),
-      pax  : String(s.type  || '').toLowerCase() === 'group'
+      name    : String(s.name  || '').replace(/"/g, '&quot;'),
+      price   : Number(s.price || 0),
+      type    : String(s.type  || 'Regular').replace(/"/g, '&quot;'),
+      // Change 7: show pax ONLY for One-Time type
+      showPax : String(s.type || '').toLowerCase() === 'one-time'
     };
   });
   var servicesJson = JSON.stringify(safeServices);
@@ -32,10 +26,8 @@ function getRiderPortalHtml() {
   return _portalHTML(paymentLink, servicesJson);
 }
 
-// ─────────────────────────────────────────────────────────────
 function _portalHTML(payLink, servicesJson) {
 
-  // ── CSS (plain string, no JS inside) ──────────────────────
   var css = ''
     + '*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}'
     + ':root{'
@@ -67,6 +59,16 @@ function _portalHTML(payLink, servicesJson) {
     + '.btn-p:disabled{opacity:.5;cursor:default}'
     + '.login-err{font-size:12px;color:var(--red);text-align:center;margin-top:10px;padding:9px 12px;background:var(--red-pale);border-radius:8px;border:1px solid #fecaca;display:none}'
     + '.login-note{font-size:11px;color:#9aaa9e;text-align:center;margin-top:10px;line-height:1.7}'
+    // Change 6: profile picker
+    + '#profile-picker{display:none;min-height:100vh;background:var(--forest);align-items:center;justify-content:center;padding:2rem 1.25rem;flex-direction:column}'
+    + '.picker-card{width:100%;max-width:400px;background:var(--white);border-radius:20px;padding:1.75rem;box-shadow:0 6px 20px rgba(10,31,22,.14)}'
+    + '.picker-title{font-family:"Playfair Display",serif;font-size:20px;font-weight:600;color:var(--ink);margin-bottom:6px;text-align:center}'
+    + '.picker-sub{font-size:12px;color:#7a9a7e;text-align:center;margin-bottom:20px}'
+    + '.profile-btn{width:100%;background:var(--dew);border:1.5px solid var(--mist);border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer;text-align:left;font-family:"DM Sans",sans-serif;transition:all .15s}'
+    + '.profile-btn:hover{background:var(--mist);border-color:var(--fern)}'
+    + '.profile-name{font-size:15px;font-weight:600;color:var(--pine);margin-bottom:3px}'
+    + '.profile-meta{font-size:11px;color:#7a9a7e}'
+    + '.btn-back{background:none;border:1px solid rgba(143,212,176,.3);color:var(--mist);font-size:11px;padding:5px 14px;border-radius:20px;cursor:pointer;font-family:"DM Sans",sans-serif;margin-top:6px;width:100%}'
     // dashboard
     + '#dashboard{display:none;min-height:100vh}'
     + '.dh{background:var(--forest);padding:14px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;border-bottom:1px solid rgba(143,212,176,.1)}'
@@ -155,16 +157,10 @@ function _portalHTML(payLink, servicesJson) {
     + '.empty-st{text-align:center;padding:30px 16px;color:#b0c8b8;font-size:13px;line-height:2}'
     + '.pfooter{text-align:center;padding:16px;font-size:10px;color:#b0c8b8;border-top:1px solid var(--border);letter-spacing:.04em}'
     + '.hint{font-size:10px;color:#b0c8b8;margin-top:4px}'
+    // Change 7: pax-row hidden by default, shown for One-Time
     + '.pax-row{display:none}';
 
-  // ── JavaScript lines (each element = one statement or block) ──
-  // Rules:
-  //   1. Only double quotes inside strings
-  //   2. No \u escapes — use actual Unicode characters (GAS handles UTF-8 fine)
-  //   3. No inline onclick with string args — use data-* + addEventListener
-  //   4. HTML fragments built with double-quoted attribute values
   var jsLines = [
-    // ── data ──────────────────────────────────────────────
     'var RD = null;',
     'var bookMode = "single";',
     'var slotCount = 1;',
@@ -173,13 +169,12 @@ function _portalHTML(payLink, servicesJson) {
     'var SERVICES = ' + servicesJson + ';',
     'var PAYMENT_LINK = ' + JSON.stringify(payLink) + ';',
     'var DAYS = ["Su","Mo","Tu","We","Th","Fr","Sa"];',
+    'var pendingPhone = "";',  // Change 6: remember phone for profile picker
 
-    // ── esc ────────────────────────────────────────────────
     'function esc(v) {',
     '  return String(v || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");',
     '}',
 
-    // ── toast ──────────────────────────────────────────────
     'function toast(msg) {',
     '  var t = document.getElementById("toast");',
     '  t.textContent = msg;',
@@ -187,7 +182,6 @@ function _portalHTML(payLink, servicesJson) {
     '  setTimeout(function() { t.classList.remove("show"); }, 2800);',
     '}',
 
-    // ── showResult ─────────────────────────────────────────
     'function showResult(id, ok, msg) {',
     '  var el = document.getElementById(id);',
     '  if (!el) return;',
@@ -203,12 +197,15 @@ function _portalHTML(payLink, servicesJson) {
     '  var btn = document.getElementById("btn-login");',
     '  btn.textContent = "Looking up..."; btn.disabled = true;',
     '  document.getElementById("login-err").style.display = "none";',
+    '  pendingPhone = id;',
     '  google.script.run',
     '    .withSuccessHandler(function(data) {',
     '      btn.textContent = "View My Rides"; btn.disabled = false;',
     '      if (!data || !data.found) { showErr(data ? data.error : "Not found."); return; }',
+    // Change 6: handle multi-profile
+    '      if (data.multiProfile) { showProfilePicker(data.profiles); return; }',
     '      RD = data;',
-    '      try { localStorage.setItem("KE_ID", id); } catch(e) {}',
+    '      try { localStorage.setItem("KE_ID", RD.keNo); } catch(e) {}',
     '      renderDash();',
     '    })',
     '    .withFailureHandler(function(e) {',
@@ -223,17 +220,57 @@ function _portalHTML(payLink, servicesJson) {
     '  el.textContent = msg; el.style.display = "block";',
     '}',
 
+    // Change 6: profile picker
+    'function showProfilePicker(profiles) {',
+    '  document.getElementById("login-screen").style.display = "none";',
+    '  var pp = document.getElementById("profile-picker");',
+    '  pp.style.display = "flex";',
+    '  var list = profiles.map(function(p, i) {',
+    '    var initials = p.name.split(" ").map(function(w){return w[0]||"";}).join("").toUpperCase().slice(0,2) || "KE";',
+    '    return "<button class=\\"profile-btn\\" data-keno=\\"" + esc(p.keNo) + "\\">"',
+    '      + "<div class=\\"profile-name\\">" + esc(initials) + " " + esc(p.name) + "</div>"',
+    '      + "<div class=\\"profile-meta\\">" + esc(p.keNo) + (p.services ? " &nbsp;&middot;&nbsp; " + esc(p.services) : "") + "</div>"',
+    '      + "</button>";',
+    '  }).join("");',
+    '  document.getElementById("profile-list").innerHTML = list;',
+    '  document.querySelectorAll(".profile-btn").forEach(function(btn) {',
+    '    btn.addEventListener("click", function() {',
+    '      var keNo = btn.getAttribute("data-keno");',
+    '      selectProfile(keNo);',
+    '    });',
+    '  });',
+    '}',
+
+    'function selectProfile(keNo) {',
+    '  google.script.run',
+    '    .withSuccessHandler(function(data) {',
+    '      if (!data || !data.found) { alert("Profile not found. Try again."); return; }',
+    '      RD = data;',
+    '      try { localStorage.setItem("KE_ID", RD.keNo); } catch(e) {}',
+    '      document.getElementById("profile-picker").style.display = "none";',
+    '      renderDash();',
+    '    })',
+    '    .withFailureHandler(function(e) { alert("Error: " + e.message); })',
+    '    .getRiderData(keNo);',
+    '}',
+
+    'function backToLogin() {',
+    '  document.getElementById("profile-picker").style.display = "none";',
+    '  document.getElementById("login-screen").style.display = "flex";',
+    '}',
+
     'function doLogout() {',
     '  RD = null; slotCount = 1; bookMode = "single";',
     '  try { localStorage.removeItem("KE_ID"); } catch(e) {}',
     '  document.getElementById("dashboard").style.display = "none";',
+    '  document.getElementById("profile-picker").style.display = "none";',
     '  document.getElementById("login-screen").style.display = "flex";',
     '  document.getElementById("inp-id").value = "";',
     '  document.getElementById("login-err").style.display = "none";',
     '  window.scrollTo(0, 0);',
     '}',
 
-    // auto-restore
+    // auto-restore by KE No (always unique)
     '(function() {',
     '  var saved = ""; try { saved = localStorage.getItem("KE_ID") || ""; } catch(e) {}',
     '  if (!saved) return;',
@@ -243,7 +280,7 @@ function _portalHTML(payLink, servicesJson) {
     '  google.script.run',
     '    .withSuccessHandler(function(data) {',
     '      btn.textContent = "View My Rides"; btn.disabled = false;',
-    '      if (!data || !data.found) { try { localStorage.removeItem("KE_ID"); } catch(e) {} return; }',
+    '      if (!data || !data.found || data.multiProfile) { try { localStorage.removeItem("KE_ID"); } catch(e) {} return; }',
     '      RD = data; renderDash();',
     '    })',
     '    .withFailureHandler(function() { btn.textContent = "View My Rides"; btn.disabled = false; })',
@@ -285,16 +322,14 @@ function _portalHTML(payLink, servicesJson) {
     '  var past     = sessions.filter(function(s) { return !s.isFuture; });',
     '  var h = "";',
     '  h += "<div class=\\"tab-heading\\">My Sessions</div>";',
-    '  h += "<div class=\\"tab-sub\\">" + sessions.length + " total &middot; " + (RD.classesAttended || 0) + " attended</div>";',
+    '  h += "<div class=\\"tab-sub\\">" + sessions.length + " total &middot; " + (RD.classesAttended || 0) + " class units attended (each 30 min = 1 unit)</div>";',
     '  if (upcoming.length) { h += "<div class=\\"sec-div\\">Upcoming</div>"; h += upcoming.map(buildSessCard).join(""); }',
     '  if (past.length)     { h += "<div class=\\"sec-div\\">Past</div>";     h += past.map(buildSessCard).join(""); }',
     '  if (!sessions.length) h += "<div class=\\"empty-st\\">No sessions yet. Use the Book tab!</div>";',
     '  document.getElementById("tc-sessions").innerHTML = h;',
-    '  // set min dates on reschedule inputs',
     '  var tmr = new Date(); tmr.setDate(tmr.getDate() + 1);',
     '  var md = tmr.toISOString().split("T")[0];',
     '  document.querySelectorAll(".rs-date").forEach(function(el) { el.min = md; });',
-    '  // wire reschedule toggles',
     '  document.querySelectorAll(".rs-trigger").forEach(function(el) {',
     '    el.addEventListener("click", function() {',
     '      var rid = el.getAttribute("data-rid");',
@@ -302,7 +337,6 @@ function _portalHTML(payLink, servicesJson) {
     '      if (panel) panel.classList.toggle("open");',
     '    });',
     '  });',
-    '  // wire reschedule submit buttons',
     '  document.querySelectorAll(".rs-submit").forEach(function(el) {',
     '    el.addEventListener("click", function() { submitResched(parseInt(el.getAttribute("data-idx"), 10)); });',
     '  });',
@@ -351,7 +385,7 @@ function _portalHTML(payLink, servicesJson) {
     '      showResult("rsr-result-" + rowIndex, res.success, res.message || res.error);',
     '      if (res.success) {',
     '        toast("Rescheduled!");',
-    '        google.script.run.withSuccessHandler(function(d) { if (d && d.found) { RD = d; renderSessions(); } }).getRiderData(RD.keNo);',
+    '        google.script.run.withSuccessHandler(function(d) { if (d && d.found && !d.multiProfile) { RD = d; renderSessions(); } }).getRiderData(RD.keNo);',
     '      }',
     '    })',
     '    .withFailureHandler(function(e) {',
@@ -375,33 +409,25 @@ function _portalHTML(payLink, servicesJson) {
     '  h += "<button class=\\"btn-sub\\" id=\\"btn-book\\">Submit Sessions</button>";',
     '  h += "<div id=\\"book-result\\" class=\\"result\\"></div>";',
     '  document.getElementById("tc-book").innerHTML = h;',
-    '  // set min dates',
     '  var tmr = new Date(); tmr.setDate(tmr.getDate() + 1);',
     '  var md = tmr.toISOString().split("T")[0];',
     '  document.querySelectorAll(".sd-input").forEach(function(el) { el.min = md; });',
-    '  // default month',
     '  var now = new Date();',
     '  var mv = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");',
     '  var mi = document.getElementById("recur-month"); if (mi) { mi.value = mv; mi.min = mv; }',
-    '  // wire mode buttons',
     '  document.querySelectorAll(".mode-btn").forEach(function(btn) {',
     '    btn.addEventListener("click", function() { switchMode(btn.getAttribute("data-mode")); });',
     '  });',
-    '  // wire add-slot',
     '  var as = document.getElementById("btn-add-slot");',
     '  if (as) as.addEventListener("click", addSlot);',
-    '  // wire submit',
     '  var bs = document.getElementById("btn-book");',
     '  if (bs) bs.addEventListener("click", submitBookings);',
-    '  // wire pattern buttons',
     '  document.querySelectorAll(".pat-btn").forEach(function(btn) {',
     '    btn.addEventListener("click", function() { selectPattern(btn.getAttribute("data-pat")); });',
     '  });',
-    '  // wire day chips',
     '  document.querySelectorAll(".day-chip").forEach(function(chip) {',
     '    chip.addEventListener("click", function() { toggleDay(chip); });',
     '  });',
-    '  // wire svc change for pax visibility',
     '  wireSlotSvcChange(1);',
     '}',
 
@@ -424,14 +450,16 @@ function _portalHTML(payLink, servicesJson) {
     '  h += "<input type=\\"date\\" class=\\"fi sd-input\\" id=\\"sdate-" + n + "\\" style=\\"margin-bottom:10px\\">";',
     '  h += "<label class=\\"fl\\">Time Slot</label>";',
     '  h += "<select class=\\"fi\\" id=\\"stime-" + n + "\\" style=\\"margin-bottom:10px\\"><option value=\\"\\">Select time...</option>" + buildTimeOpts() + "</select>";',
+    // Change 7: pax only for One-Time
     '  h += "<div class=\\"pax-row\\" id=\\"pax-" + n + "\\">";',
-    '  h += "<label class=\\"fl\\">Participants</label>";',
+    '  h += "<label class=\\"fl\\">No. of Participants</label>";',
     '  h += "<input type=\\"number\\" class=\\"fi\\" id=\\"spax-" + n + "\\" value=\\"1\\" min=\\"1\\" max=\\"20\\" style=\\"margin-bottom:10px\\">";',
     '  h += "<p class=\\"hint\\">Include yourself in the count.</p></div>";',
     '  h += "</div>";',
     '  return h;',
     '}',
 
+    // Change 7: show pax only for One-Time services
     'function wireSlotSvcChange(n) {',
     '  var sel = document.getElementById("svc-" + n);',
     '  if (!sel) return;',
@@ -439,7 +467,11 @@ function _portalHTML(payLink, servicesJson) {
     '    var idx = parseInt(sel.value, 10);',
     '    var pr  = document.getElementById("pax-" + n);',
     '    if (!pr) return;',
-    '    pr.style.display = (!isNaN(idx) && SERVICES[idx] && SERVICES[idx].pax) ? "block" : "none";',
+    '    if (!isNaN(idx) && SERVICES[idx] && SERVICES[idx].showPax) {',
+    '      pr.style.display = "block";',
+    '    } else {',
+    '      pr.style.display = "none";',
+    '    }',
     '  });',
     '}',
 
@@ -453,7 +485,6 @@ function _portalHTML(payLink, servicesJson) {
     '  var nd = document.getElementById("sdate-" + slotCount);',
     '  if (nd) nd.min = tmr.toISOString().split("T")[0];',
     '  wireSlotSvcChange(slotCount);',
-    '  // wire remove button',
     '  var rb = document.querySelector("#slot-" + slotCount + " .rm-slot");',
     '  if (rb) rb.addEventListener("click", function() { document.getElementById("slot-" + slotCount).remove(); });',
     '}',
@@ -481,7 +512,8 @@ function _portalHTML(payLink, servicesJson) {
     '  h += "<label class=\\"fl\\">Service</label><select class=\\"fi\\" id=\\"rsvc\\" style=\\"margin-bottom:10px\\"><option value=\\"\\">Select...</option>" + opts + "</select>";',
     '  h += "<label class=\\"fl\\">Month</label><input type=\\"month\\" class=\\"fi\\" id=\\"recur-month\\" style=\\"margin-bottom:10px\\">";',
     '  h += "<label class=\\"fl\\">Time Slot</label><select class=\\"fi\\" id=\\"rtime\\" style=\\"margin-bottom:12px\\"><option value=\\"\\">Select time...</option>" + buildTimeOpts() + "</select>";',
-    '  h += "<div class=\\"pax-row\\" id=\\"recur-pax\\"><label class=\\"fl\\">Participants</label><input type=\\"number\\" class=\\"fi\\" id=\\"rpax\\" value=\\"1\\" min=\\"1\\" max=\\"20\\" style=\\"margin-bottom:10px\\"></div>";',
+    // Change 7: pax hidden for recur too unless One-Time (wire on svc change)
+    '  h += "<div class=\\"pax-row\\" id=\\"recur-pax\\"><label class=\\"fl\\">No. of Participants</label><input type=\\"number\\" class=\\"fi\\" id=\\"rpax\\" value=\\"1\\" min=\\"1\\" max=\\"20\\" style=\\"margin-bottom:10px\\"></div>";',
     '  h += "<label class=\\"fl\\" style=\\"margin-bottom:8px\\">Day Pattern</label>";',
     '  h += "<div class=\\"pat-grid\\">" + patBtns + "</div>";',
     '  h += "<div id=\\"cust-days\\" style=\\"display:none\\"><label class=\\"fl\\" style=\\"margin-top:8px\\">Select Days</label><div class=\\"day-picker\\">" + dayChips + "</div></div>";',
@@ -575,7 +607,8 @@ function _portalHTML(payLink, servicesJson) {
     '      var date = dt ? dt.value : "";',
     '      if (!sIdx || !date) { toast("Fill service and date for all sessions"); return; }',
     '      var svc = SERVICES[parseInt(sIdx, 10)];',
-    '      var pax = (svc && svc.pax && px) ? parseInt(px.value || 1, 10) : 1;',
+    // Change 7: pax only for One-Time
+    '      var pax = (svc && svc.showPax && px) ? parseInt(px.value || 1, 10) : 1;',
     '      requests.push({ service: svc.name, date: date, timeSlot: tm ? tm.value : "", participants: pax });',
     '    }',
     '  } else {',
@@ -588,7 +621,7 @@ function _portalHTML(payLink, servicesJson) {
     '    var rdates = getRecurDates();',
     '    if (!rdates.length) { toast("No upcoming dates in selected month"); return; }',
     '    var rsvc = SERVICES[parseInt(rSvcIdx, 10)];',
-    '    var rpax = (rsvc && rsvc.pax && rpi) ? parseInt(rpi.value || 1, 10) : 1;',
+    '    var rpax = (rsvc && rsvc.showPax && rpi) ? parseInt(rpi.value || 1, 10) : 1;',
     '    rdates.forEach(function(d) {',
     '      requests.push({ service: rsvc.name, date: d.toISOString().split("T")[0], timeSlot: rti ? rti.value : "", participants: rpax });',
     '    });',
@@ -602,7 +635,7 @@ function _portalHTML(payLink, servicesJson) {
     '      showResult("book-result", res.success, res.message || res.error || "Done");',
     '      if (res.success) {',
     '        toast("Booked " + res.added + " session" + (res.added !== 1 ? "s" : "") + "!");',
-    '        google.script.run.withSuccessHandler(function(d) { if (d && d.found) { RD = d; renderDash(); } }).getRiderData(RD.keNo);',
+    '        google.script.run.withSuccessHandler(function(d) { if (d && d.found && !d.multiProfile) { RD = d; renderDash(); } }).getRiderData(RD.keNo);',
     '      }',
     '    })',
     '    .withFailureHandler(function(e) {',
@@ -637,7 +670,7 @@ function _portalHTML(payLink, servicesJson) {
     '  document.getElementById("tc-payments").innerHTML = h;',
     '}',
 
-    // ── time options ───────────────────────────────────────
+    // ── time options — Change 1: 30-min slots ───────────────
     'function buildTimeOpts() {',
     '  function p(n) { return (n < 10 ? "0" : "") + n; }',
     '  function grp(label, sh, sm, eh) {',
@@ -647,17 +680,16 @@ function _portalHTML(payLink, servicesJson) {
     '      var s1 = Math.floor(cur / 60), m1 = cur % 60;',
     '      var s2 = Math.floor((cur + 30) / 60), m2 = (cur + 30) % 60;',
     '      html += "<option>" + p(s1) + ":" + p(m1) + " - " + p(s2) + ":" + p(m2) + "</option>";',
-    '      cur += 30;',
+    '      cur += 30;',   // 30-min increments
     '    }',
     '    return html + "</optgroup>";',
     '  }',
-    '  return grp("Morning", 6, 30, 12) + grp("Afternoon", 14, 30, 19);',
+    '  return grp("Morning", 6, 0, 12) + grp("Afternoon", 13, 0, 19);',
     '}'
   ];
 
   var js = jsLines.join('\n');
 
-  // ── HTML skeleton ────────────────────────────────────────
   var html = '<!DOCTYPE html>'
     + '<html lang="en"><head>'
     + '<meta charset="UTF-8">'
@@ -682,11 +714,22 @@ function _portalHTML(payLink, servicesJson) {
     +     '</div>'
     +     '<div class="fg">'
     +       '<label class="fl" for="inp-id">Phone or KE Number</label>'
-    +       '<input type="tel" class="fi" id="inp-id" placeholder="e.g. 9876543210 or KER1001" maxlength="20">'
+    +       '<input type="tel" class="fi" id="inp-id" placeholder="e.g. 9876543210 or KE240101..." maxlength="20">'
     +     '</div>'
     +     '<button class="btn-p" id="btn-login">View My Rides</button>'
     +     '<div class="login-err" id="login-err"></div>'
     +     '<p class="login-note">Enter your registered phone or KE Number.<br>No password needed.</p>'
+    +   '</div>'
+    + '</div>'
+
+    // Change 6: PROFILE PICKER SCREEN
+    + '<div id="profile-picker" style="display:none;min-height:100vh;background:var(--forest);align-items:center;justify-content:center;padding:2rem 1.25rem;flex-direction:column">'
+    +   '<div class="picker-card">'
+    +     '<div class="brand-icon" style="margin:0 auto 1rem">&#128101;</div>'
+    +     '<div class="picker-title">Choose a Profile</div>'
+    +     '<div class="picker-sub">Multiple riders are registered with this number.<br>Select the profile you want to view.</div>'
+    +     '<div id="profile-list"></div>'
+    +     '<button class="btn-back" id="btn-back-login">&#8592; Use a different number</button>'
     +   '</div>'
     + '</div>'
 
@@ -704,7 +747,7 @@ function _portalHTML(payLink, servicesJson) {
     +     '<div class="info-ke" id="d-keno"></div>'
     +     '<div class="info-svc" id="d-svc"></div>'
     +     '<div class="info-stats">'
-    +       '<div class="istat"><div class="istat-val" id="d-attended">0</div><div class="istat-lbl">Attended</div></div>'
+    +       '<div class="istat"><div class="istat-val" id="d-attended">0</div><div class="istat-lbl">Class Units</div></div>'
     +       '<div class="istat"><div class="istat-val" id="d-upcoming">0</div><div class="istat-lbl">Upcoming</div></div>'
     +       '<div class="istat"><div class="istat-val" id="d-payments">0</div><div class="istat-lbl">Payments</div></div>'
     +     '</div>'
@@ -722,14 +765,13 @@ function _portalHTML(payLink, servicesJson) {
 
     + '<div id="toast"></div>'
 
-    // SCRIPT — completely clean, no inline handlers
     + '<script>' + js + '</script>'
 
-    // Wire static event listeners after DOM is ready
     + '<script>'
     + 'document.getElementById("inp-id").addEventListener("keydown", function(e) { if (e.key === "Enter") doLogin(); });'
     + 'document.getElementById("btn-login").addEventListener("click", doLogin);'
     + 'document.getElementById("btn-logout").addEventListener("click", doLogout);'
+    + 'document.getElementById("btn-back-login").addEventListener("click", backToLogin);'
     + 'document.querySelectorAll(".tb").forEach(function(btn) {'
     +   'btn.addEventListener("click", function() { kTab(btn.getAttribute("data-tab")); });'
     + '});'

@@ -9,8 +9,6 @@
 // ────────────────────────────────────────────────────────────
 
 function addSessionToSchedule(d) {
-  // d: { keNo, name, phone, email, service, date, timeSlot,
-  //      participants, source, status }
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.SHEETS.SCHEDULE);
   if (!sheet) { Logger.log('Schedule sheet not found'); return null; }
@@ -34,7 +32,6 @@ function addSessionToSchedule(d) {
   const lr = sheet.getLastRow();
   if (d.date) sheet.getRange(lr, CONFIG.SCHED_COLS.DATE + 1).setNumberFormat('dd-MMM-yyyy');
 
-  // Create calendar event (non-fatal)
   if (d.date && d.timeSlot) {
     try {
       const calId = _createCalEvent(d);
@@ -49,22 +46,22 @@ function addSessionToSchedule(d) {
 }
 
 // ────────────────────────────────────────────────────────────
-//  GET SESSIONS FOR DATE  (used by attendance app + daily summary)
+//  GET SESSIONS FOR DATE
 // ────────────────────────────────────────────────────────────
 
 function getSessionsForDate(dateStr) {
   const tz = Session.getScriptTimeZone();
   let target;
-  if (dateStr === 'today')    { target = new Date(); }
+  if (dateStr === 'today')         { target = new Date(); }
   else if (dateStr === 'tomorrow') { target = new Date(); target.setDate(target.getDate() + 1); }
-  else { target = new Date(dateStr); }
+  else                             { target = new Date(dateStr); }
   const targetYMD = Utilities.formatDate(target, tz, 'yyyy-MM-dd');
 
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.SHEETS.SCHEDULE);
   if (!sheet) return [];
 
-  const data    = sheet.getDataRange().getValues();
+  const data = sheet.getDataRange().getValues();
   const results = [];
 
   for (let i = 1; i < data.length; i++) {
@@ -74,13 +71,9 @@ function getSessionsForDate(dateStr) {
     let rowYMD;
     try { rowYMD = Utilities.formatDate(new Date(date), tz, 'yyyy-MM-dd'); } catch(e) { continue; }
     if (rowYMD !== targetYMD) continue;
+    if (String(row[CONFIG.SCHED_COLS.STATUS] || '').toLowerCase() === 'cancelled') continue;
 
-    const status = String(row[CONFIG.SCHED_COLS.STATUS] || '').toLowerCase();
-    if (status === 'cancelled') continue;
-
-    const keNo   = String(row[CONFIG.SCHED_COLS.KE_NO] || '').trim();
-
-    // Fetch payment history for this rider
+    const keNo     = String(row[CONFIG.SCHED_COLS.KE_NO] || '').trim();
     const payments = _getPaymentsForRider(ss, keNo);
 
     results.push({
@@ -96,7 +89,7 @@ function getSessionsForDate(dateStr) {
       attendance  : row[CONFIG.SCHED_COLS.ATTENDANCE]   || '',
       staffNotes  : row[CONFIG.SCHED_COLS.STAFF_NOTES]  || '',
       source      : row[CONFIG.SCHED_COLS.SOURCE]       || '',
-      payments    : payments,  // array of payment objects for this rider
+      payments    : payments,
       classesAttended: _countClassesAttended(ss, keNo)
     });
   }
@@ -106,7 +99,7 @@ function getSessionsForDate(dateStr) {
 }
 
 // ────────────────────────────────────────────────────────────
-//  GET ALL RIDERS  (for "All Riders" tab in attendance app)
+//  GET ALL RIDERS WITH STATS
 // ────────────────────────────────────────────────────────────
 
 function getAllRidersWithStats() {
@@ -122,9 +115,9 @@ function getAllRidersWithStats() {
     const keNo = String(row[CONFIG.RIDER_COLS.KE_NO] || '').trim();
     if (!keNo) continue;
 
-    const payments       = _getPaymentsForRider(ss, keNo);
+    const payments        = _getPaymentsForRider(ss, keNo);
     const classesAttended = _countClassesAttended(ss, keNo);
-    const nextSession    = _getNextSession(ss, keNo);
+    const nextSession     = _getNextSession(ss, keNo);
 
     results.push({
       keNo        : keNo,
@@ -145,7 +138,7 @@ function getAllRidersWithStats() {
 }
 
 // ────────────────────────────────────────────────────────────
-//  SAVE ATTENDANCE  (called by attendance web app)
+//  SAVE ATTENDANCE — Change 5: sends Present / No-Show emails
 // ────────────────────────────────────────────────────────────
 
 function saveAttendance(rowIndex, status, note) {
@@ -154,36 +147,33 @@ function saveAttendance(rowIndex, status, note) {
     const sheet = ss.getSheetByName(CONFIG.SHEETS.SCHEDULE);
     if (!sheet) return { success: false, error: 'Schedule sheet not found' };
 
-    // Write attendance
     const attCell = sheet.getRange(rowIndex, CONFIG.SCHED_COLS.ATTENDANCE + 1);
     attCell.setValue(status);
     _colourAttCell(attCell, status);
 
-    // Update status column too
     const statusCell = sheet.getRange(rowIndex, CONFIG.SCHED_COLS.STATUS + 1);
-    if (status === 'Present')  { statusCell.setValue('Completed').setBackground('#d4edda').setFontColor('#155724').setFontWeight('bold'); }
-    else if (status === 'No-Show') { statusCell.setValue('No-Show').setBackground('#f8d7da').setFontColor('#721c24').setFontWeight('bold'); }
+    if (status === 'Present')      statusCell.setValue('Completed').setBackground('#d4edda').setFontColor('#155724').setFontWeight('bold');
+    else if (status === 'No-Show') statusCell.setValue('No-Show').setBackground('#f8d7da').setFontColor('#721c24').setFontWeight('bold');
 
-    // Write staff note
     if (note !== null && note !== undefined) {
       sheet.getRange(rowIndex, CONFIG.SCHED_COLS.STAFF_NOTES + 1).setValue(note);
     }
 
-    // Send attendance ack email when marked Present
-    if (status === 'Present') {
-      try {
-        const rowData = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
-        sendAttendanceAckEmail({
-          name        : rowData[CONFIG.SCHED_COLS.NAME]         || '',
-          email       : rowData[CONFIG.SCHED_COLS.EMAIL]        || '',
-          keNo        : rowData[CONFIG.SCHED_COLS.KE_NO]        || '',
-          service     : rowData[CONFIG.SCHED_COLS.SERVICE]      || '',
-          timeSlot    : rowData[CONFIG.SCHED_COLS.TIME_SLOT]    || '',
-          participants: rowData[CONFIG.SCHED_COLS.PARTICIPANTS]  || 1
-        });
-      } catch (mailErr) {
-        Logger.log('Attendance ack email failed (non-fatal): ' + mailErr);
-      }
+    // Send attendance email (Present OR No-Show)
+    try {
+      const rowData = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
+      const emailData = {
+        name        : rowData[CONFIG.SCHED_COLS.NAME]         || '',
+        email       : rowData[CONFIG.SCHED_COLS.EMAIL]        || '',
+        keNo        : rowData[CONFIG.SCHED_COLS.KE_NO]        || '',
+        service     : rowData[CONFIG.SCHED_COLS.SERVICE]      || '',
+        timeSlot    : rowData[CONFIG.SCHED_COLS.TIME_SLOT]    || '',
+        participants: rowData[CONFIG.SCHED_COLS.PARTICIPANTS]  || 1
+      };
+      if (status === 'Present')      sendPresentEmail(emailData);
+      else if (status === 'No-Show') sendNoShowEmail(emailData);
+    } catch (mailErr) {
+      Logger.log('Attendance email failed (non-fatal): ' + mailErr);
     }
 
     Logger.log('Attendance saved: row ' + rowIndex + ' → ' + status);
@@ -195,13 +185,13 @@ function saveAttendance(rowIndex, status, note) {
 }
 
 function _colourAttCell(cell, status) {
-  if (status === 'Present')     cell.setBackground('#d4edda').setFontColor('#155724').setFontWeight('bold');
-  else if (status === 'No-Show')cell.setBackground('#f8d7da').setFontColor('#721c24').setFontWeight('bold');
-  else                          cell.setBackground('#ffffff').setFontColor('#333333').setFontWeight('normal');
+  if (status === 'Present')      cell.setBackground('#d4edda').setFontColor('#155724').setFontWeight('bold');
+  else if (status === 'No-Show') cell.setBackground('#f8d7da').setFontColor('#721c24').setFontWeight('bold');
+  else                           cell.setBackground('#ffffff').setFontColor('#333333').setFontWeight('normal');
 }
 
 // ────────────────────────────────────────────────────────────
-//  PAYMENT LOOKUPS (for attendance cards + portal)
+//  PAYMENT LOOKUPS
 // ────────────────────────────────────────────────────────────
 
 function _getPaymentsForRider(ss, keNo) {
@@ -221,14 +211,17 @@ function _getPaymentsForRider(ss, keNo) {
         paidOn    : fmtDateTime(data[i][CONFIG.LEDGER_COLS.TIMESTAMP])
       });
     }
-    // newest first
-    out.reverse();
+    out.reverse(); // newest first
     return out;
   } catch (e) {
     Logger.log('_getPaymentsForRider error: ' + e);
     return [];
   }
 }
+
+// ────────────────────────────────────────────────────────────
+//  Change 1: Class count — each 30 minutes = 1 class unit
+// ────────────────────────────────────────────────────────────
 
 function _countClassesAttended(ss, keNo) {
   if (!keNo) return 0;
@@ -240,34 +233,35 @@ function _countClassesAttended(ss, keNo) {
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][CONFIG.SCHED_COLS.KE_NO] || '').trim() !== keNo) continue;
       if (String(data[i][CONFIG.SCHED_COLS.ATTENDANCE] || '').toLowerCase() === 'present') {
-        const timeSlot = String(data[i][CONFIG.SCHED_COLS.TIME_SLOT] || '');
-        const slots = _calculateSlotsFromTimeSlot(timeSlot);
-        count += slots;
+        count += _calculate30MinBlocks(String(data[i][CONFIG.SCHED_COLS.TIME_SLOT] || ''));
       }
     }
     return count;
   } catch (e) { return 0; }
 }
 
-function _calculateSlotsFromTimeSlot(timeSlot) {
-  if (!timeSlot) return 1; // default to 1 if no time slot
-  const match = timeSlot.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-  if (!match) return 1; // if can't parse, default to 1
-  const startH = parseInt(match[1]), startM = parseInt(match[2]), startAP = match[3].toUpperCase();
-  const endH = parseInt(match[4]), endM = parseInt(match[5]), endAP = match[6].toUpperCase();
-  
-  // Convert to 24-hour
-  let startMin = startH * 60 + startM;
-  if (startAP === 'PM' && startH !== 12) startMin += 12 * 60;
-  if (startAP === 'AM' && startH === 12) startMin = startM;
-  
-  let endMin = endH * 60 + endM;
-  if (endAP === 'PM' && endH !== 12) endMin += 12 * 60;
-  if (endAP === 'AM' && endH === 12) endMin = endM;
-  
-  const durationMin = endMin - startMin;
-  if (durationMin <= 0) return 1;
-  return Math.ceil(durationMin / 30); // each 30 min is a class
+// Each 30-minute window = 1 class block
+function _calculate30MinBlocks(timeSlot) {
+  if (!timeSlot) return 1;
+  // 24-hr format: "HH:MM - HH:MM"
+  const m24 = timeSlot.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})(?!\s*[AaPp])/);
+  if (m24) {
+    const dur = (parseInt(m24[3]) * 60 + parseInt(m24[4])) - (parseInt(m24[1]) * 60 + parseInt(m24[2]));
+    return dur > 0 ? Math.max(1, Math.round(dur / 30)) : 1;
+  }
+  // AM/PM format: "H:MM AM - H:MM PM"
+  const mAP = timeSlot.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*[-–]\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (mAP) {
+    let sh = parseInt(mAP[1]), sm = parseInt(mAP[2]);
+    let eh = parseInt(mAP[4]), em = parseInt(mAP[5]);
+    if (mAP[3].toUpperCase() === 'PM' && sh !== 12) sh += 12;
+    if (mAP[3].toUpperCase() === 'AM' && sh === 12) sh = 0;
+    if (mAP[6].toUpperCase() === 'PM' && eh !== 12) eh += 12;
+    if (mAP[6].toUpperCase() === 'AM' && eh === 12) eh = 0;
+    const dur = (eh * 60 + em) - (sh * 60 + sm);
+    return dur > 0 ? Math.max(1, Math.round(dur / 30)) : 1;
+  }
+  return 1;
 }
 
 function _getNextSession(ss, keNo) {
@@ -278,10 +272,10 @@ function _getNextSession(ss, keNo) {
     const sheet = ss.getSheetByName(CONFIG.SHEETS.SCHEDULE);
     if (!sheet) return null;
     const data  = sheet.getDataRange().getValues();
-    let upcoming = [];
+    const upcoming = [];
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][CONFIG.SCHED_COLS.KE_NO] || '').trim() !== keNo) continue;
-      const att    = String(data[i][CONFIG.SCHED_COLS.ATTENDANCE] || '').toLowerCase();
+      const att = String(data[i][CONFIG.SCHED_COLS.ATTENDANCE] || '').toLowerCase();
       if (att === 'present' || att === 'no-show') continue;
       const dt = data[i][CONFIG.SCHED_COLS.DATE];
       if (!dt) continue;
@@ -292,16 +286,12 @@ function _getNextSession(ss, keNo) {
     if (!upcoming.length) return null;
     upcoming.sort((a, b) => a.dateStr.localeCompare(b.dateStr));
     const r = upcoming[0].row;
-    return {
-      date    : fmtDate(r[CONFIG.SCHED_COLS.DATE]),
-      timeSlot: r[CONFIG.SCHED_COLS.TIME_SLOT] || '',
-      service : r[CONFIG.SCHED_COLS.SERVICE]   || ''
-    };
+    return { date: fmtDate(r[CONFIG.SCHED_COLS.DATE]), timeSlot: r[CONFIG.SCHED_COLS.TIME_SLOT] || '', service: r[CONFIG.SCHED_COLS.SERVICE] || '' };
   } catch (e) { return null; }
 }
 
 // ────────────────────────────────────────────────────────────
-//  GET SESSIONS FOR A SPECIFIC RIDER  (for portal)
+//  GET SESSIONS FOR A SPECIFIC RIDER  (portal)
 // ────────────────────────────────────────────────────────────
 
 function getSessionsForRider(keNo) {
@@ -318,10 +308,7 @@ function getSessionsForRider(keNo) {
       const dt = data[i][CONFIG.SCHED_COLS.DATE];
       let dateStr = '', rawDate = '';
       if (dt) {
-        try {
-          dateStr = fmtDate(new Date(dt));
-          rawDate = Utilities.formatDate(new Date(dt), tz, 'yyyy-MM-dd');
-        } catch(e){}
+        try { dateStr = fmtDate(new Date(dt)); rawDate = Utilities.formatDate(new Date(dt), tz, 'yyyy-MM-dd'); } catch(e){}
       }
       out.push({
         rowIndex    : i + 1,
@@ -335,7 +322,6 @@ function getSessionsForRider(keNo) {
         isFuture    : rawDate >= Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd')
       });
     }
-    // sort by date descending (most recent first)
     out.sort((a, b) => b.rawDate.localeCompare(a.rawDate));
     return out;
   } catch (e) {
@@ -345,7 +331,7 @@ function getSessionsForRider(keNo) {
 }
 
 // ────────────────────────────────────────────────────────────
-//  RESCHEDULE A SESSION  (called from portal)
+//  RESCHEDULE A SESSION  (portal)
 // ────────────────────────────────────────────────────────────
 
 function rescheduleSession(keNo, schedRowIndex, newDate, newTime, reason) {
@@ -355,80 +341,56 @@ function rescheduleSession(keNo, schedRowIndex, newDate, newTime, reason) {
     if (!sheet) return { success: false, error: 'Schedule sheet not found' };
 
     const rowData = sheet.getRange(schedRowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
-
-    // Verify ownership
-    if (String(rowData[CONFIG.SCHED_COLS.KE_NO] || '').trim() !== String(keNo).trim()) {
+    if (String(rowData[CONFIG.SCHED_COLS.KE_NO] || '').trim() !== String(keNo).trim())
       return { success: false, error: 'KE Number does not match this session.' };
-    }
 
-    // Can't reschedule completed or cancelled
     const att    = String(rowData[CONFIG.SCHED_COLS.ATTENDANCE] || '').toLowerCase();
     const status = String(rowData[CONFIG.SCHED_COLS.STATUS]     || '').toLowerCase();
-    if (att === 'present' || status === 'completed' || status === 'cancelled') {
+    if (att === 'present' || status === 'completed' || status === 'cancelled')
       return { success: false, error: 'This session cannot be rescheduled (status: ' + rowData[CONFIG.SCHED_COLS.STATUS] + ').' };
-    }
 
     const newDateObj = new Date(newDate);
     if (isNaN(newDateObj.getTime())) return { success: false, error: 'Invalid new date.' };
     const today = new Date(); today.setHours(0,0,0,0);
-    if (newDateObj <= today)    return { success: false, error: 'New date must be in the future.' };
+    if (newDateObj <= today) return { success: false, error: 'New date must be in the future.' };
 
-    // Update
-    sheet.getRange(schedRowIndex, CONFIG.SCHED_COLS.DATE + 1)
-      .setValue(newDateObj).setNumberFormat('dd-MMM-yyyy');
+    sheet.getRange(schedRowIndex, CONFIG.SCHED_COLS.DATE + 1).setValue(newDateObj).setNumberFormat('dd-MMM-yyyy');
     sheet.getRange(schedRowIndex, CONFIG.SCHED_COLS.TIME_SLOT + 1).setValue(newTime || rowData[CONFIG.SCHED_COLS.TIME_SLOT]);
-    sheet.getRange(schedRowIndex, CONFIG.SCHED_COLS.STATUS + 1)
-      .setValue('Rescheduled').setBackground('#fff3cd').setFontColor('#856404').setFontWeight('bold');
+    sheet.getRange(schedRowIndex, CONFIG.SCHED_COLS.STATUS + 1).setValue('Rescheduled').setBackground('#fff3cd').setFontColor('#856404').setFontWeight('bold');
     sheet.getRange(schedRowIndex, CONFIG.SCHED_COLS.STAFF_NOTES + 1)
       .setValue('Rescheduled: ' + (reason || 'No reason') + ' (was: ' + fmtDate(rowData[CONFIG.SCHED_COLS.DATE]) + ')');
 
-    // Update calendar event
     const calId = String(rowData[CONFIG.SCHED_COLS.CAL_EVENT_ID] || '').trim();
     if (calId) {
       try {
         const ev = CalendarApp.getDefaultCalendar().getEventById(calId);
         if (ev) {
           const tSlot = newTime || String(rowData[CONFIG.SCHED_COLS.TIME_SLOT] || '');
-          const tm    = tSlot.match(/(\d+):(\d+)\s*(AM|PM)/i);
+          const tm    = tSlot.match(/(\d+):(\d+)\s*(AM|PM)?/i);
           if (tm) {
             let h = parseInt(tm[1]), m = parseInt(tm[2]);
-            if (tm[3].toUpperCase() === 'PM' && h !== 12) h += 12;
-            if (tm[3].toUpperCase() === 'AM' && h === 12) h = 0;
+            if (tm[3] && tm[3].toUpperCase() === 'PM' && h !== 12) h += 12;
+            if (tm[3] && tm[3].toUpperCase() === 'AM' && h === 12) h = 0;
             const ns = new Date(newDateObj); ns.setHours(h,m,0,0);
-            const ne = new Date(ns); ne.setMinutes(ne.getMinutes() + 60);
+            const ne = new Date(ns); ne.setMinutes(ne.getMinutes() + 30); // 30-min
             ev.setTime(ns, ne);
           }
         }
       } catch (calErr) { Logger.log('Calendar reschedule failed (non-fatal): ' + calErr); }
     }
 
-    // Notify rider
     try {
       const rider = findRiderByKENo(keNo);
       if (rider) {
         const email = String(rider.row[CONFIG.RIDER_COLS.EMAIL] || '').trim();
         if (email) {
           const name = rider.row[CONFIG.RIDER_COLS.NAME] || '';
-          GmailApp.sendEmail(
-            email,
-            'Session Rescheduled: ' + fmtDate(newDateObj) + ' (' + keNo + ')',
-            'Your session has been rescheduled to ' + fmtDate(newDateObj) + '. New time: ' + (newTime || rowData[CONFIG.SCHED_COLS.TIME_SLOT] || 'TBD'),
-            {
-              htmlBody : '<div style="font-family:Arial,sans-serif;padding:20px;max-width:540px">'
-                + '<h2 style="color:#1f4e3d">Session Rescheduled</h2>'
-                + '<p>Hi <strong>' + name + '</strong>, your session has been moved.</p>'
-                + '<p><strong>New Date:</strong> ' + fmtDate(newDateObj) + '<br>'
-                + '<strong>New Time:</strong> ' + (newTime || rowData[CONFIG.SCHED_COLS.TIME_SLOT] || 'TBD') + '<br>'
-                + '<strong>Reason:</strong> ' + (reason || 'Not specified') + '</p>'
-                + '<p>Kings Equestrian Foundation</p></div>',
-              name : 'Kings Equestrian Foundation'
-            }
-          );
+          GmailApp.sendEmail(email, 'Session Rescheduled: ' + fmtDate(newDateObj) + ' (' + keNo + ')', '',
+            { htmlBody: '<div style="font-family:Arial,sans-serif;padding:20px;max-width:540px"><h2 style="color:#1f4e3d">Session Rescheduled</h2><p>Hi <strong>' + name + '</strong>, your session has been moved.</p><p><strong>New Date:</strong> ' + fmtDate(newDateObj) + '<br><strong>New Time:</strong> ' + (newTime || rowData[CONFIG.SCHED_COLS.TIME_SLOT] || 'TBD') + '<br><strong>Reason:</strong> ' + (reason || 'Not specified') + '</p><p>Kings Equestrian Foundation</p></div>', name: 'Kings Equestrian Foundation' });
         }
       }
     } catch (mailErr) { Logger.log('Reschedule email failed (non-fatal): ' + mailErr); }
 
-    Logger.log('Session rescheduled: row ' + schedRowIndex + ' → ' + fmtDate(newDateObj));
     return { success: true, message: 'Session rescheduled to ' + fmtDate(newDateObj) + '!' };
   } catch (err) {
     Logger.log('rescheduleSession error: ' + err);
@@ -437,21 +399,20 @@ function rescheduleSession(keNo, schedRowIndex, newDate, newTime, reason) {
 }
 
 // ────────────────────────────────────────────────────────────
-//  BOOK MULTIPLE SESSIONS  (called from portal)
+//  BOOK MULTIPLE SESSIONS  — Change 4: booking confirmation email
 // ────────────────────────────────────────────────────────────
 
 function bookMultipleSessions(keNo, sessionRequests) {
-  // sessionRequests: [{ service, date, timeSlot, participants }]
   try {
     const rider = findRiderByKENo(keNo);
     if (!rider) return { success: false, error: 'Rider not found for KE No: ' + keNo };
 
-    const r       = rider.row;
-    const name    = r[CONFIG.RIDER_COLS.NAME]  || '';
-    const email   = r[CONFIG.RIDER_COLS.EMAIL] || '';
-    const phone   = String(r[CONFIG.RIDER_COLS.PHONE] || '');
-    const added   = [];
-    const errors  = [];
+    const r      = rider.row;
+    const name   = r[CONFIG.RIDER_COLS.NAME]  || '';
+    const email  = r[CONFIG.RIDER_COLS.EMAIL] || '';
+    const phone  = String(r[CONFIG.RIDER_COLS.PHONE] || '');
+    const added  = [];
+    const errors = [];
 
     sessionRequests.forEach((req, idx) => {
       try {
@@ -460,63 +421,26 @@ function bookMultipleSessions(keNo, sessionRequests) {
         if (isNaN(newDateObj.getTime())) throw new Error('Invalid date');
         const today = new Date(); today.setHours(0,0,0,0);
         if (newDateObj <= today) throw new Error('Date must be in the future');
-
-        addSessionToSchedule({
-          keNo, name, phone, email,
-          service     : req.service,
-          date        : newDateObj,
-          timeSlot    : req.timeSlot    || '',
-          participants: req.participants || 1,
-          source      : 'rider-portal',
-          status      : 'Scheduled'
-        });
-        added.push(fmtDate(newDateObj) + ' — ' + req.service);
-      } catch (e) {
-        errors.push('Request ' + (idx+1) + ': ' + e.message);
-      }
+        addSessionToSchedule({ keNo, name, phone, email, service: req.service, date: newDateObj, timeSlot: req.timeSlot || '', participants: req.participants || 1, source: 'rider-portal', status: 'Scheduled' });
+        added.push({ label: fmtDate(newDateObj) + ' — ' + req.service, service: req.service, date: fmtDate(newDateObj), timeSlot: req.timeSlot || '' });
+      } catch (e) { errors.push('Request ' + (idx+1) + ': ' + e.message); }
     });
 
-    // Send confirmation email
+    // Change 4: Send proper booking confirmation email
     if (email && added.length > 0) {
-      const sessionList = added.map(s => '<li>' + s + '</li>').join('');
-      GmailApp.sendEmail(
-        email,
-        added.length + ' Session(s) Booked - Kings Equestrian (' + keNo + ')',
-        added.join("\n"),
-        {
-          htmlBody : '<div style="font-family:Arial,sans-serif;padding:20px;max-width:560px;color:#333">'
-            + '<div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:20px;text-align:center;color:#fff;border-radius:10px 10px 0 0">'
-            + '<h2 style="margin:0">Sessions Booked!</h2></div>'
-            + '<div style="border:1px solid #e0e0e0;border-top:none;padding:20px;border-radius:0 0 10px 10px">'
-            + '<p>Hi <strong>' + name + '</strong>, your sessions have been booked:</p>'
-            + '<ul style="font-size:13px;line-height:2">' + sessionList + '</ul>'
-            + '<p style="font-size:13px;color:#555">Please ensure your payments are up to date.</p>'
-            + '<p><a href="' + CONFIG.PAYMENT_FORM_LINK + '" style="background:#1f4e3d;color:#fff;padding:10px 20px;text-decoration:none;border-radius:6px;font-size:13px">Pay Now</a></p>'
-            + (errors.length ? '<p style="color:#c62828;font-size:12px">Some requests had issues: ' + errors.join(', ') + '</p>' : '')
-            + '</div></div>',
-          name : 'Kings Equestrian Foundation'
-        }
-      );
+      try { sendBookingConfirmationEmail({ name, email, keNo, added, errors }); }
+      catch (mailErr) { Logger.log('Booking email failed (non-fatal): ' + mailErr); }
     }
 
-    // Notify admin
+    // Admin notification
     const adminEmails = getAdminEmails();
     if (adminEmails.length && added.length > 0) {
-      GmailApp.sendEmail(
-        adminEmails.join(','),
-        'New Portal Booking: ' + name + ' (' + keNo + ')',
-        name + ' (' + keNo + ') has booked ' + added.length + ' session(s) via the Rider Portal:\n\n' + added.join('\n'),
-        { name : 'Kings Equestrian System' }
-      );
+      GmailApp.sendEmail(adminEmails.join(','), 'New Portal Booking: ' + name + ' (' + keNo + ')',
+        name + ' (' + keNo + ') booked ' + added.length + ' session(s):\n\n' + added.map(a => a.label).join('\n'),
+        { name: 'Kings Equestrian System' });
     }
 
-    return {
-      success: added.length > 0,
-      added: added.length,
-      failed: errors.length,
-      errors,
-      message: added.length + ' session(s) booked successfully!'
-    };
+    return { success: added.length > 0, added: added.length, failed: errors.length, errors, message: added.length + ' session(s) booked successfully!' };
   } catch (err) {
     Logger.log('bookMultipleSessions error: ' + err);
     return { success: false, error: err.message };
@@ -524,7 +448,7 @@ function bookMultipleSessions(keNo, sessionRequests) {
 }
 
 // ────────────────────────────────────────────────────────────
-//  GOOGLE CALENDAR
+//  GOOGLE CALENDAR — Change 1: 30-minute events
 // ────────────────────────────────────────────────────────────
 
 function _createCalEvent(d) {
@@ -532,39 +456,36 @@ function _createCalEvent(d) {
   const date     = new Date(d.date);
   if (isNaN(date.getTime())) return null;
 
-  const tSlot   = String(d.timeSlot || '').trim();
-  const tm      = tSlot.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  const tSlot = String(d.timeSlot || '').trim();
+  const tm    = tSlot.match(/(\d+):(\d+)\s*(AM|PM)?/i);
   if (!tm) return null;
 
   let h = parseInt(tm[1]), m = parseInt(tm[2]);
-  if (tm[3].toUpperCase() === 'PM' && h !== 12) h += 12;
-  if (tm[3].toUpperCase() === 'AM' && h === 12) h = 0;
+  if (tm[3] && tm[3].toUpperCase() === 'PM' && h !== 12) h += 12;
+  if (tm[3] && tm[3].toUpperCase() === 'AM' && h === 12) h = 0;
 
   const start = new Date(date); start.setHours(h, m, 0, 0);
-  const end   = new Date(start); end.setMinutes(end.getMinutes() + 60);
+  const end   = new Date(start); end.setMinutes(end.getMinutes() + 30); // 30-min slots
 
-  const pax    = d.participants || 1;
-  const desc   = 'KE No: ' + d.keNo + '\nService: ' + d.service
-    + '\nParticipants: ' + pax + '\nPhone: ' + d.phone
-    + '\n\nKings Equestrian Foundation | Karnataka | +91-9980895533';
+  const pax  = d.participants || 1;
+  const desc = 'KE No: ' + d.keNo + '\nService: ' + d.service + '\nParticipants: ' + pax + '\nPhone: ' + d.phone + '\n\nKings Equestrian Foundation | Karnataka | +91-9980895533';
 
-  const event  = calendar.createEvent(
+  const event = calendar.createEvent(
     'KE — ' + d.name + (pax > 1 ? ' ×' + pax : '') + ' (' + d.keNo + ')',
     start, end,
     { description: desc, location: 'Kings Equestrian Foundation, Karnataka', guests: d.email || '', sendInvites: false }
   );
 
   event.removeAllReminders();
-  event.addEmailReminder(1440);  // 24h
-  event.addEmailReminder(60);    //  1h
-  event.addPopupReminder(30);    // 30 min
+  event.addEmailReminder(1440);
+  event.addEmailReminder(60);
+  event.addPopupReminder(15);
 
-  // Color by service type
   const svc = String(d.service || '').toLowerCase();
-  if (svc.includes('trek'))   event.setColor(CalendarApp.EventColor.GREEN);
-  else if (svc.includes('photo')) event.setColor(CalendarApp.EventColor.YELLOW);
-  else if (svc.includes('camp'))  event.setColor(CalendarApp.EventColor.ORANGE);
-  else event.setColor(CalendarApp.EventColor.CYAN);
+  if (svc.includes('trek'))        event.setColor(CalendarApp.EventColor.GREEN);
+  else if (svc.includes('photo'))  event.setColor(CalendarApp.EventColor.YELLOW);
+  else if (svc.includes('camp'))   event.setColor(CalendarApp.EventColor.ORANGE);
+  else                             event.setColor(CalendarApp.EventColor.CYAN);
 
   return event.getId();
 }

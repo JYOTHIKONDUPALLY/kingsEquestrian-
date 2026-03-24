@@ -6,7 +6,7 @@
 
 // ────────────────────────────────────────────────────────────
 //  WELCOME EMAIL
-//  Sent on every new booking form submission (first-time or not)
+//  Change 3: adds a clickable link to the services PDF/PPT in Drive
 // ────────────────────────────────────────────────────────────
 
 function sendWelcomeEmail(d) {
@@ -18,17 +18,15 @@ function sendWelcomeEmail(d) {
   // Terms PDF
   const termsPDF = getTermsPDF();
   if (termsPDF) attachments.push(termsPDF);
-   const additionalPDF = getAdditionalPDF();
-  if (additionalPDF) {
-    attachments.push(additionalPDF);
-    Logger("There is a PDF")
-  }
+
+  // Additional PDF (services brochure/PPT)
+  const additionalPDF = getAdditionalPDF();
+  if (additionalPDF) attachments.push(additionalPDF);
 
   // Consent form
   try {
     const consentPDF = generateConsentPDF(d.name, d.email, d.phone, d.bookingDate);
     if (consentPDF) attachments.push(consentPDF);
-    
   } catch (e) { Logger.log('Consent PDF error: ' + e); }
 
   // Service-specific PDFs
@@ -42,13 +40,31 @@ function sendWelcomeEmail(d) {
     });
   } catch (e) { Logger.log('Service PDF error: ' + e); }
 
+  // Change 3: Build a public Drive link for the services document
+  let servicesPDFLink = '';
+  try {
+    if (CONFIG.ADDITIONAL_PDF_DOC_ID && CONFIG.ADDITIONAL_PDF_DOC_ID !== 'YOUR_ADDITIONAL_PDF_DOC_ID_HERE') {
+      // Construct a standard Google Drive viewer link (works for Docs, Slides, PDFs)
+      servicesPDFLink = 'https://drive.google.com/file/d/' + CONFIG.ADDITIONAL_PDF_DOC_ID + '/view?usp=sharing';
+    }
+  } catch (e) { Logger.log('Services PDF link error: ' + e); }
+
   const subject = d.isFirstTime
     ? 'Welcome to Kings Equestrian! Your KE No: ' + d.keNo
     : 'New Booking Confirmed — Kings Equestrian (' + d.keNo + ')';
 
   const greeting = d.isFirstTime
-    ? '<h2 style="color:#1f4e3d;margin:0 0 8px">Welcome, ' + d.name + '! </h2><p>You have been registered with Kings Equestrian. Your <strong>KE Number is ' + d.keNo + '</strong> — keep this safe, you\'ll need it for future bookings and payments.</p>'
+    ? '<h2 style="color:#1f4e3d;margin:0 0 8px">Welcome, ' + d.name + '! 🐴</h2><p>You have been registered with Kings Equestrian. Your <strong>KE Number is ' + d.keNo + '</strong> — keep this safe, you\'ll need it for future bookings and payments.</p>'
     : '<h2 style="color:#1f4e3d;margin:0 0 8px">Hi ' + d.name + '!</h2><p>A new booking has been received for your account <strong>(' + d.keNo + ')</strong>.</p>';
+
+  // Change 3: Services PDF link block
+  const servicesPDFBlock = servicesPDFLink
+    ? `<div style="background:#e8f4ff;border-left:4px solid #2196f3;padding:13px 18px;margin:16px 0;border-radius:4px">
+        <p style="margin:0;font-size:13px">📖 <strong>Learn about our services:</strong><br>
+        <a href="${servicesPDFLink}" style="color:#1565c0;font-weight:600" target="_blank">View Our Services Guide →</a><br>
+        <span style="font-size:11px;color:#555">(Also attached as a PDF to this email)</span></p>
+       </div>`
+    : '';
 
   const htmlBody = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0;color:#333">
@@ -65,53 +81,46 @@ function sendWelcomeEmail(d) {
       <strong>Service:</strong> ${d.services}<br>
       <strong>Participants:</strong> ${d.participants}</p>
     </div>
+    ${servicesPDFBlock}
     <div style="background:#e8f5e9;border:2px solid #4caf50;padding:20px;border-radius:8px;margin:20px 0">
-      <h3 style="color:#2e7d32;margin:0 0 12px">Pay Advance — ₹${d.amount.toLocaleString('en-IN')}</h3>
+      <h3 style="color:#2e7d32;margin:0 0 12px">💳 Pay Advance — ₹${d.amount.toLocaleString('en-IN')}</h3>
       <p style="font-size:13px;color:#555;margin:0 0 16px">Scan the QR code below and then submit the payment confirmation form.</p>
       <div style="text-align:center;margin:16px 0">
         <img src="${d.qrCode}" style="width:160px;height:160px;border:2px solid #e0e0e0;border-radius:6px">
       </div>
       <div style="text-align:center;margin-top:14px">
-        <a href="${CONFIG.PAYMENT_FORM_LINK}" style="background:#1f4e3d;color:#fff;padding:12px 26px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;display:inline-block"> Submit Payment</a>
+        <a href="${CONFIG.PAYMENT_FORM_LINK}" style="background:#1f4e3d;color:#fff;padding:12px 26px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;display:inline-block">📤 Submit Payment</a>
       </div>
       <p style="font-size:11px;color:#777;margin:12px 0 0;text-align:center">After paying, click the button to upload your screenshot and select date/time</p>
     </div>
     <div style="background:#f9f9f9;padding:16px;border-radius:8px">
-      <h4 style="color:#1f4e3d;margin:0 0 10px"> What's Next</h4>
+      <h4 style="color:#1f4e3d;margin:0 0 10px">✅ What's Next</h4>
       <ol style="margin:0;padding-left:20px;font-size:13px;color:#555;line-height:1.9">
         <li>Pay ₹${d.amount.toLocaleString('en-IN')} advance via the QR code above</li>
         <li>Submit payment via the form and choose your date &amp; time</li>
-        <li>Review the attached Terms &amp; Conditions${additionalPDF ? ', Additional Information' : ''}, and Consent Form</li>
+        <li>Review the attached Terms &amp; Conditions${additionalPDF ? ', Services Guide' : ''}, and Consent Form</li>
         <li>Await your payment receipt &amp; confirmation email</li>
         <li>Arrive 15 min before your slot — wear comfortable shoes!</li>
       </ol>
     </div>
   </div>
   <div style="background:#1f4e3d;color:#fff;padding:18px 30px;text-align:center;font-size:12px">
-    <strong>Kings Equestrian Foundation</strong><br>Karnataka, India<br> +91-9980895533 &nbsp;|&nbsp; info@kingsequestrian.com
+    <strong>Kings Equestrian Foundation</strong><br>Karnataka, India<br>📞 +91-9980895533 &nbsp;|&nbsp; ✉ info@kingsequestrian.com
   </div>
 </div>
 </body></html>`;
 
   const ccEmails = getCCRecipients('welcome');
-  GmailApp.sendEmail(
-    d.email,
-    subject,
-    '',
-    {
-      htmlBody    : htmlBody,
-      attachments : attachments,
-      cc          : ccEmails.join(','),
-      name        : 'Kings Equestrian Foundation'
-    }
-  );
+  GmailApp.sendEmail(d.email, subject, '', {
+    htmlBody    : htmlBody,
+    attachments : attachments,
+    cc          : ccEmails.join(','),
+    name        : 'Kings Equestrian Foundation'
+  });
 
-  // Mark sent in sheet
   if (d.sheet && d.row) {
-    d.sheet.getRange(d.row, CONFIG.BOOKING_COLS.WELCOME_SENT + 1)
-      .setValue('Yes').setBackground('#d4edda').setFontColor('#155724').setFontWeight('bold');
-    d.sheet.getRange(d.row, CONFIG.BOOKING_COLS.WELCOME_AT + 1)
-      .setValue(new Date()).setNumberFormat('dd-MMM-yyyy HH:mm:ss');
+    d.sheet.getRange(d.row, CONFIG.BOOKING_COLS.WELCOME_SENT + 1).setValue('Yes').setBackground('#d4edda').setFontColor('#155724').setFontWeight('bold');
+    d.sheet.getRange(d.row, CONFIG.BOOKING_COLS.WELCOME_AT + 1).setValue(new Date()).setNumberFormat('dd-MMM-yyyy HH:mm:ss');
   }
 
   Logger.log('Welcome email sent to ' + d.email + ' (KE: ' + d.keNo + ')');
@@ -122,7 +131,6 @@ function sendWelcomeEmail(d) {
 // ────────────────────────────────────────────────────────────
 
 function buildReceiptEmailHTML(d) {
-  // d: { name, keNo, amount, txnRef, payDate, receiptNo }
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
 <body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0;color:#333">
 <div style="max-width:620px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,.1)">
@@ -155,69 +163,143 @@ function buildReceiptEmailHTML(d) {
 }
 
 // ────────────────────────────────────────────────────────────
-//  ATTENDANCE ACKNOWLEDGMENT EMAIL  (sent when marked Present)
+//  Change 4: BOOKING CONFIRMATION EMAIL
+//  Sent when a rider books sessions via the portal
 // ────────────────────────────────────────────────────────────
 
-function sendAttendanceAckEmail(d) {
-  // d: { name, email, keNo, service, timeSlot, date, participants }
+function sendBookingConfirmationEmail(d) {
+  // d: { name, email, keNo, added:[{label,service,date,timeSlot}], errors }
   if (!d.email || !d.email.includes('@')) return;
 
-  const firstName = d.name.split(' ')[0];
-  const subject   = '🐴 Attendance Confirmed — Kings Equestrian (' + d.keNo + ')';
+  const sessionRows = (d.added || []).map(s =>
+    `<tr style="border-bottom:1px solid #e8f0e8">
+      <td style="padding:9px 12px;font-weight:600;color:#1f4e3d">${s.service}</td>
+      <td style="padding:9px 12px">📅 ${s.date}</td>
+      <td style="padding:9px 12px;color:#555">${s.timeSlot || 'Time TBD'}</td>
+    </tr>`
+  ).join('');
 
   const htmlBody = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
-<body style="font-family:Arial,sans-serif;background:#f4f6f4;margin:0;padding:0;color:#333">
-<div style="max-width:580px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,.08)">
-  <div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:26px 28px;text-align:center;color:#fff">
-    <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" style="width:68px;height:68px;border-radius:50%;border:3px solid rgba(255,255,255,.4);margin-bottom:10px">
-    <h1 style="margin:0;font-size:21px">Welcome, ${firstName}! 🐴</h1>
+<body style="font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0;color:#333">
+<div style="max-width:620px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.1)">
+  <div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:26px 30px;text-align:center;color:#fff">
+    <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" style="width:64px;height:64px;border-radius:50%;border:3px solid rgba(255,255,255,.4);margin-bottom:10px">
+    <h1 style="margin:0;font-size:22px">Sessions Booked! 🐴</h1>
+    <p style="margin:6px 0 0;font-size:13px;opacity:.9">Kings Equestrian Foundation</p>
   </div>
-  <div style="padding:26px 28px">
-    <div style="background:#d4edda;border-left:4px solid #28a745;border-radius:6px;padding:14px 18px;margin-bottom:20px">
-      <div style="font-weight:bold;color:#155724;font-size:15px">✅ Attendance Confirmed — Present</div>
-      <div style="color:#1e7e34;font-size:12px;margin-top:4px">${fmtDate(new Date())}</div>
+  <div style="padding:26px 30px">
+    <p style="font-size:15px">Dear <strong>${d.name}</strong>,</p>
+    <div style="background:#d4edda;border-left:4px solid #28a745;padding:14px 18px;border-radius:6px;margin:16px 0">
+      <strong style="color:#155724">✅ Your ${d.added.length} session${d.added.length !== 1 ? 's have' : ' has'} been confirmed!</strong><br>
+      <span style="font-size:12px;color:#1e7e34">KE No: ${d.keNo}</span>
     </div>
-    <p style="font-size:14px;line-height:1.7">Hi <strong>${d.name}</strong>, we're happy you're here today! Your attendance has been recorded.</p>
-    <div style="background:#f8faf8;border:1px solid #c8e6c9;border-radius:8px;padding:16px;margin:16px 0;font-size:13px">
-      <div style="margin-bottom:6px"><strong>KE No:</strong> ${d.keNo}</div>
-      <div style="margin-bottom:6px"><strong>Service:</strong> ${d.service}</div>
-      ${d.timeSlot ? '<div style="margin-bottom:6px"><strong>Time:</strong> ' + d.timeSlot + '</div>' : ''}
-      ${d.participants > 1 ? '<div><strong>Participants:</strong> ' + d.participants + '</div>' : ''}
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px">
+      <thead><tr style="background:#1f4e3d;color:#fff">
+        <th style="padding:9px 12px;text-align:left">Service</th>
+        <th style="padding:9px 12px;text-align:left">Date</th>
+        <th style="padding:9px 12px;text-align:left">Time Slot</th>
+      </tr></thead>
+      <tbody>${sessionRows}</tbody>
+    </table>
+    <div style="background:#fff8e6;border-left:4px solid #f0a500;padding:13px;border-radius:4px;font-size:12px;color:#7a5000;margin-top:16px">
+      <strong>💡 Reminder:</strong> Please ensure your advance payment is up to date. Arrive 15 minutes before your slot.
     </div>
-    <div style="background:#fff8e6;border-left:4px solid #f0a500;padding:14px;border-radius:4px;font-size:12px;color:#7a5000">
-      <strong>Tips:</strong> Stay calm around the horses, follow your instructor, wear your helmet, and enjoy!
+    <div style="text-align:center;margin-top:20px">
+      <a href="${CONFIG.PAYMENT_FORM_LINK}" style="background:#1f4e3d;color:#fff;padding:12px 26px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:13px;display:inline-block">📤 Submit Payment</a>
     </div>
+    ${d.errors && d.errors.length ? `<p style="font-size:11px;color:#c62828;margin-top:12px">Note: Some requests could not be processed — ${d.errors.join(', ')}</p>` : ''}
   </div>
-  <div style="background:#1f4e3d;color:#fff;padding:16px 28px;text-align:center;font-size:12px">
+  <div style="background:#1f4e3d;color:#fff;padding:16px 30px;text-align:center;font-size:12px">
+    <strong>Kings Equestrian Foundation</strong><br>Karnataka, India &nbsp;|&nbsp; +91-9980895533 &nbsp;|&nbsp; info@kingsequestrian.com
+  </div>
+</div>
+</body></html>`;
+
+  const ccEmails = getCCRecipients('welcome');
+  GmailApp.sendEmail(d.email, 'Sessions Booked — Kings Equestrian (' + d.keNo + ')', '', {
+    htmlBody : htmlBody,
+    cc       : ccEmails.join(','),
+    name     : 'Kings Equestrian Foundation'
+  });
+  Logger.log('Booking confirmation sent to ' + d.email);
+}
+
+// ────────────────────────────────────────────────────────────
+//  Change 5: PRESENT EMAIL — "Loved having you ride with us today"
+// ────────────────────────────────────────────────────────────
+
+function sendPresentEmail(d) {
+  // d: { name, email, keNo, service, timeSlot, participants }
+  if (!d.email || !d.email.includes('@')) return;
+
+  const htmlBody = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="font-family:Georgia,serif;background:#f4f6f4;margin:0;padding:0;color:#333">
+<div style="max-width:580px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.08)">
+  <div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:28px 30px;text-align:center;color:#fff">
+    <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" style="width:68px;height:68px;border-radius:50%;border:3px solid rgba(255,255,255,.4);margin-bottom:12px">
+    <h1 style="margin:0;font-size:22px;font-family:Georgia,serif">Kings Equestrian Foundation 🐎</h1>
+  </div>
+  <div style="padding:32px 34px;line-height:1.9">
+    <p style="font-size:15px;margin:0 0 18px">Dear <strong>${d.name}</strong>,</p>
+    <p style="font-size:14px;margin:0 0 16px">It was truly a pleasure having you with us today.</p>
+    <p style="font-size:14px;margin:0 0 16px">We hope your time with the horses brought calm, joy, and a beautiful sense of connection.</p>
+    <p style="font-size:14px;margin:0 0 24px">Thank you for being part of our space — we look forward to welcoming you again soon.</p>
+    <p style="font-size:14px;margin:0;color:#1f4e3d;font-style:italic">Warm regards,<br><strong>Kings Equestrian Foundation 🐎</strong></p>
+  </div>
+  <div style="background:#1f4e3d;color:#fff;padding:16px 30px;text-align:center;font-size:12px">
     Kings Equestrian Foundation &nbsp;|&nbsp; Karnataka &nbsp;|&nbsp; +91-9980895533
   </div>
 </div>
 </body></html>`;
 
   const ccEmails = getCCRecipients('welcome');
-  GmailApp.sendEmail(
-    d.email,
-    subject,
-    '',
-    {
-      htmlBody : htmlBody,
-      cc       : ccEmails.join(','),
-      name     : 'Kings Equestrian Foundation'
-    }
-  );
-  Logger.log('Attendance ack sent to ' + d.email);
+  GmailApp.sendEmail(d.email, '🌿 Loved having you ride with us today', '', {
+    htmlBody : htmlBody,
+    cc       : ccEmails.join(','),
+    name     : 'Kings Equestrian Foundation'
+  });
+  Logger.log('Present email sent to ' + d.email);
+}
+
+// ────────────────────────────────────────────────────────────
+//  Change 5: NO-SHOW EMAIL — "We missed you today"
+// ────────────────────────────────────────────────────────────
+
+function sendNoShowEmail(d) {
+  // d: { name, email, keNo, service, timeSlot, participants }
+  if (!d.email || !d.email.includes('@')) return;
+
+  const htmlBody = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="font-family:Georgia,serif;background:#f4f6f4;margin:0;padding:0;color:#333">
+<div style="max-width:580px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.08)">
+  <div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:28px 30px;text-align:center;color:#fff">
+    <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" style="width:68px;height:68px;border-radius:50%;border:3px solid rgba(255,255,255,.4);margin-bottom:12px">
+    <h1 style="margin:0;font-size:22px;font-family:Georgia,serif">Kings Equestrian Foundation 🐎</h1>
+  </div>
+  <div style="padding:32px 34px;line-height:1.9">
+    <p style="font-size:15px;margin:0 0 18px">Dear <strong>${d.name}</strong>,</p>
+    <p style="font-size:14px;margin:0 0 16px">We missed having you with us today and hope everything is well.</p>
+    <p style="font-size:14px;margin:0 0 16px">Whenever you feel ready, we'll be happy to welcome you back — just reply to this email and our team will assist you with the next steps.</p>
+    <p style="font-size:14px;margin:0 0 24px">Wishing you ease and well-being,</p>
+    <p style="font-size:14px;margin:0;color:#1f4e3d;font-style:italic"><strong>Kings Equestrian Foundation 🐎</strong></p>
+  </div>
+  <div style="background:#1f4e3d;color:#fff;padding:16px 30px;text-align:center;font-size:12px">
+    Kings Equestrian Foundation &nbsp;|&nbsp; Karnataka &nbsp;|&nbsp; +91-9980895533
+  </div>
+</div>
+</body></html>`;
+
+  const ccEmails = getCCRecipients('welcome');
+  GmailApp.sendEmail(d.email, '🌸 We missed you today', '', {
+    htmlBody : htmlBody,
+    cc       : ccEmails.join(','),
+    name     : 'Kings Equestrian Foundation'
+  });
+  Logger.log('No-show email sent to ' + d.email);
 }
 
 // ────────────────────────────────────────────────────────────
 //  80G RECEIPT PDF GENERATOR
-// ────────────────────────────────────────────────────────────
-
-// ────────────────────────────────────────────────────────────
-//  80G RECEIPT PDF GENERATOR
-//  Uses DocumentApp (Docs scope) instead of DriveApp.createFile
-//  so it works without the Drive scope.
-//  Flow: create a Google Doc → write content → export as PDF
-//        → trash the temp Doc immediately
 // ────────────────────────────────────────────────────────────
 
 function generate80GReceipt(riderName, pan, amount, txnRef, receiptNo) {

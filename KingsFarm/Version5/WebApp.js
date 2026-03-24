@@ -4,12 +4,6 @@
 // Web app entry point + rider portal backend
 // ============================================================
 
-// ────────────────────────────────────────────────────────────
-//  doGet — routes between Attendance App and Rider Portal
-//  ?app=portal  → Rider Portal
-//  (default)    → Staff Attendance App
-// ────────────────────────────────────────────────────────────
-
 function doGet(e) {
   const app = (e && e.parameter && e.parameter.app) ? String(e.parameter.app) : 'attendance';
   if (app === 'portal') {
@@ -19,7 +13,6 @@ function doGet(e) {
       .addMetaTag('viewport', 'width=device-width,initial-scale=1,maximum-scale=1')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
-  // Default: attendance app
   return HtmlService
     .createTemplate(getAttendanceAppHtml())
     .evaluate()
@@ -30,52 +23,89 @@ function doGet(e) {
 
 // ────────────────────────────────────────────────────────────
 //  PORTAL BACKEND — getRiderData
-//  Called via google.script.run from the Rider Portal
+//  Change 6: returns { multiProfile: true, profiles: [...] }
+//  when multiple riders share the same phone number
 // ────────────────────────────────────────────────────────────
 
 function getRiderData(identifier) {
-  // identifier can be phone number or KE No (KER...)
   try {
     identifier = String(identifier || '').trim();
     if (!identifier) return { found: false, error: 'Please enter your phone number or KE Number.' };
 
-    let rider = null;
-    if (identifier.toUpperCase().startsWith('KER')) {
-      rider = findRiderByKENo(identifier.toUpperCase());
-    } else {
-      rider = findRiderByPhone(identifier);
+    if (identifier.toUpperCase().startsWith('KE')) {
+      // Lookup by KE No — always single profile
+      const rider = findRiderByKENo(identifier.toUpperCase());
+      if (!rider) return { found: false, error: 'No account found. Contact us at +91-9980895533.' };
+      return _buildRiderData(rider);
     }
 
-    if (!rider) return { found: false, error: 'No account found. Contact us at +91-9980895533.' };
+    // Phone lookup — may return multiple profiles
+    const riders = findAllRidersByPhone(identifier);
+    if (!riders || !riders.length) {
+      return { found: false, error: 'No account found. Contact us at +91-9980895533.' };
+    }
 
-    const r    = rider.row;
-    const keNo = String(r[CONFIG.RIDER_COLS.KE_NO] || '').trim();
+    if (riders.length === 1) {
+      return _buildRiderData(riders[0]);
+    }
 
-    // Payments — individual transactions only (no totals)
-    const ss       = SpreadsheetApp.getActiveSpreadsheet();
-    const payments = _getPaymentsForRider(ss, keNo);
-
-    // Sessions — all (past + upcoming)
-    const sessions = getSessionsForRider(keNo);
-
-    // Classes attended count
-    const classesAttended = _countClassesAttended(ss, keNo);
-
+    // Multiple profiles share this phone — return profile picker
     return {
-      found          : true,
-      keNo           : keNo,
-      name           : r[CONFIG.RIDER_COLS.NAME]         || '',
-      phone          : String(r[CONFIG.RIDER_COLS.PHONE] || ''),
-      email          : r[CONFIG.RIDER_COLS.EMAIL]        || '',
-      services       : r[CONFIG.RIDER_COLS.SERVICES]     || '',
-      participants   : r[CONFIG.RIDER_COLS.PARTICIPANTS]  || 1,
-      registeredOn   : r[CONFIG.RIDER_COLS.REGISTERED]   ? fmtDate(new Date(r[CONFIG.RIDER_COLS.REGISTERED])) : '',
-      payments       : payments,        // [{amount, payDate, txnRef, receiptNo, paidOn}]
-      sessions       : sessions,        // [{rowIndex, service, date, rawDate, timeSlot, status, attendance, isFuture}]
-      classesAttended: classesAttended
+      found        : true,
+      multiProfile : true,
+      profiles     : riders.map(r => ({
+        keNo  : String(r.row[CONFIG.RIDER_COLS.KE_NO]   || '').trim(),
+        name  : r.row[CONFIG.RIDER_COLS.NAME]            || '',
+        services: r.row[CONFIG.RIDER_COLS.SERVICES]      || ''
+      }))
     };
   } catch (err) {
     Logger.log('getRiderData error: ' + err);
     return { found: false, error: 'Something went wrong. Please try again.' };
   }
+}
+
+// Build full rider data object for a single rider
+function _buildRiderData(rider) {
+  const r    = rider.row;
+  const keNo = String(r[CONFIG.RIDER_COLS.KE_NO] || '').trim();
+  const ss   = SpreadsheetApp.getActiveSpreadsheet();
+
+  const payments        = _getPaymentsForRider(ss, keNo);
+  const sessions        = getSessionsForRider(keNo);
+  const classesAttended = _countClassesAttended(ss, keNo);
+
+  return {
+    found          : true,
+    keNo           : keNo,
+    name           : r[CONFIG.RIDER_COLS.NAME]         || '',
+    phone          : String(r[CONFIG.RIDER_COLS.PHONE] || ''),
+    email          : r[CONFIG.RIDER_COLS.EMAIL]        || '',
+    services       : r[CONFIG.RIDER_COLS.SERVICES]     || '',
+    participants   : r[CONFIG.RIDER_COLS.PARTICIPANTS]  || 1,
+    registeredOn   : r[CONFIG.RIDER_COLS.REGISTERED]   ? fmtDate(new Date(r[CONFIG.RIDER_COLS.REGISTERED])) : '',
+    payments       : payments,
+    sessions       : sessions,
+    classesAttended: classesAttended
+  };
+}
+
+// ────────────────────────────────────────────────────────────
+//  Change 6: find ALL riders matching a phone number
+// ────────────────────────────────────────────────────────────
+
+function findAllRidersByPhone(phone) {
+  const ss     = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet  = ss.getSheetByName(CONFIG.SHEETS.RIDERS);
+  if (!sheet) return [];
+  const target = normalisePhone(phone);
+  if (!target || target.length < 10) return [];
+  const data   = sheet.getDataRange().getValues();
+  const result = [];
+  for (let i = 1; i < data.length; i++) {
+    if (normalisePhone(data[i][CONFIG.RIDER_COLS.PHONE]) === target) {
+      result.push({ rowIndex: i + 1, row: data[i] });
+    }
+  }
+  return result;
 }
