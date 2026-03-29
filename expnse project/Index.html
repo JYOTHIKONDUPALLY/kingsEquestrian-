@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kings Equestrian – Expense Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#C9A84C;--gold-light:#E8C97A;--gold-dark:#9A7A2E;
+  --charcoal:#1A1A1A;--dark:#111111;--mid:#2C2C2C;--card:#222222;
+  --border:rgba(201,168,76,0.2);--text:#F0EDE8;--muted:#8A8580;
+  --green:#4CAF75;--red:#E05252;--blue:#5295E0;--orange:#E08A32;
+  --radius:12px;--shadow:0 8px 32px rgba(0,0,0,0.4);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--dark);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+
+/* ── LOADER ── */
+#loader{position:fixed;inset:0;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999}
+.loader-logo{font-family:'Playfair Display',serif;font-size:2.2rem;color:var(--gold);letter-spacing:.08em;margin-bottom:.75rem}
+.loader-sub{color:var(--muted);font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;margin-bottom:2rem}
+.loader-ring{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hidden{display:none!important}
+
+/* ── HEADER ── */
+header{background:linear-gradient(135deg,var(--charcoal),var(--mid));border-bottom:1px solid var(--border);padding:.9rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:1rem;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:.9rem}
+.brand-icon{width:40px;height:40px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.brand-name{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--gold);font-weight:700;line-height:1.1}
+.brand-sub{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.13em}
+.user-badge{display:flex;align-items:center;gap:.7rem;background:var(--card);padding:.4rem .9rem;border-radius:50px;border:1px solid var(--border);flex-shrink:0}
+.user-email{font-size:.75rem;color:var(--muted)}
+.user-name{font-size:.85rem;font-weight:500}
+.role-pill{padding:.2rem .7rem;border-radius:50px;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+.role-admin{background:rgba(201,168,76,.2);color:var(--gold);border:1px solid var(--gold-dark)}
+.role-accounts{background:rgba(82,149,224,.2);color:var(--blue);border:1px solid var(--blue)}
+.role-viewer{background:rgba(138,133,128,.2);color:var(--muted);border:1px solid #555}
+
+/* ── TABS ── */
+.tabs-bar{background:var(--charcoal);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;padding:0 1.5rem;gap:0;scrollbar-width:none}
+.tabs-bar::-webkit-scrollbar{display:none}
+.tab-btn{padding:.85rem 1.4rem;font-size:.88rem;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;position:relative;white-space:nowrap;transition:color .2s;display:flex;align-items:center;gap:.4rem}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--gold)}
+.tab-btn.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--gold);border-radius:2px}
+.tab-btn:disabled{opacity:.3;cursor:not-allowed}
+.tab-count{background:rgba(201,168,76,.2);color:var(--gold);font-size:.65rem;padding:1px 7px;border-radius:10px;font-weight:700}
+
+/* ── MAIN ── */
+main{max-width:1100px;margin:0 auto;padding:1.75rem 1.5rem}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem}
+.sec-title{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--gold)}
+.sec-desc{font-size:.78rem;color:var(--muted);margin-top:.2rem}
+
+/* ── KPI STRIP ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.9rem;margin-bottom:1.75rem}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.stat-card.gold::before{background:var(--gold)}
+.stat-card.green::before{background:var(--green)}
+.stat-card.orange::before{background:var(--orange)}
+.stat-card.red::before{background:var(--red)}
+.stat-card.blue::before{background:var(--blue)}
+.stat-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.4rem}
+.stat-value{font-size:1.7rem;font-weight:700;color:var(--text);line-height:1}
+.stat-sub{font-size:.72rem;color:var(--muted);margin-top:.25rem}
+
+/* ── FILTERS ── */
+.filters{display:flex;gap:.7rem;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center}
+.filters select,.filters input{background:var(--card);border:1px solid var(--border);color:var(--text);padding:.5rem .85rem;border-radius:8px;font-size:.84rem;font-family:'DM Sans',sans-serif;min-width:150px;appearance:none}
+.filters select:focus,.filters input:focus{outline:none;border-color:var(--gold)}
+.filters select option{background:var(--charcoal)}
+
+/* ── FORM ── */
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem}
+.form-section{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:1.35rem;margin-bottom:1.35rem}
+.form-section-title{font-size:.72rem;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:.12em;margin-bottom:1.1rem;display:flex;align-items:center;gap:.5rem}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.1rem}
+.form-group{display:flex;flex-direction:column;gap:.35rem}
+.form-group.full{grid-column:1/-1}
+label{font-size:.78rem;font-weight:500;color:var(--muted)}
+label .req{color:var(--red)}
+input,select,textarea{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;padding:.6rem .85rem;transition:border-color .2s;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold)}
+select option{background:var(--charcoal);color:var(--text)}
+textarea{resize:vertical;min-height:78px}
+.file-upload{position:relative}
+.file-upload input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.file-upload-label{display:flex;align-items:center;gap:.7rem;background:rgba(255,255,255,.04);border:1px dashed rgba(201,168,76,.4);border-radius:8px;padding:.7rem 1rem;font-size:.84rem;color:var(--muted);transition:border-color .2s;cursor:pointer}
+.file-upload-label:hover{border-color:var(--gold);color:var(--text)}
+.file-name{font-size:.78rem;color:var(--gold);margin-top:.3rem}
+
+/* ── PAYEE BANK INFO ── */
+.payee-bank-box{background:rgba(201,168,76,.05);border:1px solid var(--border);border-radius:8px;padding:.9rem 1rem;margin-top:.9rem}
+.bank-box-title{font-size:.7rem;color:var(--gold);font-weight:600;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.65rem}
+.bank-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.6rem}
+.bank-field-label{font-size:.7rem;color:var(--muted)}
+.bank-field-val{font-size:.85rem;font-weight:500;color:var(--text);font-family:monospace;word-break:break-all}
+
+/* ── BUTTONS ── */
+.btn{padding:.58rem 1.35rem;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.87rem;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:.45rem;white-space:nowrap}
+.btn-primary{background:var(--gold);color:var(--dark)}
+.btn-primary:hover{background:var(--gold-light)}
+.btn-approve{background:rgba(76,175,117,.15);border:1px solid var(--green);color:var(--green)}
+.btn-approve:hover{background:rgba(76,175,117,.3)}
+.btn-reject{background:rgba(224,82,82,.15);border:1px solid var(--red);color:var(--red)}
+.btn-reject:hover{background:rgba(224,82,82,.3)}
+.btn-pay{background:rgba(82,149,224,.15);border:1px solid var(--blue);color:var(--blue)}
+.btn-pay:hover{background:rgba(82,149,224,.3)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-sm{padding:.38rem .85rem;font-size:.78rem}
+
+/* ── REQUEST CARDS ── */
+.requests-list{display:flex;flex-direction:column;gap:.9rem}
+
+/* The main card */
+.req-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s}
+.req-card:hover{border-color:rgba(201,168,76,.45)}
+
+/* Top click-area */
+.req-card-clickable{padding:1.1rem 1.25rem;cursor:pointer}
+.req-top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.65rem}
+.req-id{font-size:.75rem;font-weight:700;color:var(--gold);letter-spacing:.05em;margin-bottom:.2rem}
+.req-name{font-size:.98rem;font-weight:600;color:var(--text)}
+.req-sub{font-size:.8rem;color:var(--muted);margin-top:.15rem}
+.req-right{text-align:right;flex-shrink:0}
+.req-amount{font-size:1.15rem;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif}
+.req-date{font-size:.72rem;color:var(--muted);margin-top:.2rem}
+
+/* Meta chips */
+.req-meta{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.6rem}
+.meta-chip{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:50px;padding:.18rem .6rem;font-size:.72rem;color:var(--muted)}
+
+/* Status badge */
+.status-badge{padding:.22rem .75rem;border-radius:50px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;display:inline-block}
+.st-Pending{background:rgba(224,138,50,.2);color:var(--orange);border:1px solid rgba(224,138,50,.4)}
+.st-Approved{background:rgba(76,175,117,.2);color:var(--green);border:1px solid rgba(76,175,117,.4)}
+.st-Rejected{background:rgba(224,82,82,.2);color:var(--red);border:1px solid rgba(224,82,82,.4)}
+.st-Paid{background:rgba(82,149,224,.2);color:var(--blue);border:1px solid rgba(82,149,224,.4)}
+
+/* ── INLINE ADMIN ACTIONS ── */
+.req-admin-actions{border-top:1px solid var(--border);padding:.9rem 1.25rem;background:rgba(201,168,76,.03);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.req-admin-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-right:.25rem}
+
+/* ── ACCOUNTS SETTLEMENT CARD ── */
+.settlement-card{background:var(--card);border:1px solid rgba(82,149,224,.3);border-radius:var(--radius);overflow:hidden}
+.settlement-head{padding:1.1rem 1.25rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;cursor:pointer}
+.settlement-head:hover{background:rgba(82,149,224,.05)}
+.settlement-body{padding:1.1rem 1.25rem;border-top:1px solid var(--border);background:rgba(0,0,0,.15)}
+.settlement-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1rem}
+.settle-field{display:flex;flex-direction:column;gap:.3rem}
+.settle-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:500}
+.settle-input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;padding:.55rem .8rem;width:100%;transition:border-color .2s}
+.settle-input:focus{outline:none;border-color:var(--blue)}
+.settle-actions{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;margin-top:.75rem}
+.settle-hint{font-size:.75rem;color:var(--muted);margin-top:.5rem}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px)}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card);z-index:1}
+.modal-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--gold)}
+.modal-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.4rem;padding:.2rem .4rem;border-radius:6px;line-height:1}
+.modal-close:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.modal-body{padding:1.5rem}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.detail-item{display:flex;flex-direction:column;gap:.25rem}
+.detail-item.full{grid-column:1/-1}
+.detail-item label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500}
+.detail-item .val{font-size:.9rem;color:var(--text);font-weight:500}
+.modal-divider{border:none;border-top:1px solid var(--border);margin:1.2rem 0}
+
+/* Logs */
+.logs-title{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.7rem}
+.log-entry{background:rgba(255,255,255,.03);border-left:3px solid var(--border);padding:.65rem .9rem;border-radius:0 7px 7px 0;margin-bottom:.6rem;font-size:.83rem}
+.log-entry.log-approve{border-left-color:var(--green)}
+.log-entry.log-reject{border-left-color:var(--red)}
+.log-entry.log-paid{border-left-color:var(--blue)}
+.log-action{font-weight:600;color:var(--text)}
+.log-meta{color:var(--muted);font-size:.76rem;margin-top:.2rem;line-height:1.5}
+
+/* Modal confirm */
+.confirm-warning{background:rgba(224,82,82,.08);border:1px solid rgba(224,82,82,.25);border-radius:8px;padding:.85rem 1rem;font-size:.85rem;margin-bottom:1rem;color:var(--text)}
+.confirm-warning.green{background:rgba(76,175,117,.08);border-color:rgba(76,175,117,.25)}
+.modal-form-group{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.9rem}
+.modal-form-group label{font-size:.78rem;font-weight:500;color:var(--muted)}
+.modal-textarea{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.87rem;padding:.6rem .85rem;width:100%;min-height:80px;resize:vertical}
+.modal-textarea:focus{outline:none;border-color:var(--gold)}
+.modal-btns{display:flex;gap:.75rem;flex-wrap:wrap}
+
+/* ── EMPTY / LOADING ── */
+.empty-state{text-align:center;padding:3.5rem 1.5rem;color:var(--muted)}
+.empty-icon{font-size:2.5rem;margin-bottom:.85rem;opacity:.5}
+.empty-text{font-size:.9rem}
+.loading-row{text-align:center;padding:2.5rem;color:var(--muted);font-size:.87rem}
+.spin-sm{display:inline-block;width:22px;height:22px;border:2.5px solid rgba(255,255,255,.1);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:.4rem}
+
+/* ── TOAST ── */
+.toast-container{position:fixed;bottom:1.25rem;right:1.25rem;z-index:9999;display:flex;flex-direction:column;gap:.45rem}
+.toast{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.8rem 1.15rem;font-size:.84rem;box-shadow:var(--shadow);max-width:300px;animation:slideIn .3s ease}
+.toast.success{border-color:var(--green);color:var(--green)}
+.toast.error{border-color:var(--red);color:var(--red)}
+.toast.info{border-color:var(--blue);color:var(--blue)}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--mid);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--gold-dark)}
+
+@media(max-width:600px){
+  header{padding:.7rem 1rem}
+  main{padding:1rem}
+  .detail-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-logo">🐴 Kings Equestrian</div>
+  <div class="loader-sub">Expense Management System</div>
+  <div class="loader-ring"></div>
+</div>
+
+<!-- HEADER -->
+<header id="app-header" class="hidden">
+  <div class="brand">
+    <div class="brand-icon">🐴</div>
+    <div>
+      <div class="brand-name">Kings Equestrian</div>
+      <div class="brand-sub">Expense &amp; Payment Portal</div>
+    </div>
+  </div>
+  <div class="user-badge">
+    <div>
+      <div id="user-name" class="user-name"></div>
+      <div id="user-email" class="user-email"></div>
+    </div>
+    <span id="role-pill" class="role-pill"></span>
+  </div>
+</header>
+
+<!-- TABS -->
+<nav class="tabs-bar hidden" id="tabs-bar">
+  <button class="tab-btn active" data-tab="request" onclick="switchTab('request',this)">📋 New Request</button>
+  <button class="tab-btn" data-tab="list" onclick="switchTab('list',this)">
+    📁 All Requests <span class="tab-count" id="tc-all">0</span>
+  </button>
+  <button class="tab-btn" id="tab-accounts-btn" data-tab="accounts" onclick="switchTab('accounts',this)" disabled>
+    💳 Accounts &amp; Settlement <span class="tab-count" id="tc-acc">0</span>
+  </button>
+</nav>
+
+<!-- MAIN -->
+<main id="app-main" class="hidden">
+
+  <!-- ═══ NEW REQUEST TAB ═══ -->
+  <div id="tab-request" class="tab-panel active">
+    <div class="sec-hdr">
+      <div>
+        <div class="sec-title">New Expense / Advance Request</div>
+        <div class="sec-desc">Submit before 3:00 PM · Advances settled within 3–5 working days</div>
+      </div>
+    </div>
+
+    <div class="form-card">
+
+      <!-- Requestor -->
+      <div class="form-section">
+        <div class="form-section-title">👤 Requestor Details</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Requestor Name <span class="req">*</span></label>
+            <select id="f-employee" required onchange="onEmployeeChange()">
+              <option value="">— Select Employee —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Department <span class="req">*</span></label>
+            <select id="f-dept" required>
+              <option value="">— Select Department —</option>
+              <option>Stable Operations</option>
+              <option>Competitions / Sports Development</option>
+              <option>Equine Therapy Program</option>
+              <option>Education &amp; Outreach</option>
+              <option>Administration</option>
+              <option>Accounts</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expense -->
+      <div class="form-section">
+        <div class="form-section-title">💰 Expense Details</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Expense Type <span class="req">*</span></label>
+            <select id="f-expense-type" required onchange="onExpenseTypeChange()">
+              <option value="">— Select Type —</option>
+              <option>Vendor Payment</option>
+              <option>Reimbursement</option>
+              <option>Advance Request</option>
+              <option>Advance Settlement</option>
+              <option>Staff Salary</option>
+              <option>Adjustment / Reversal</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Expense Category <span class="req">*</span></label>
+            <select id="f-category" required>
+              <option value="">— Select Category —</option>
+              <option>Horse Feed</option><option>Veterinary / Medical Expenses</option>
+              <option>Farriery (Shoeing)</option><option>Stable Maintenance</option>
+              <option>Farm Equipment</option><option>Farm Expenses</option>
+              <option>Lease Rental</option><option>Facility Maintenance</option>
+              <option>Electricity</option><option>Internet</option>
+              <option>Gas Cylinder</option><option>Grocery</option>
+              <option>Petrol / Fuel</option><option>Transport Expense</option>
+              <option>Travel Expenses</option><option>Stay / Hotel Expenses</option>
+              <option>Vehicle Maintenance</option><option>Car Insurance</option>
+              <option>Vehicle Lease / Rental</option><option>Competition Expenses</option>
+              <option>Training / Coaching</option><option>Sports Equipment</option>
+              <option>Photography / Media</option><option>Competition Entry Fees</option>
+              <option>Office Supplies</option><option>Professional Services</option>
+              <option>Insurance</option><option>Bank Charges</option>
+              <option>Miscellaneous</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>Expense Description <span class="req">*</span></label>
+            <textarea id="f-desc" placeholder="E.g. Petrol for transport vehicle, Hotel stay during competition" required></textarea>
+          </div>
+          <div class="form-group">
+            <label>Amount (₹) <span class="req">*</span></label>
+            <input type="number" id="f-amount" placeholder="0.00" min="1" step="0.01" required>
+          </div>
+          <div class="form-group">
+            <label>Expense Date <span class="req">*</span></label>
+            <input type="date" id="f-date" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payee -->
+      <div class="form-section">
+        <div class="form-section-title">🏦 Payee Details</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Payee Type <span class="req">*</span></label>
+            <select id="f-payee-type" required onchange="onPayeeTypeChange()">
+              <option value="">— Select Payee Type —</option>
+              <option>Vendor</option>
+              <option>Staff</option>
+              <option>Employee</option>
+              <option>Organization</option>
+            </select>
+          </div>
+          <div class="form-group" id="payee-dd-group">
+            <label>Payee Name <span class="req">*</span></label>
+            <select id="f-payee-name" required onchange="onPayeeNameChange()">
+              <option value="">— Select Payee —</option>
+            </select>
+          </div>
+          <div class="form-group" id="payee-txt-group" style="display:none">
+            <label>Payee Name <span class="req">*</span></label>
+            <input type="text" id="f-payee-name-text" placeholder="Enter organisation / payee name">
+          </div>
+        </div>
+
+        <!-- Bank details auto-populated -->
+        <div id="payee-bank-info" class="payee-bank-box hidden">
+          <div class="bank-box-title">📋 Registered Bank Details</div>
+          <div id="payee-bank-content" class="bank-grid"></div>
+        </div>
+      </div>
+
+      <!-- Invoice -->
+      <div class="form-section">
+        <div class="form-section-title">📎 Invoice / Receipt</div>
+        <div class="form-group full">
+          <label>Upload Invoice / Bill</label>
+          <div class="file-upload">
+            <input type="file" id="f-invoice" accept=".pdf,.jpg,.jpeg,.png" onchange="onFileChange(this)">
+            <div class="file-upload-label">
+              <span>📄</span>
+              <span>Click to upload PDF, JPG, or PNG</span>
+            </div>
+          </div>
+          <div id="file-name-display" class="file-name hidden"></div>
+        </div>
+      </div>
+
+      <!-- Advance (conditional) -->
+      <div class="form-section" id="advance-section" style="display:none">
+        <div class="form-section-title">⏳ Advance Details</div>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Reason for Advance <span class="req">*</span></label>
+            <textarea id="f-advance-reason" placeholder="E.g. Advance required to purchase horse feed"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Expected Invoice Date <span class="req">*</span></label>
+            <input type="date" id="f-expected-date">
+          </div>
+        </div>
+      </div>
+
+      <!-- Confirm + Submit -->
+      <div class="form-section">
+        <div class="form-group">
+          <label style="display:flex;align-items:flex-start;gap:.7rem;cursor:pointer;color:var(--text);font-size:.87rem">
+            <input type="checkbox" id="f-confirm" style="width:auto;margin-top:3px;flex-shrink:0">
+            <span>I confirm the information provided is correct and supporting documents will be submitted where required.</span>
+          </label>
+        </div>
+        <div style="margin-top:1.1rem;display:flex;gap:.85rem;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="submitRequestForm()" id="submit-btn">📤 Submit Request</button>
+          <button class="btn btn-ghost" onclick="resetForm()">🔄 Clear</button>
+        </div>
+      </div>
+    </div>
+  </div><!-- /tab-request -->
+
+
+  <!-- ═══ ALL REQUESTS TAB ═══ -->
+  <div id="tab-list" class="tab-panel">
+    <div class="sec-hdr">
+      <div>
+        <div class="sec-title">All Requests</div>
+        <div class="sec-desc">All submitted requests · newest first
+          <span id="admin-hint" class="hidden" style="color:var(--gold);font-weight:600"> · You can approve / reject pending requests inline below</span>
+        </div>
+      </div>
+      <button class="btn btn-ghost" onclick="loadRequests()">🔄 Refresh</button>
+    </div>
+
+    <!-- KPIs -->
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card gold"><div class="stat-label">Total</div><div class="stat-value" id="s-total">—</div></div>
+      <div class="stat-card orange"><div class="stat-label">Pending</div><div class="stat-value" id="s-pending">—</div><div class="stat-sub" id="s-pending-amt"></div></div>
+      <div class="stat-card green"><div class="stat-label">Approved</div><div class="stat-value" id="s-approved">—</div><div class="stat-sub" id="s-approved-amt"></div></div>
+      <div class="stat-card blue"><div class="stat-label">Paid</div><div class="stat-value" id="s-paid">—</div><div class="stat-sub" id="s-paid-amt"></div></div>
+      <div class="stat-card red"><div class="stat-label">Rejected</div><div class="stat-value" id="s-rejected">—</div></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <select id="f-status" onchange="applyListFilters()">
+        <option value="">All Status</option>
+        <option>Pending</option><option>Approved</option>
+        <option>Rejected</option><option>Paid</option>
+      </select>
+      <select id="f-type" onchange="applyListFilters()">
+        <option value="">All Types</option>
+        <option>Vendor Payment</option><option>Reimbursement</option>
+        <option>Advance Request</option><option>Advance Settlement</option>
+        <option>Staff Salary</option><option>Adjustment / Reversal</option>
+      </select>
+      <select id="f-dept-filter" onchange="applyListFilters()">
+        <option value="">All Departments</option>
+        <option>Stable Operations</option>
+        <option>Competitions / Sports Development</option>
+        <option>Equine Therapy Program</option>
+        <option>Education &amp; Outreach</option>
+        <option>Administration</option>
+        <option>Accounts</option>
+      </select>
+      <input type="text" id="f-search" placeholder="🔍 Search name, ID, description..." oninput="applyListFilters()" style="min-width:220px;flex:1">
+    </div>
+
+    <div id="requests-list" class="requests-list">
+      <div class="loading-row"><span class="spin-sm"></span>Loading requests…</div>
+    </div>
+  </div><!-- /tab-list -->
+
+
+  <!-- ═══ ACCOUNTS & SETTLEMENT TAB ═══ -->
+  <div id="tab-accounts" class="tab-panel">
+    <div class="sec-hdr">
+      <div>
+        <div class="sec-title">Accounts &amp; Settlement</div>
+        <div class="sec-desc">Process payments for admin-approved requests · Enter settlement amount and UTR as proof</div>
+      </div>
+      <button class="btn btn-ghost" onclick="loadRequests()">🔄 Refresh</button>
+    </div>
+
+    <div id="acc-unauthorized" class="hidden">
+      <div class="empty-state">
+        <div class="empty-icon">🔒</div>
+        <div class="empty-text">Access restricted to Accounts team only</div>
+      </div>
+    </div>
+
+    <div id="acc-content">
+      <div class="filters">
+        <select id="acc-filter-status" onchange="applyAccFilters()">
+          <option value="Approved">Approved – Pending Payment</option>
+          <option value="">All Status</option>
+          <option value="Paid">Paid</option>
+        </select>
+        <input type="text" id="acc-filter-search" placeholder="🔍 Search name or ID..." oninput="applyAccFilters()" style="min-width:200px;flex:1">
+      </div>
+      <div id="acc-requests-list" class="requests-list">
+        <div class="loading-row"><span class="spin-sm"></span>Loading…</div>
+      </div>
+    </div>
+  </div><!-- /tab-accounts -->
+
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Request Details</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let currentUser  = null;
+let allRequests  = [];
+let vendorList   = [];
+let employeeList = [];
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+window.onload = async function () {
+  try {
+    currentUser = await gg('getUserInfo');
+    renderHeader();
+    setupTabs();
+    await Promise.all([loadVendors(), loadEmployees()]);
+    populateEmployeeDropdown();
+    await loadRequests();
+
+    document.getElementById('loader').classList.add('hidden');
+    document.getElementById('app-header').classList.remove('hidden');
+    document.getElementById('tabs-bar').classList.remove('hidden');
+    document.getElementById('app-main').classList.remove('hidden');
+
+    // Show admin hint on list tab if admin
+    if (currentUser.role === 'admin') {
+      document.getElementById('admin-hint').classList.remove('hidden');
+    }
+  } catch (e) {
+    document.getElementById('loader').innerHTML =
+      '<div style="color:#E05252;text-align:center"><div style="font-size:2rem">⚠️</div>' +
+      '<div style="margin-top:1rem">Failed to load. Please sign in with Google.</div>' +
+      '<div style="font-size:.78rem;color:#8A8580;margin-top:.5rem">' + e + '</div></div>';
+  }
+};
+
+function gg(fnName, ...args) {
+  return new Promise((res, rej) => {
+    google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fnName](...args);
+  });
+}
+
+// ══════════════════════════════════════════
+// HEADER & TABS
+// ══════════════════════════════════════════
+function renderHeader() {
+  document.getElementById('user-name').textContent  = currentUser.name || currentUser.email;
+  document.getElementById('user-email').textContent = currentUser.email;
+  const pill = document.getElementById('role-pill');
+  const roleMap = { admin: ['Admin', 'role-admin'], accounts: ['Accounts', 'role-accounts'] };
+  const [lbl, cls] = roleMap[currentUser.role] || ['Staff', 'role-viewer'];
+  pill.textContent = lbl;
+  pill.className   = 'role-pill ' + cls;
+}
+
+function setupTabs() {
+  // Only accounts role gets the Settlement tab
+  if (currentUser.role === 'accounts') {
+    document.getElementById('tab-accounts-btn').removeAttribute('disabled');
+  }
+}
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+
+  if (name === 'accounts') renderAccTab();
+  if (name === 'list')     applyListFilters();
+}
+
+// ══════════════════════════════════════════
+// DATA LOADERS
+// ══════════════════════════════════════════
+async function loadVendors()   { vendorList   = await gg('getVendorList');   }
+async function loadEmployees() { employeeList = await gg('getEmployeeList'); }
+
+async function loadRequests() {
+  allRequests = await gg('getAllRequests');
+    console.log("🔥 RAW REQUESTS FROM BACKEND:", allRequests);
+
+  updateTabCounts();
+  renderStats();
+  applyListFilters();
+  if (currentUser.role === 'accounts') renderAccTab();
+}
+
+function updateTabCounts() {
+  document.getElementById('tc-all').textContent = allRequests.length;
+  const approved = allRequests.filter(r => r.status === 'Approved').length;
+  document.getElementById('tc-acc').textContent = approved;
+}
+
+// ══════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════
+function renderStats() {
+  let total=0,pending=0,approved=0,paid=0,rejected=0,
+      pendingAmt=0,approvedAmt=0,paidAmt=0;
+  allRequests.forEach(r => {
+    total++;
+    const amt = Number(r.amount)||0;
+    switch((r.status||'').toLowerCase()){
+      case 'pending' : pending++;  pendingAmt  += amt; break;
+      case 'approved': approved++; approvedAmt += amt; break;
+      case 'paid'    : paid++;     paidAmt     += amt; break;
+      case 'rejected': rejected++; break;
+    }
+  });
+  sv('s-total',    total);
+  sv('s-pending',  pending);  sv('s-pending-amt',  fmtAmt(pendingAmt));
+  sv('s-approved', approved); sv('s-approved-amt', fmtAmt(approvedAmt));
+  sv('s-paid',     paid);     sv('s-paid-amt',     fmtAmt(paidAmt));
+  sv('s-rejected', rejected);
+}
+
+function sv(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
+
+// ══════════════════════════════════════════
+// EMPLOYEE DROPDOWN
+// ══════════════════════════════════════════
+function populateEmployeeDropdown() {
+  const sel = document.getElementById('f-employee');
+  sel.innerHTML = '<option value="">— Select Employee —</option>';
+  employeeList.forEach(e => {
+    const o = document.createElement('option');
+    o.value       = (e.regNo||'') + '||' + e.name;
+    o.textContent = (e.empId ? '['+e.empId+'] ' : '') + e.name;
+    sel.appendChild(o);
+  });
+}
+function onEmployeeChange() { /* reserved */ }
+
+// ══════════════════════════════════════════
+// FORM LOGIC
+// ══════════════════════════════════════════
+function onExpenseTypeChange() {
+  const t = document.getElementById('f-expense-type').value;
+  document.getElementById('advance-section').style.display = (t === 'Advance Request') ? 'block' : 'none';
+}
+
+function onPayeeTypeChange() {
+  const type = document.getElementById('f-payee-type').value;
+  const sel  = document.getElementById('f-payee-name');
+  const ddGrp  = document.getElementById('payee-dd-group');
+  const txtGrp = document.getElementById('payee-txt-group');
+  const bankBox = document.getElementById('payee-bank-info');
+
+  sel.innerHTML = '<option value="">— Select Payee —</option>';
+  bankBox.classList.add('hidden');
+
+  if (type === 'Organization') {
+    ddGrp.style.display  = 'none';
+    txtGrp.style.display = '';
+    return;
+  }
+
+  ddGrp.style.display  = '';
+  txtGrp.style.display = 'none';
+
+  const list = (type === 'Vendor') ? vendorList : employeeList;
+  list.forEach(item => {
+    const o = document.createElement('option');
+    o.value       = (item.regNo||'') + '||' + item.name;
+    o.textContent = (item.regNo ? '['+item.regNo+'] ' : '') + item.name;
+    sel.appendChild(o);
+  });
+}
+
+function onPayeeNameChange() {
+  const type    = document.getElementById('f-payee-type').value;
+  const selVal  = document.getElementById('f-payee-name').value;
+  const bankBox = document.getElementById('payee-bank-info');
+
+  if (!selVal) { bankBox.classList.add('hidden'); return; }
+
+  // Parse "regNo||name" — name is everything after first '||'
+  const sepIdx  = selVal.indexOf('||');
+  const regNo   = sepIdx >= 0 ? selVal.slice(0, sepIdx) : '';
+  const selName = sepIdx >= 0 ? selVal.slice(sepIdx + 2) : selVal;
+
+  const list = (type === 'Vendor') ? vendorList : employeeList;
+  // Match by regNo first, fall back to name
+  const item = list.find(i => (regNo && i.regNo === regNo) || i.name === selName);
+
+  if (!item) { bankBox.classList.add('hidden'); return; }
+
+  const rows = [
+    ['Bank',         item.bank],
+    ['Beneficiary',  item.beneficiary],
+    ['Account No.',  item.accountNo],
+    ['IFSC',         item.ifsc],
+  ];
+  if (item.panGst)  rows.unshift(['PAN / GST', item.panGst]);
+  if (item.pan)     rows.unshift(['PAN',        item.pan]);
+  if (item.address) rows.push(['Address', item.address]);
+
+  document.getElementById('payee-bank-content').innerHTML = rows
+    .filter(([, v]) => v)
+    .map(([l, v]) =>
+      `<div><div class="bank-field-label">${l}</div><div class="bank-field-val">${esc(v)}</div></div>`
+    ).join('');
+
+  bankBox.classList.remove('hidden');
+}
+
+function onFileChange(input) {
+  const d = document.getElementById('file-name-display');
+  if (input.files && input.files[0]) {
+    d.textContent = '📎 ' + input.files[0].name;
+    d.classList.remove('hidden');
+  } else {
+    d.classList.add('hidden');
+  }
+}
+
+// ══════════════════════════════════════════
+// SUBMIT REQUEST
+// ══════════════════════════════════════════
+async function submitRequestForm() {
+  const empVal = document.getElementById('f-employee').value;
+  if (!empVal) return toast('Please select a requestor name', 'error');
+  const requestorName = empVal.indexOf('||') >= 0 ? empVal.slice(empVal.indexOf('||') + 2) : empVal;
+
+  const dept       = v('f-dept');
+  const expType    = v('f-expense-type');
+  const cat        = v('f-category');
+  const desc       = v('f-desc');
+  const amount     = v('f-amount');
+  const date       = v('f-date');
+  const payeeType  = v('f-payee-type');
+
+  if (!requestorName||!dept||!expType||!cat||!desc||!amount||!date||!payeeType)
+    return toast('Please fill in all required fields', 'error');
+  if (!document.getElementById('f-confirm').checked)
+    return toast('Please confirm the declaration', 'error');
+
+  // Resolve payee name
+  let payeeName = '';
+  if (document.getElementById('payee-dd-group').style.display !== 'none') {
+    const sv2 = document.getElementById('f-payee-name').value;
+    if (!sv2) return toast('Please select a payee', 'error');
+    payeeName = sv2.indexOf('||') >= 0 ? sv2.slice(sv2.indexOf('||') + 2) : sv2;
+  } else {
+    payeeName = v('f-payee-name-text');
+    if (!payeeName) return toast('Please enter the payee name', 'error');
+  }
+
+  // File
+  let invoiceBase64 = '', invoiceFileName = '';
+  const fi = document.getElementById('f-invoice');
+  if (fi.files && fi.files[0]) {
+    invoiceFileName = fi.files[0].name;
+    invoiceBase64   = await toBase64(fi.files[0]);
+  }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled    = true;
+  btn.textContent = '⏳ Submitting...';
+
+  try {
+    const result = await gg('submitRequest', {
+      requestorName,
+      contact: '', email: currentUser.email || '',
+      department: dept, expenseType: expType, category: cat,
+      description: desc, amount, expenseDate: date,
+      payeeName, payeeType, upiId: '', refId: '',
+      advanceReason: v('f-advance-reason'),
+      expectedInvoiceDate: v('f-expected-date'),
+      invoiceBase64, invoiceFileName
+    });
+
+    if (result.success) {
+      toast('✅ Submitted! ID: ' + result.reqId, 'success');
+      resetForm();
+      await loadRequests();
+    } else {
+      toast('❌ ' + result.error, 'error');
+    }
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '📤 Submit Request';
+  }
+}
+
+function toBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function resetForm() {
+  ['f-employee','f-dept','f-expense-type','f-category','f-desc',
+   'f-amount','f-date','f-payee-type','f-advance-reason','f-expected-date']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value=''; });
+  document.getElementById('f-payee-name').innerHTML = '<option value="">— Select Payee —</option>';
+  document.getElementById('f-payee-name-text').value = '';
+  document.getElementById('f-confirm').checked = false;
+  document.getElementById('advance-section').style.display = 'none';
+  document.getElementById('payee-bank-info').classList.add('hidden');
+  document.getElementById('file-name-display').classList.add('hidden');
+  document.getElementById('payee-dd-group').style.display  = '';
+  document.getElementById('payee-txt-group').style.display = 'none';
+}
+
+// ══════════════════════════════════════════
+// ALL REQUESTS LIST
+// ══════════════════════════════════════════
+function applyListFilters() {
+  const status  = v('f-status');
+  const type    = v('f-type');
+  const dept    = v('f-dept-filter');
+  const search  = v('f-search').toLowerCase();
+  const filtered = allRequests.filter(r =>
+    (!status  || r.status === status) &&
+    (!type    || r.expenseType === type) &&
+    (!dept    || r.dept === dept) &&
+    (!search  || r.requestor.toLowerCase().includes(search) ||
+                 r.id.toLowerCase().includes(search) ||
+                 (r.description||'').toLowerCase().includes(search) ||
+                 (r.payeeName||'').toLowerCase().includes(search))
+  );
+  renderRequestCards(filtered, 'requests-list', currentUser.role);
+}
+
+// ══════════════════════════════════════════
+// ACCOUNTS TAB
+// ══════════════════════════════════════════
+function renderAccTab() {
+  if (currentUser.role !== 'accounts') {
+    document.getElementById('acc-unauthorized').classList.remove('hidden');
+    document.getElementById('acc-content').classList.add('hidden');
+    return;
+  }
+  applyAccFilters();
+}
+
+function applyAccFilters() {
+  const status = v('acc-filter-status');
+  const search = v('acc-filter-search').toLowerCase();
+  const filtered = allRequests.filter(r =>
+    (!status || r.status === status) &&
+    (!search || r.requestor.toLowerCase().includes(search) ||
+                r.id.toLowerCase().includes(search))
+  );
+  renderSettlementCards(filtered, 'acc-requests-list');
+}
+
+// ══════════════════════════════════════════
+// RENDER — REQUEST CARDS (with inline admin actions)
+// ══════════════════════════════════════════
+function renderRequestCards(requests, containerId, role) {
+  const c = document.getElementById(containerId);
+  if (!requests.length) {
+    c.innerHTML = '<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">No requests found</div></div>';
+    return;
+  }
+  c.innerHTML = requests.map(r => buildRequestCard(r, role)).join('');
+}
+
+function buildRequestCard(r, role) {
+  const amt = Number(r.amount||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+  const isAdmin = (role === 'admin');
+
+  // Inline admin actions strip — only shown if user is admin AND status is Pending
+  let adminStrip = '';
+  if (isAdmin && r.status === 'Pending') {
+    adminStrip = `
+      <div class="req-admin-actions">
+        <span class="req-admin-label">Action:</span>
+        <button class="btn btn-approve btn-sm" onclick="event.stopPropagation();openApproveModal('${r.id}')">✅ Approve</button>
+        <button class="btn btn-reject btn-sm"  onclick="event.stopPropagation();openRejectModal('${r.id}')">❌ Reject</button>
+      </div>`;
+  }
+
+  return `
+    <div class="req-card">
+      <div class="req-card-clickable" onclick="openDetailModal('${r.id}')">
+        <div class="req-top-row">
+          <div>
+            <div class="req-id">${esc(r.id)}</div>
+            <div class="req-name">${esc(r.requestor)}</div>
+            <div class="req-sub">${esc(r.expenseType)} · ${esc(r.category)}</div>
+          </div>
+          <div class="req-right">
+            <span class="status-badge st-${r.status}">${r.status}</span>
+            <div class="req-amount">₹${amt}</div>
+            <div class="req-date">${r.createdAt || r.date}</div>
+          </div>
+        </div>
+        <div class="req-meta">
+          <span class="meta-chip">${esc(r.dept)}</span>
+          <span class="meta-chip">${esc(r.payeeType)}: ${esc(r.payeeName)}</span>
+          ${r.invoiceUrl ? '<span class="meta-chip" style="color:var(--gold)">📄 Invoice</span>' : ''}
+        </div>
+      </div>
+      ${adminStrip}
+    </div>`;
+}
+
+// ══════════════════════════════════════════
+// RENDER — SETTLEMENT CARDS (accounts tab)
+// ══════════════════════════════════════════
+function renderSettlementCards(requests, containerId) {
+  const c = document.getElementById(containerId);
+  if (!requests.length) {
+    c.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">No approved requests awaiting payment</div></div>';
+    return;
+  }
+  c.innerHTML = requests.map(r => buildSettlementCard(r)).join('');
+}
+
+function buildSettlementCard(r) {
+  const amt      = Number(r.amount||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+  const isPaid   = r.status === 'Paid';
+  const isApproved = r.status === 'Approved';
+
+  // Settlement form — only for Approved status
+  let settleForm = '';
+  if (isApproved) {
+    settleForm = `
+      <div class="settlement-body" id="settle-body-${r.id}">
+        <div class="settlement-grid">
+          <div class="settle-field">
+            <div class="settle-label">Settlement Amount (₹) <span style="color:var(--red)">*</span></div>
+            <input type="number" class="settle-input" id="s-amount-${r.id}"
+              placeholder="Enter actual amount paid" min="1" step="0.01"
+              value="${Number(r.amount||0)}" >
+          </div>
+          <div class="settle-field">
+            <div class="settle-label">UTR / Reference No. <span style="color:var(--red)">*</span></div>
+            <input type="text" class="settle-input" id="s-utr-${r.id}"
+              placeholder="e.g. UTR123456789 or NEFT ref" style="font-family:monospace">
+          </div>
+          <div class="settle-field">
+            <div class="settle-label">Payment Mode <span style="color:var(--red)">*</span></div>
+            <select class="settle-input" id="s-mode-${r.id}">
+              <option value="">— Select Mode —</option>
+              <option>NEFT</option><option>RTGS</option><option>IMPS</option>
+              <option>UPI</option><option>Cash</option><option>Cheque</option>
+              <option>NEFT + Cash</option>
+            </select>
+          </div>
+          <div class="settle-field">
+            <div class="settle-label">Payment Date <span style="color:var(--red)">*</span></div>
+            <input type="date" class="settle-input" id="s-date-${r.id}"
+              value="${new Date().toISOString().split('T')[0]}">
+          </div>
+          <div class="settle-field" style="grid-column:1/-1">
+            <div class="settle-label">Remarks</div>
+            <input type="text" class="settle-input" id="s-remarks-${r.id}"
+              placeholder="Optional notes (e.g. partial payment, split payment)">
+          </div>
+        </div>
+        <div class="settle-actions">
+          <button class="btn btn-pay" onclick="doSettle('${r.id}')">
+            💳 Confirm Payment Done
+          </button>
+          <span class="settle-hint">This will mark the request as Paid and send an email confirmation to the requestor.</span>
+        </div>
+      </div>`;
+  }
+
+  const paidBadge = isPaid
+    ? `<div style="margin-top:.5rem;font-size:.75rem;color:var(--blue)">✓ Payment recorded</div>` : '';
+
+  return `
+    <div class="settlement-card">
+      <div class="settlement-head" onclick="toggleSettleBody('${r.id}', ${isApproved})">
+        <div>
+          <div class="req-id" style="margin-bottom:.25rem">${esc(r.id)}</div>
+          <div class="req-name">${esc(r.requestor)}</div>
+          <div class="req-sub" style="margin-top:.2rem">${esc(r.expenseType)} · ${esc(r.dept)}</div>
+          <div class="req-meta" style="margin-top:.5rem">
+            <span class="meta-chip">${esc(r.payeeType)}: ${esc(r.payeeName)}</span>
+            <span class="meta-chip">${esc(r.category)}</span>
+          </div>
+          ${paidBadge}
+        </div>
+        <div class="req-right">
+          <span class="status-badge st-${r.status}">${r.status}</span>
+          <div class="req-amount" style="margin-top:.4rem">₹${amt}</div>
+          <div class="req-date">${r.createdAt || r.date}</div>
+          ${isApproved ? '<div style="font-size:.72rem;color:var(--blue);margin-top:.3rem">▼ Enter payment details</div>' : ''}
+        </div>
+      </div>
+      ${settleForm}
+    </div>`;
+}
+
+function toggleSettleBody(reqId, isApproved) {
+  if (!isApproved) { openDetailModal(reqId); return; }
+  // Approved cards have inline form — clicking header opens detail instead
+  openDetailModal(reqId);
+}
+
+// ══════════════════════════════════════════
+// ADMIN ACTIONS
+// ══════════════════════════════════════════
+function openApproveModal(reqId) {
+  document.getElementById('modal-title').textContent = 'Approve Request';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="confirm-warning green">
+      Approve request <strong style="color:var(--gold)">${reqId}</strong>?
+      This will move it to Accounts for payment processing.
+    </div>
+    <div class="modal-form-group">
+      <label>Remarks (optional)</label>
+      <textarea class="modal-textarea" id="approve-remarks" placeholder="Add any remarks…"></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-approve" onclick="doApprove('${reqId}')">✅ Confirm Approve</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+function openRejectModal(reqId) {
+  document.getElementById('modal-title').textContent = 'Reject Request';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="confirm-warning">
+      Reject request <strong style="color:var(--gold)">${reqId}</strong>?
+      Please provide a reason below.
+    </div>
+    <div class="modal-form-group">
+      <label>Reason for Rejection <span class="req">*</span></label>
+      <textarea class="modal-textarea" id="reject-remarks" placeholder="Required — please explain the reason…"></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-reject" onclick="doReject('${reqId}')">❌ Confirm Reject</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+async function doApprove(reqId) {
+  const remarks = (document.getElementById('approve-remarks')||{}).value||'';
+  const r = await gg('approveRequest', reqId, remarks);
+  if (r.success) { toast('✅ Request approved', 'success'); closeModal(); await loadRequests(); }
+  else toast('❌ ' + r.error, 'error');
+}
+
+async function doReject(reqId) {
+  const remarks = (document.getElementById('reject-remarks')||{}).value||'';
+  if (!remarks.trim()) return toast('Please provide a rejection reason', 'error');
+  const r = await gg('rejectRequest', reqId, remarks);
+  if (r.success) { toast('Request rejected', 'info'); closeModal(); await loadRequests(); }
+  else toast('❌ ' + r.error, 'error');
+}
+
+// ══════════════════════════════════════════
+// ACCOUNTS SETTLEMENT
+// ══════════════════════════════════════════
+async function doSettle(reqId) {
+  const amount  = document.getElementById('s-amount-' + reqId)?.value || '';
+  const utr     = document.getElementById('s-utr-' + reqId)?.value    || '';
+  const mode    = document.getElementById('s-mode-' + reqId)?.value   || '';
+  const date    = document.getElementById('s-date-' + reqId)?.value   || '';
+  const remarks = document.getElementById('s-remarks-' + reqId)?.value|| '';
+
+  if (!amount) return toast('Please enter the settlement amount', 'error');
+  if (!utr.trim()) return toast('Please enter the UTR / Reference number', 'error');
+  if (!mode)   return toast('Please select the payment mode', 'error');
+
+  const btn = event.target;
+  btn.disabled    = true;
+  btn.textContent = '⏳ Processing…';
+
+  try {
+    const r = await gg('settlePayment', reqId, utr, parseFloat(amount), date, mode, remarks);
+    if (r.success) {
+      toast('💳 Payment recorded successfully! Email sent to requestor.', 'success');
+      await loadRequests();
+    } else {
+      toast('❌ ' + r.error, 'error');
+    }
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '💳 Confirm Payment Done';
+  }
+}
+
+// ══════════════════════════════════════════
+// DETAIL MODAL
+// ══════════════════════════════════════════
+async function openDetailModal(reqId) {
+  const r = allRequests.find(x => x.id === reqId);
+  if (!r) return;
+
+  document.getElementById('modal-title').textContent = r.id + ' — ' + r.requestor;
+  document.getElementById('modal-body').innerHTML =
+    '<div class="loading-row"><span class="spin-sm"></span>Loading…</div>';
+  document.getElementById('modal-overlay').classList.remove('hidden');
+
+  const [appLogs, payLogs] = await Promise.all([
+    gg('getApprovalLogs', reqId),
+    gg('getPaymentLogs',  reqId)
+  ]);
+
+  // Payee bank details
+  let bankHtml = '';
+  try {
+    const bd = await gg('getPayeeBankDetails', r.payeeName, r.payeeType);
+    if (bd) {
+      const brows = [
+        bd.empId    ? ['Employee ID', bd.empId] : null,
+        bd.panGst   ? ['PAN/GST',    bd.panGst] : null,
+        bd.pan      ? ['PAN',        bd.pan]     : null,
+        bd.bank     ? ['Bank',       bd.bank]    : null,
+        bd.beneficiary ? ['Beneficiary', bd.beneficiary] : null,
+        bd.accountNo ? ['Account No.', bd.accountNo] : null,
+        bd.ifsc     ? ['IFSC',       bd.ifsc]    : null,
+        bd.address  ? ['Address',    bd.address] : null,
+      ].filter(Boolean);
+      bankHtml = `
+        <hr class="modal-divider">
+        <div style="font-size:.72rem;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.7rem">🏦 Payee Bank Details</div>
+        <div class="detail-grid">
+          ${brows.map(([l,v2])=>`<div class="detail-item"><label>${l}</label><div class="val" style="font-family:monospace">${esc(v2)}</div></div>`).join('')}
+        </div>`;
+    }
+  } catch(e) { /* no bank details */ }
+
+  const amt = Number(r.amount||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+
+  let logsHtml = '';
+  if (appLogs.length) {
+    logsHtml += `<hr class="modal-divider">
+      <div class="logs-title" style="color:var(--gold)">📋 Approval History</div>
+      ${appLogs.map(l => {
+        const cls = l.action.toLowerCase().includes('reject') ? 'log-reject'
+                  : l.action.toLowerCase().includes('paid') || l.action.toLowerCase().includes('settle') ? 'log-paid'
+                  : 'log-approve';
+        return `<div class="log-entry ${cls}">
+          <div class="log-action">${esc(l.action)}</div>
+          <div class="log-meta">by ${esc(l.byName)} · ${esc(l.timestamp)}${l.remarks ? '<br>'+esc(l.remarks) : ''}</div>
+        </div>`;
+      }).join('')}`;
+  }
+
+  if (payLogs.length) {
+    logsHtml += `<hr class="modal-divider">
+      <div class="logs-title" style="color:var(--blue)">💳 Payment Records</div>
+      ${payLogs.map(l => `<div class="log-entry log-paid">
+        <div class="log-action">UTR: ${esc(l.utr)} | ₹${Number(l.paymentAmount||0).toLocaleString('en-IN')} | ${esc(l.mode||'—')}</div>
+        <div class="log-meta">Paid by ${esc(l.paidByName)} · ${esc(l.paymentDate)} · recorded ${esc(l.timestamp)}${l.remarks ? '<br>'+esc(l.remarks) : ''}</div>
+      </div>`).join('')}`;
+  }
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="detail-grid">
+      <div class="detail-item"><label>Status</label><div class="val"><span class="status-badge st-${r.status}">${r.status}</span></div></div>
+      <div class="detail-item"><label>Amount Requested</label><div class="val" style="color:var(--gold);font-family:'Playfair Display',serif;font-size:1.15rem">₹${amt}</div></div>
+      <div class="detail-item"><label>Requestor</label><div class="val">${esc(r.requestor)}</div></div>
+      <div class="detail-item"><label>Department</label><div class="val">${esc(r.dept)}</div></div>
+      <div class="detail-item"><label>Expense Type</label><div class="val">${esc(r.expenseType)}</div></div>
+      <div class="detail-item"><label>Category</label><div class="val">${esc(r.category)}</div></div>
+      <div class="detail-item full"><label>Description</label><div class="val">${esc(r.description)}</div></div>
+      <div class="detail-item"><label>Expense Date</label><div class="val">${esc(r.date)}</div></div>
+      <div class="detail-item"><label>Payee</label><div class="val">${esc(r.payeeType)}: ${esc(r.payeeName)}</div></div>
+      ${r.advanceReason ? `<div class="detail-item full"><label>Advance Reason</label><div class="val">${esc(r.advanceReason)}</div></div>` : ''}
+      ${r.expectedInvoiceDate ? `<div class="detail-item"><label>Expected Invoice Date</label><div class="val">${esc(r.expectedInvoiceDate)}</div></div>` : ''}
+      ${r.invoiceUrl ? `<div class="detail-item full"><label>Invoice</label><div class="val"><a href="${r.invoiceUrl}" target="_blank" style="color:var(--gold)">📄 View Invoice ↗</a></div></div>` : ''}
+      <div class="detail-item"><label>Submitted</label><div class="val">${esc(r.createdAt)}</div></div>
+    </div>
+    ${bankHtml}
+    ${logsHtml}`;
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.add('hidden');
+}
+
+// ══════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════
+function v(id) { return (document.getElementById(id)||{}).value||''; }
+function fmtAmt(n) {
+  const x = Number(n)||0;
+  if (x >= 100000) return '₹' + (x/100000).toFixed(1) + 'L';
+  if (x >= 1000)   return '₹' + (x/1000).toFixed(1)   + 'K';
+  return '₹' + x.toLocaleString('en-IN');
+}
+function esc(s) {
+  if (!s) return '—';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function toast(msg, type='info') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className   = 'toast ' + type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4200);
+}
+</script>
+</body>
+</html>
