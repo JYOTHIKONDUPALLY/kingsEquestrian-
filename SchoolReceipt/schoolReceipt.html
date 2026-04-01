@@ -215,39 +215,34 @@
     </div>
 
     <div class="date-row"><strong>Receipt Date:</strong> ${currentDate}</div>
-
-    <!-- STUDENT & PARENT DETAILS -->
-      <div class="main-content">
-        <div class="left-column">
-            <div class="section-title">Donor Category (✓ Tick Applicable)</div>
-            <div class="checkbox-item">
-                <span class="checkbox checked"></span> Resident Indian Donor
-            </div>
-            <div class="checkbox-item">
-                <span class="checkbox"></span> Non-Resident Indian (NRI)
-            </div>
-        </div>
-
-        <div class="right-column">
-            <div class="section-title">Donor Details</div>
-            <div class="detail-row"><span class="detail-label">Name of Donor:</span> ${parentName}</div>
-            <div class="detail-row"><span class="detail-label">PAN / Aadhaar:</span> ${pan}</div>
-        </div>
-    </div>
-
-    <!-- AMOUNT BOX -->
-    <div class="amount-section">
-        <span class="rupee-symbol">₹</span>
-        <div class="amount-value">
-            ${amount.toLocaleString('en-IN')}
-        </div>
-    </div>
-
-    <!-- PAYMENT MODE -->
-    <div class="payment-mode">
-        <strong>Mode of Payment:</strong> ${modeOfPayment || '—'}<br><br>
-        <strong>Amount in Words:</strong> ${amountInWords}
-    </div>
+// ── Kings Equestrian Experience Details Block ──────────────────────────────
+       <div style="background:#f4faf4;border:1px solid #c8e6c9;border-radius:8px;padding:20px 22px;margin:20px 0">
+         <h3 style="color:#1f4e3d;margin:0 0 4px;font-size:16px">🐎 Your Experience at Kings Equestrian</h3>
+         <p style="font-size:12px;color:#777;margin:0 0 14px;font-style:italic">Here\s a summary of what you\ve booked</p>
+         <table style="width:100%;border-collapse:collapse;font-size:13px">
+           <tbody>
+             <tr style="background:#fff">
+               <td style="padding:9px 12px;border-bottom:1px solid #e0e0e0;color:#555;width:40%">📋 KE Number</td>
+               <td style="padding:9px 12px;border-bottom:1px solid #e0e0e0;font-weight:bold;color:#1f4e3d">  d.keNo  </td>
+             </tr>
+             <tr style="background:#f9f9f9">
+               <td style="padding:9px 12px;border-bottom:1px solid #e0e0e0;color:#555">🏇 Service Booked</td>
+               <td style="padding:9px 12px;border-bottom:1px solid #e0e0e0;font-weight:bold;color:#1f4e3d">  d.services  </td>
+             </tr>
+             <tr style="background:#fff">
+               <td style="padding:9px 12px;border-bottom:1px solid #e0e0e0;color:#555">👥 Participants</td>
+               <td style="padding:9px 12px;border-bottom:1px solid #e0e0e0;font-weight:bold;color:#1f4e3d">  d.participants  </td>
+             </tr>
+             <tr style="background:#f9f9f9">
+               <td style="padding:9px 12px;color:#555">💰 Advance Amount</td>
+               <td style="padding:9px 12px;font-weight:bold;color:#2e7d32">Rs.  Number(d.amount).toLocaleString(en-IN)  </td>
+             </tr>
+           </tbody>
+         </table>
+         <p style="font-size:12px;color:#555;margin:14px 0 0">📍 <a href="https://maps.app.goo.gl/LKXQ8VTbYhrw1PDb9" style="color:#1565c0" target="_blank">View Location on Maps</a>
+         &nbsp;|&nbsp; 📸 <a href="https://www.instagram.com/kingsequestrianfoundation" style="color:#1565c0" target="_blank">@kingsequestrianfoundation</a></p>
+       </div>
+  // ── End Experience Block ───────────────────────────────────────────────────
 
     <!-- DECLARATION -->
     <div class="declaration-section">

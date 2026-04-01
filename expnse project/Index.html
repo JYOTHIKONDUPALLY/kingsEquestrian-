@@ -317,6 +317,23 @@ textarea{resize:vertical;min-height:78px}
               <option>Adjustment / Reversal</option>
             </select>
           </div>
+          <div class="form-group full">
+  <label>Location(s) <span class="req">*</span></label>
+  <div style="display:flex;flex-wrap:wrap;gap:1rem;margin-top:.3rem">
+    <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
+      <input type="checkbox" name="location" value="Hyderabad" style="width:auto"> Hyderabad
+    </label>
+    <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
+      <input type="checkbox" name="location" value="Bangalore" style="width:auto"> Bangalore
+    </label>
+    <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
+      <input type="checkbox" name="location" value="Pune" style="width:auto"> Pune
+    </label>
+    <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
+      <input type="checkbox" name="location" value="Farm" style="width:auto"> Farm
+    </label>
+  </div>
+</div>
           <div class="form-group">
             <label>Expense Category <span class="req">*</span></label>
             <select id="f-category" required>
@@ -548,6 +565,35 @@ let employeeList = [];
 window.onload = async function () {
   try {
     currentUser = await gg('getUserInfo');
+
+    // ── DEPLOYMENT CHECK ──────────────────────────────────────────
+    // If email is empty the app is deployed as "Execute as: Me" which
+    // never exposes the viewer's identity. Show a clear fix message.
+    if (currentUser._authError) {
+      document.getElementById('loader').innerHTML = `
+        <div style="text-align:center;max-width:480px;padding:2rem">
+          <div style="font-size:2.5rem;margin-bottom:1rem">🔐</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold);margin-bottom:.75rem">
+            Re-deployment Required
+          </div>
+          <div style="color:var(--muted);font-size:.87rem;line-height:1.7;margin-bottom:1.5rem">
+            The web app is currently deployed as <strong style="color:var(--text)">"Execute as: Me"</strong>
+            which prevents reading the signed-in user's identity.<br><br>
+            To fix: go to <strong style="color:var(--text)">Deploy → Manage deployments → Edit</strong>,
+            change <em>Execute as</em> to
+            <strong style="color:var(--gold)">"User accessing the web app"</strong>,
+            then click <strong style="color:var(--gold)">Deploy</strong> and use the new URL.
+          </div>
+          <div style="background:rgba(201,168,76,.08);border:1px solid var(--border);border-radius:10px;padding:1rem;font-size:.78rem;color:var(--muted);text-align:left">
+            <strong style="color:var(--gold)">Who has access</strong> should be set to
+            <strong style="color:var(--text)">Anyone with Google Account</strong>
+            (or your organisation domain).
+          </div>
+        </div>`;
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────
+
     renderHeader();
     setupTabs();
     await Promise.all([loadVendors(), loadEmployees()]);
@@ -559,15 +605,17 @@ window.onload = async function () {
     document.getElementById('tabs-bar').classList.remove('hidden');
     document.getElementById('app-main').classList.remove('hidden');
 
-    // Show admin hint on list tab if admin
     if (currentUser.role === 'admin') {
       document.getElementById('admin-hint').classList.remove('hidden');
     }
   } catch (e) {
     document.getElementById('loader').innerHTML =
-      '<div style="color:#E05252;text-align:center"><div style="font-size:2rem">⚠️</div>' +
-      '<div style="margin-top:1rem">Failed to load. Please sign in with Google.</div>' +
-      '<div style="font-size:.78rem;color:#8A8580;margin-top:.5rem">' + e + '</div></div>';
+      '<div style="color:#E05252;text-align:center;padding:2rem">' +
+      '<div style="font-size:2rem">⚠️</div>' +
+      '<div style="margin-top:1rem;font-size:.95rem">Something went wrong loading the app.</div>' +
+      '<div style="font-size:.78rem;color:#8A8580;margin-top:.75rem;word-break:break-all">' + e + '</div>' +
+      '<div style="margin-top:1rem;font-size:.78rem;color:var(--muted)">Make sure you are signed into Google and the sheet names in SHEET_CONFIG match exactly.</div>' +
+      '</div>';
   }
 };
 
@@ -615,8 +663,6 @@ async function loadEmployees() { employeeList = await gg('getEmployeeList'); }
 
 async function loadRequests() {
   allRequests = await gg('getAllRequests');
-    console.log("🔥 RAW REQUESTS FROM BACKEND:", allRequests);
-
   updateTabCounts();
   renderStats();
   applyListFilters();
@@ -767,6 +813,9 @@ async function submitRequestForm() {
   const amount     = v('f-amount');
   const date       = v('f-date');
   const payeeType  = v('f-payee-type');
+  const locations = [...document.querySelectorAll('input[name="location"]:checked')]
+  .map(cb => cb.value).join(', ');
+if (!locations) return toast('Please select at least one location', 'error');
 
   if (!requestorName||!dept||!expType||!cat||!desc||!amount||!date||!payeeType)
     return toast('Please fill in all required fields', 'error');
@@ -805,7 +854,8 @@ async function submitRequestForm() {
       payeeName, payeeType, upiId: '', refId: '',
       advanceReason: v('f-advance-reason'),
       expectedInvoiceDate: v('f-expected-date'),
-      invoiceBase64, invoiceFileName
+      invoiceBase64, invoiceFileName,
+      location: locations,
     });
 
     if (result.success) {

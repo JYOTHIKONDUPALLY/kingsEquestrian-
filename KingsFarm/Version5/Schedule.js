@@ -160,24 +160,48 @@ function saveAttendance(rowIndex, status, note) {
     }
 
     // Send attendance email (Present OR No-Show)
+    let emailSent = false;
     try {
       const rowData = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
+      let email = String(rowData[CONFIG.SCHED_COLS.EMAIL] || '').trim();
+      if (!email) {
+        // fallback: scan riders sheet for email by KE No
+        const keNo = String(rowData[CONFIG.SCHED_COLS.KE_NO] || '').trim();
+        if (keNo) {
+          const ridersSheet = ss.getSheetByName(CONFIG.SHEETS.RIDERS);
+          if (ridersSheet) {
+            const ridersData = ridersSheet.getDataRange().getValues();
+            for (let ri = 1; ri < ridersData.length; ri++) {
+              if (String(ridersData[ri][CONFIG.RIDER_COLS.KE_NO] || '').trim() === keNo) {
+                email = String(ridersData[ri][CONFIG.RIDER_COLS.EMAIL] || '').trim();
+                break;
+              }
+            }
+          }
+        }
+      }
+
       const emailData = {
         name        : rowData[CONFIG.SCHED_COLS.NAME]         || '',
-        email       : rowData[CONFIG.SCHED_COLS.EMAIL]        || '',
+        email       : email,
         keNo        : rowData[CONFIG.SCHED_COLS.KE_NO]        || '',
         service     : rowData[CONFIG.SCHED_COLS.SERVICE]      || '',
         timeSlot    : rowData[CONFIG.SCHED_COLS.TIME_SLOT]    || '',
         participants: rowData[CONFIG.SCHED_COLS.PARTICIPANTS]  || 1
       };
-      if (status === 'Present')      sendPresentEmail(emailData);
-      else if (status === 'No-Show') sendNoShowEmail(emailData);
+
+      if (status === 'Present')      emailSent = sendPresentEmail(emailData);
+      else if (status === 'No-Show') emailSent = sendNoShowEmail(emailData);
+
+      if (!emailSent) {
+        Logger.log('Attendance email was not sent (maybe invalid/missing recipient) for row ' + rowIndex + ', status ' + status + ', email ' + email);
+      }
     } catch (mailErr) {
       Logger.log('Attendance email failed (non-fatal): ' + mailErr);
     }
 
-    Logger.log('Attendance saved: row ' + rowIndex + ' → ' + status);
-    return { success: true };
+    Logger.log('Attendance saved: row ' + rowIndex + ' → ' + status + (emailSent ? ' (email sent)' : ' (email not sent)'));
+    return { success: true, emailSent: emailSent };
   } catch (err) {
     Logger.log('saveAttendance error: ' + err);
     return { success: false, error: err.message };

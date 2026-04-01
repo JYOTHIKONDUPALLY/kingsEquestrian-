@@ -228,7 +228,11 @@ function sendBookingConfirmationEmail(d) {
 // ────────────────────────────────────────────────────────────
 
 function sendPresentEmail(d) {
-  if (!d.email || !d.email.includes('@')) return;
+  const cleanEmail = String(d.email || '').trim();
+  if (!cleanEmail || !cleanEmail.includes('@')) {
+    Logger.log('sendPresentEmail skipped: invalid email [' + d.email + ']');
+    return false;
+  }
 
   const htmlBody = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>'
     + '<body style="font-family:Georgia,serif;background:#f4f6f4;margin:0;padding:0;color:#333">'
@@ -251,13 +255,13 @@ function sendPresentEmail(d) {
     + '</body></html>';
 
   const ccEmails = getCCRecipients('welcome');
-  // FIX #6: GmailApp, FIX #1: no emoji in subject
-  GmailApp.sendEmail(d.email, 'Thank you for riding with us today - Kings Equestrian', '', {
+  GmailApp.sendEmail(cleanEmail, 'Thank you for riding with us today - Kings Equestrian', '', {
     htmlBody : htmlBody,
     cc       : ccEmails.join(','),
     name     : 'Kings Equestrian Foundation'
   });
-  Logger.log('Present email sent to ' + d.email);
+  Logger.log('Present email sent to ' + cleanEmail);
+  return true;
 }
 
 // ────────────────────────────────────────────────────────────
@@ -266,7 +270,11 @@ function sendPresentEmail(d) {
 // ────────────────────────────────────────────────────────────
 
 function sendNoShowEmail(d) {
-  if (!d.email || !d.email.includes('@')) return;
+  const cleanEmail = String(d.email || '').trim();
+  if (!cleanEmail || !cleanEmail.includes('@')) {
+    Logger.log('sendNoShowEmail skipped: invalid email [' + d.email + ']');
+    return false;
+  }
 
   const htmlBody = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>'
     + '<body style="font-family:Georgia,serif;background:#f4f6f4;margin:0;padding:0;color:#333">'
@@ -289,13 +297,13 @@ function sendNoShowEmail(d) {
     + '</body></html>';
 
   const ccEmails = getCCRecipients('welcome');
-  // FIX #6: GmailApp, FIX #1: no emoji in subject
-  GmailApp.sendEmail(d.email, 'We missed you today - Kings Equestrian', '', {
+  GmailApp.sendEmail(cleanEmail, 'We missed you today - Kings Equestrian', '', {
     htmlBody : htmlBody,
     cc       : ccEmails.join(','),
     name     : 'Kings Equestrian Foundation'
   });
-  Logger.log('No-show email sent to ' + d.email);
+  Logger.log('No-show email sent to ' + cleanEmail);
+  return true;
 }
 
 // ────────────────────────────────────────────────────────────

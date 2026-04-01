@@ -74,19 +74,25 @@ function _buildRiderData(rider) {
   const payments        = _getPaymentsForRider(ss, keNo);
   const sessions        = getSessionsForRider(keNo);
   const classesAttended = _countClassesAttended(ss, keNo);
+  const noShowCount     = sessions.filter(function(s) { return String(s.attendance || '').toLowerCase() === 'no-show'; }).length;
+  const totalParticipants = sessions.reduce(function(acc, s) {
+    return acc + (Number(s.participants) || 1);
+  }, 0);
 
   return {
-    found          : true,
-    keNo           : keNo,
-    name           : r[CONFIG.RIDER_COLS.NAME]         || '',
-    phone          : String(r[CONFIG.RIDER_COLS.PHONE] || ''),
-    email          : r[CONFIG.RIDER_COLS.EMAIL]        || '',
-    services       : r[CONFIG.RIDER_COLS.SERVICES]     || '',
-    participants   : r[CONFIG.RIDER_COLS.PARTICIPANTS]  || 1,
-    registeredOn   : r[CONFIG.RIDER_COLS.REGISTERED]   ? fmtDate(new Date(r[CONFIG.RIDER_COLS.REGISTERED])) : '',
-    payments       : payments,
-    sessions       : sessions,
-    classesAttended: classesAttended
+    found            : true,
+    keNo             : keNo,
+    name             : r[CONFIG.RIDER_COLS.NAME]         || '',
+    phone            : String(r[CONFIG.RIDER_COLS.PHONE] || ''),
+    email            : r[CONFIG.RIDER_COLS.EMAIL]        || '',
+    services         : r[CONFIG.RIDER_COLS.SERVICES]     || '',
+    participants     : r[CONFIG.RIDER_COLS.PARTICIPANTS]  || 1,
+    registeredOn     : r[CONFIG.RIDER_COLS.REGISTERED]   ? fmtDate(new Date(r[CONFIG.RIDER_COLS.REGISTERED])) : '',
+    payments         : payments,
+    sessions         : sessions,
+    classesAttended  : classesAttended,
+    noShowCount      : noShowCount,
+    totalParticipants: totalParticipants
   };
 }
 

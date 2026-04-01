@@ -18,7 +18,7 @@ function getRiderPortalHtml() {
       price   : Number(s.price || 0),
       type    : String(s.type  || 'Regular').replace(/"/g, '&quot;'),
       // Change 7: show pax ONLY for One-Time type
-      showPax : String(s.type || '').toLowerCase() === 'one-time'
+      showPax : true
     };
   });
   var servicesJson = JSON.stringify(safeServices);
@@ -81,7 +81,7 @@ function _portalHTML(payLink, servicesJson) {
     + '.info-banner{background:linear-gradient(135deg,var(--forest) 0%,var(--pine) 100%);padding:14px 16px 16px}'
     + '.info-ke{font-family:"Playfair Display",serif;font-size:18px;font-weight:600;color:var(--mist);margin-bottom:2px}'
     + '.info-svc{font-size:11px;color:var(--mint);margin-bottom:12px}'
-    + '.info-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}'
+    + '.info-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}'
     + '.istat{background:rgba(143,212,176,.1);border:1px solid rgba(143,212,176,.18);border-radius:10px;padding:9px 8px;text-align:center}'
     + '.istat-val{font-family:"Playfair Display",serif;font-size:22px;font-weight:700;color:var(--mint);line-height:1}'
     + '.istat-lbl{font-size:9px;color:rgba(143,212,176,.7);text-transform:uppercase;letter-spacing:.08em;margin-top:3px}'
@@ -158,7 +158,7 @@ function _portalHTML(payLink, servicesJson) {
     + '.pfooter{text-align:center;padding:16px;font-size:10px;color:#b0c8b8;border-top:1px solid var(--border);letter-spacing:.04em}'
     + '.hint{font-size:10px;color:#b0c8b8;margin-top:4px}'
     // Change 7: pax-row hidden by default, shown for One-Time
-    + '.pax-row{display:none}';
+    + '.pax-row{display:block}';
 
   var jsLines = [
     'var RD = null;',
@@ -299,7 +299,9 @@ function _portalHTML(payLink, servicesJson) {
     '  document.getElementById("d-svc").textContent = RD.services || "";',
     '  var upcoming = (RD.sessions || []).filter(function(s) { return s.isFuture && s.attendance !== "Present"; }).length;',
     '  document.getElementById("d-attended").textContent = RD.classesAttended || 0;',
+    '  document.getElementById("d-noshow").textContent = RD.noShowCount || 0;',
     '  document.getElementById("d-upcoming").textContent = upcoming;',
+    '  document.getElementById("d-participants").textContent = RD.totalParticipants || 0;',
     '  document.getElementById("d-payments").textContent = (RD.payments || []).length;',
     '  renderSessions(); renderBook(); renderPayments();',
     '  window.scrollTo(0, 0);',
@@ -368,8 +370,8 @@ function _portalHTML(payLink, servicesJson) {
     '    + "<span class=\\"bdg " + bCls + "\\">" + lbl + "</span>"',
     '    + "</div>"',
     '    + (s.timeSlot ? "<div class=\\"sc-tm\\">&#128336; " + esc(s.timeSlot) + "</div>" : "")',
-    '    + (s.participants > 1 ? "<div class=\\"sc-tm\\">&#128101; " + s.participants + " participants</div>" : "")',
-    '    + rHtml + "</div></div>";',
+    '    + "<div class=\"sc-tm\">&#128101; " + (Number(s.participants) || 1) + " participant" + ((Number(s.participants) || 1) !== 1 ? "s" : "") + "</div>"',
+'    + rHtml + "</div></div>";',
     '}',
 
     'function submitResched(rowIndex) {',
@@ -463,16 +465,17 @@ function _portalHTML(payLink, servicesJson) {
     'function wireSlotSvcChange(n) {',
     '  var sel = document.getElementById("svc-" + n);',
     '  if (!sel) return;',
-    '  sel.addEventListener("change", function() {',
+    '  var updatePaxDisplay = function() {',
     '    var idx = parseInt(sel.value, 10);',
     '    var pr  = document.getElementById("pax-" + n);',
     '    if (!pr) return;',
-    '    if (!isNaN(idx) && SERVICES[idx] && SERVICES[idx].showPax) {',
-    '      pr.style.display = "block";',
-    '    } else {',
-    '      pr.style.display = "none";',
-    '    }',
-    '  });',
+    '    function wireSlotSvcChange(n) {',
+    '     var pr = document.getElementById("pax-" + n);',
+  '       if (pr) pr.style.display = "block";',
+       '}',
+    '  };',
+    '  sel.addEventListener("change", updatePaxDisplay);',
+    '  updatePaxDisplay();',
     '}',
 
     'function addSlot() {',
@@ -748,7 +751,9 @@ function _portalHTML(payLink, servicesJson) {
     +     '<div class="info-svc" id="d-svc"></div>'
     +     '<div class="info-stats">'
     +       '<div class="istat"><div class="istat-val" id="d-attended">0</div><div class="istat-lbl">Class Units</div></div>'
+    +       '<div class="istat"><div class="istat-val" id="d-noshow">0</div><div class="istat-lbl">No-Shows</div></div>'
     +       '<div class="istat"><div class="istat-val" id="d-upcoming">0</div><div class="istat-lbl">Upcoming</div></div>'
+    +       '<div class="istat"><div class="istat-val" id="d-participants">0</div><div class="istat-lbl">Total Participants</div></div>'
     +       '<div class="istat"><div class="istat-val" id="d-payments">0</div><div class="istat-lbl">Payments</div></div>'
     +     '</div>'
     +   '</div>'
