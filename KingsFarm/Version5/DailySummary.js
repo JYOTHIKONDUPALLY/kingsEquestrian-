@@ -158,7 +158,7 @@ function _buildSummaryEmail(todaySess, tomorrowSess, newBookings, newRiders, tod
       <td style="padding:9px 11px;font-size:12px">${s.phone}</td>
       <td style="padding:9px 11px;background:${attBg};font-weight:600;font-size:12px">${attTxt}</td>
       <td style="padding:9px 11px;font-size:11px;color:#888">${slots} × 30min</td>
-      <td style="padding:9px 11px;font-size:11px;color:#888">${s.source === 'rider-portal' ? '🌐 Portal' : '📝 Form'}</td>
+      <td style="padding:9px 11px;font-size:11px;color:#888">${s.source === 'rider-portal' ? 'Portal' : 'Form'}</td>
     </tr>`;
   }
 
@@ -202,9 +202,10 @@ function _buildSummaryEmail(todaySess, tomorrowSess, newBookings, newRiders, tod
 <body style="font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f4;margin:0;padding:0;color:#333">
 <div style="max-width:860px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.1)">
   <div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:26px 30px;display:flex;align-items:center;gap:16px">
-    <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" style="width:60px;height:60px;border-radius:50%;border:3px solid rgba(255,255,255,.35)">
+    <img src="https://drive.google.com/uc?export=view&id=1EAkJ8_EeOVmpX3L1RGLi8b9amX5wuLhb"
+   style="width:72px;height:72px;border-radius:50%;border:3px solid #000;margin-bottom:12px"> 
     <div>
-      <h1 style="margin:0;color:#fff;font-size:20px">🌙 Nightly Schedule Report</h1>
+      <h1 style="margin:0;color:#fff;font-size:20px"> Nightly Schedule Report</h1>
       <p style="margin:4px 0 0;color:rgba(255,255,255,.88);font-size:13px">Kings Equestrian Foundation — Admin Summary</p>
       <p style="margin:2px 0 0;color:rgba(255,255,255,.7);font-size:11px">${todayLbl}</p>
     </div>
@@ -212,25 +213,25 @@ function _buildSummaryEmail(todaySess, tomorrowSess, newBookings, newRiders, tod
   <div style="padding:26px 30px">
 
     <!-- Stats row 1: Today -->
-    <h3 style="color:#1f4e3d;margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.06em">📅 Today's Summary</h3>
+    <h3 style="color:#1f4e3d;margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.06em"> Today's Summary</h3>
     <div style="display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap">
-      ${statBox(todaySess.length, 'Total Today', '#f0f4f0', '#1f4e3d', '📋')}
+      ${statBox(todaySess.length, 'Total Today', '#f0f4f0', '#1f4e3d', '')}
       ${statBox(present,          'Present',      '#d4edda', '#155724', '✅')}
       ${statBox(noShow,           'No-Show',      '#f8d7da', '#721c24', '❌')}
       ${statBox(unmarked,         'Unmarked',     '#fff3cd', '#856404', '⏳')}
-      ${statBox(totalBlocks,      '30-min Blocks','#e8f5e9', '#2e7d32', '🕐')}
+      ${statBox(totalBlocks,      '30-min Blocks','#e8f5e9', '#2e7d32', '')}
     </div>
 
     <!-- Stats row 2: Overview -->
     <div style="display:flex;gap:10px;margin-bottom:26px;flex-wrap:wrap">
-      ${statBox(newBookings.length, 'New Bookings (24h)', '#d1ecf1', '#0c5460', '🆕')}
-      ${statBox(newRiders.length,   'New Riders Today',   '#e8daef', '#6c3483', '🧑‍🤝‍🧑')}
-      ${statBox(tomorrowSess.length,'Booked Tomorrow',    '#fef9e7', '#7d6608', '📅')}
+      ${statBox(newBookings.length, 'New Bookings (24h)', '#d1ecf1', '#0c5460', '')}
+      ${statBox(newRiders.length,   'New Riders Today',   '#e8daef', '#6c3483', '')}
+      ${statBox(tomorrowSess.length,'Booked Tomorrow',    '#fef9e7', '#7d6608', '')}
     </div>
 
     <!-- New Riders -->
     ${newRiders.length ? `
-    <h2 style="color:#6c3483;border-bottom:3px solid #6c3483;padding-bottom:7px;margin-bottom:14px;font-size:17px">🧑‍🤝‍🧑 New Riders Today (${newRiders.length})</h2>
+    <h2 style="color:#6c3483;border-bottom:3px solid #6c3483;padding-bottom:7px;margin-bottom:14px;font-size:17px"> New Riders Today (${newRiders.length})</h2>
     <div style="overflow-x:auto;margin-bottom:26px">
       <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:420px">
         <thead><tr style="background:#6c3483;color:#fff">
@@ -244,7 +245,7 @@ function _buildSummaryEmail(todaySess, tomorrowSess, newBookings, newRiders, tod
     </div>` : ''}
 
     <!-- New Bookings -->
-    <h2 style="color:#0c5460;border-bottom:3px solid #0c5460;padding-bottom:7px;margin-bottom:14px;font-size:17px">🆕 New Bookings (Last 24 Hours)</h2>
+    <h2 style="color:#0c5460;border-bottom:3px solid #0c5460;padding-bottom:7px;margin-bottom:14px;font-size:17px"> New Bookings (Last 24 Hours)</h2>
     <div style="overflow-x:auto;margin-bottom:26px">
       <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:500px">
         <thead><tr style="background:#0c5460;color:#fff">
@@ -259,7 +260,7 @@ function _buildSummaryEmail(todaySess, tomorrowSess, newBookings, newRiders, tod
     </div>
 
     <!-- Today -->
-    <h2 style="color:#1f4e3d;border-bottom:3px solid #1f4e3d;padding-bottom:7px;margin-bottom:14px;font-size:17px">📅 Today — ${todayLbl}</h2>
+    <h2 style="color:#1f4e3d;border-bottom:3px solid #1f4e3d;padding-bottom:7px;margin-bottom:14px;font-size:17px"> Today — ${todayLbl}</h2>
     <div style="overflow-x:auto;margin-bottom:26px">
       <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px">
         <thead><tr style="background:#1f4e3d;color:#fff">
@@ -276,7 +277,7 @@ function _buildSummaryEmail(todaySess, tomorrowSess, newBookings, newRiders, tod
     </div>
 
     <!-- Tomorrow -->
-    <h2 style="color:#2c5f2d;border-bottom:3px solid #2c5f2d;padding-bottom:7px;margin-bottom:14px;font-size:17px">📅 Tomorrow — ${tmrwLbl} (${tomorrowSess.length} booked)</h2>
+    <h2 style="color:#2c5f2d;border-bottom:3px solid #2c5f2d;padding-bottom:7px;margin-bottom:14px;font-size:17px"> Tomorrow — ${tmrwLbl} (${tomorrowSess.length} booked)</h2>
     <div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:480px">
         <thead><tr style="background:#2c5f2d;color:#fff">
@@ -290,7 +291,7 @@ function _buildSummaryEmail(todaySess, tomorrowSess, newBookings, newRiders, tod
       </table>
     </div>
 
-    ${driveUrl ? `<div style="background:#e8f5e9;border-left:4px solid #4caf50;padding:13px;border-radius:6px;font-size:12px">📁 <strong>PDF saved to Drive:</strong> <a href="${driveUrl}" style="color:#1f4e3d">${driveUrl}</a></div>` : ''}
+    ${driveUrl ? `<div style="background:#e8f5e9;border-left:4px solid #4caf50;padding:13px;border-radius:6px;font-size:12px"><strong>PDF saved to Drive:</strong> <a href="${driveUrl}" style="color:#1f4e3d">${driveUrl}</a></div>` : ''}
     <p style="font-size:11px;color:#999;margin-top:20px">Auto-generated nightly by Kings Equestrian booking system.</p>
   </div>
   <div style="background:#1f4e3d;color:#fff;padding:16px 30px;text-align:center;font-size:12px">

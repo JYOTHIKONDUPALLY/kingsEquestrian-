@@ -15,10 +15,9 @@
 
 function sendWelcomeEmail(d) {
   // d: { name, email, phone, services, participants, amount, keNo,
-  //      upiLink, qrCode, bookingDate, isFirstTime, sheet, row }
+  //      upiLink, qrCode, prefDate, isFirstTime, sheet, row }
 
   const attachments = [];
-
   // Terms PDF
   try {
     const termsPDF = getTermsPDF();
@@ -27,7 +26,7 @@ function sendWelcomeEmail(d) {
 
   // Consent form
   try {
-    const consentPDF = generateConsentPDF(d.name, d.email, d.phone, d.bookingDate);
+    const consentPDF = generateConsentPDF(d.name, d.email, d.phone, d.prefDate);
     if (consentPDF) attachments.push(consentPDF);
   } catch (e) { Logger.log('Consent PDF error: ' + e); }
 
@@ -45,12 +44,17 @@ function sendWelcomeEmail(d) {
   // FIX #7/#9: Use the direct Drive link — no PDF download needed
   const servicesBrochureLink = CONFIG.ADDITIONAL_PDF_DRIVE_LINK || '';
 
-  const servicesBrochureBlock = servicesBrochureLink
-    ? '<div style="background:#e8f4ff;border-left:4px solid #2196f3;padding:13px 18px;margin:16px 0;border-radius:4px">'
-      + '<p style="margin:0;font-size:13px"><strong>Learn about our services:</strong><br>'
-      + '<a href="' + servicesBrochureLink + '" style="color:#1565c0;font-weight:600" target="_blank">View Our Services Guide</a>'
-      + '</p></div>'
-    : '';
+  const Myrides=CONFIG.MYRIDES;
+
+const servicesBrochureBlock = servicesBrochureLink
+  ? '<div style="background:#e8f4ff;border-left:4px solid #2196f3;padding:13px 18px;margin:16px 0;border-radius:4px">'
+    + '<p style="margin:0;font-size:13px"><strong>Learn about our services:</strong><br>'
+    + '<a href="' + servicesBrochureLink + '" style="color:#1565c0;font-weight:600" target="_blank">View Our Services Guide</a>'
+    + '<br><br><strong>Book your future rides here:</strong><br>'
+    + '<a href="' + Myrides + '" style="color:#1565c0;font-weight:600" target="_blank">My Rides</a>'
+    + '</p></div>'
+  : '';
+
 
   // FIX #1: No emojis in subject
   const subject = d.isFirstTime
@@ -63,49 +67,95 @@ function sendWelcomeEmail(d) {
     : '<h2 style="color:#1f4e3d;margin:0 0 8px">Hi ' + d.name + '!</h2>'
       + '<p>A new booking has been received for your account <strong>(' + d.keNo + ')</strong>.</p>';
 
-  const htmlBody = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>'
-    + '<body style="font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0;color:#333">'
-    + '<div style="max-width:640px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.1)">'
-    + '  <div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:28px 30px;text-align:center;color:#fff">'
-    + '    <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" style="width:72px;height:72px;border-radius:50%;border:3px solid rgba(255,255,255,.4);margin-bottom:12px">'
-    + '    <h1 style="margin:0;font-size:24px">Kings Equestrian Foundation</h1>'
-    + '    <p style="margin:6px 0 0;font-size:13px;opacity:.9">Where horses don\'t just carry you — they change you</p>'
-    + '  </div>'
-    + '  <div style="padding:28px 30px">'
-    + '    ' + greeting
-    + '    <div style="background:#f0f8f0;border-left:4px solid #2c5f2d;padding:14px 18px;margin:20px 0;border-radius:4px">'
-    + '      <p style="margin:0;font-size:13px"><strong>KE Number:</strong> <span style="font-size:20px;color:#1f4e3d;font-weight:bold">' + d.keNo + '</span><br>'
-    + '      <strong>Service:</strong> ' + d.services + '<br>'
-    + '      <strong>Participants:</strong> ' + d.participants + '</p>'
-    + '    </div>'
-    + '    ' + servicesBrochureBlock
-    + '    <div style="background:#e8f5e9;border:2px solid #4caf50;padding:20px;border-radius:8px;margin:20px 0">'
-    + '      <h3 style="color:#2e7d32;margin:0 0 12px">Pay Advance - Rs.' + Number(d.amount).toLocaleString('en-IN') + '</h3>'
-    + '      <p style="font-size:13px;color:#555;margin:0 0 16px">Scan the QR code below and then submit the payment confirmation form.</p>'
-    + '      <div style="text-align:center;margin:16px 0">'
-    + '        <img src="' + d.qrCode + '" style="width:160px;height:160px;border:2px solid #e0e0e0;border-radius:6px">'
-    + '      </div>'
-    + '      <div style="text-align:center;margin-top:14px">'
-    + '        <a href="' + CONFIG.PAYMENT_FORM_LINK + '" style="background:#1f4e3d;color:#fff;padding:12px 26px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;display:inline-block">Submit Payment</a>'
-    + '      </div>'
-    + '      <p style="font-size:11px;color:#777;margin:12px 0 0;text-align:center">After paying, click the button to upload your screenshot and select date/time</p>'
-    + '    </div>'
-    + '    <div style="background:#f9f9f9;padding:16px;border-radius:8px">'
-    + '      <h4 style="color:#1f4e3d;margin:0 0 10px">What\'s Next</h4>'
-    + '      <ol style="margin:0;padding-left:20px;font-size:13px;color:#555;line-height:1.9">'
-    + '        <li>Pay Rs.' + Number(d.amount).toLocaleString('en-IN') + ' advance via the QR code above</li>'
-    + '        <li>Submit payment via the form and choose your date and time</li>'
-    + '        <li>Review the attached Terms and Conditions and Consent Form</li>'
-    + '        <li>Await your payment receipt and confirmation email</li>'
-    + '        <li>Arrive 15 min before your slot — wear comfortable shoes!</li>'
-    + '      </ol>'
-    + '    </div>'
-    + '  </div>'
-    + '  <div style="background:#1f4e3d;color:#fff;padding:18px 30px;text-align:center;font-size:12px">'
-    + '    <strong>Kings Equestrian Foundation</strong><br>Karnataka, India<br>+91-9980895533 | info@kingsequestrian.com'
-    + '  </div>'
-    + '</div>'
-    + '</body></html>';
+const htmlBody = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>'
++ '<body style="font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0;color:#333">'
++ '<div style="max-width:640px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.1)">'
++ '  <div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:28px 30px;text-align:center;color:#fff">'
++ '   <img src="https://drive.google.com/uc?export=view&id=1EAkJ8_EeOVmpX3L1RGLi8b9amX5wuLhb"'
++  '   style="width:72px;height:72px;border-radius:50%;border:3px solid #000;margin-bottom:12px"> '
++ '    <h1 style="margin:0;font-size:24px">Kings Equestrian Foundation</h1>'
++ '    <p style="margin:6px 0 0;font-size:13px;opacity:.9">Where Nature Connects. Riders Transform.</p>'
++ '  </div>'
++ '  <div style="padding:28px 30px">'
++ '    ' + greeting
++ '    <div style="background:#f0f8f0;border-left:4px solid #2c5f2d;padding:14px 18px;margin:20px 0;border-radius:4px">'
++ '      <p style="margin:0;font-size:13px">'
++ '      <strong>KE Number:</strong> <span style="font-size:20px;color:#1f4e3d;font-weight:bold">' + d.keNo + '</span><br>'
++ '      <strong>Service:</strong> ' + d.services + '<br>'
++ '      <strong>Participants:</strong> ' + d.participants + '<br>'
++ '      <strong>Preferred Date:</strong> <br>'+d.prefDate
++ '      <strong>Time Slot:</strong> '+d.prefTime
++ '      </p>'
++ '    </div>'
+
+  // ── Kings Equestrian Experience Details Block ──────────────────────────────
+  + '    <div style="background:#f4faf4;border:1px solid #c8e6c9;border-radius:8px;padding:20px 22px;margin:20px 0;text-align:center">'
+  + '      <p style="font-size:20px;margin:0 0 4px"></p>'
+  + '      <h3 style="color:#1f4e3d;margin:0 0 2px;font-size:18px;letter-spacing:1px">KINGS EQUESTRIAN</h3>'
+  + '      <p style="font-size:13px;color:#2c5f2d;font-style:italic;margin:0 0 10px">Where Nature Connects. Riders Transform.</p>'
+  + '      <hr style="border:none;border-top:1px solid #c8e6c9;margin:10px 0">'
+
+  + '      <p style="font-size:13px;color:#444;margin:10px 0 4px"> <strong>Begin Your Ride</strong></p>'
+  + '      <p style="font-size:13px;color:#555;margin:0 0 6px">A premium equestrian experience near Sarjapur —<br>perfect for beginners, families &amp; riders.</p>'
+  + '      <p style="font-size:13px;color:#2c5f2d;font-style:italic;margin:0 0 10px"> Calm. Confidence. Connection.</p>'
+  + '      <hr style="border:none;border-top:1px solid #c8e6c9;margin:10px 0">'
+
+  + '      <p style="font-size:13px;color:#555;margin:10px 0 4px"> <strong>Location</strong><br>'
+  + '      <a href="https://maps.app.goo.gl/LKXQ8VTbYhrw1PDb9" style="color:#1565c0" target="_blank">https://maps.app.goo.gl/LKXQ8VTbYhrw1PDb9</a></p>'
+  + '      <p style="font-size:13px;color:#555;margin:4px 0 10px"> <a href="https://www.instagram.com/kingsequestrianfoundation" style="color:#1565c0" target="_blank">@kingsequestrianfoundation</a></p>'
+  + '      <hr style="border:none;border-top:1px solid #c8e6c9;margin:10px 0">'
+
+  + '      <p style="font-size:13px;color:#444;margin:10px 0 8px"> <strong>Horse Safari Experiences</strong></p>'
+  + '      <table style="width:80%;border-collapse:collapse;font-size:13px;margin:0 auto">'
+  + '        <tbody>'
+  + '          <tr style="background:#fff">'
+  + '            <td style="padding:8px 14px;border-bottom:1px solid #e0e0e0;text-align:left">Short Safari <span style="color:#777">(30 mins)</span></td>'
+  + '            <td style="padding:8px 14px;border-bottom:1px solid #e0e0e0;text-align:right;font-weight:bold;color:#1f4e3d">₹1,500</td>'
+  + '          </tr>'
+  + '          <tr style="background:#f9f9f9">'
+  + '            <td style="padding:8px 14px;text-align:left">Long Safari <span style="color:#777">(1 hour)</span></td>'
+  + '            <td style="padding:8px 14px;text-align:right;font-weight:bold;color:#1f4e3d">₹2,500</td>'
+  + '          </tr>'
+  + '        </tbody>'
+  + '      </table>'
+  + '      <hr style="border:none;border-top:1px solid #c8e6c9;margin:10px 0">'
+
+  + '      <p style="font-size:12px;color:#555;margin:10px 0;background:#fffde7;border-left:3px solid #f9a825;padding:10px 14px;text-align:left;border-radius:4px">'
+  + '         Please refer to the <strong>Kings Equestrian brochure</strong> attached to this email for comprehensive services and detailed pricing.'
+  + '      </p>'
+  + '      <hr style="border:none;border-top:1px solid #c8e6c9;margin:10px 0">'
+
+  + '      <p style="font-size:13px;color:#2c5f2d;font-style:italic;margin:10px 0 0">Not just a ride — an experience you\'ll return to. </p>'
+  + '    </div>'
+  // ── End Experience Block ───────────────────────────────────────────────────
+  + '    ' + servicesBrochureBlock
+  + '    <div style="background:#e8f5e9;border:2px solid #4caf50;padding:20px;border-radius:8px;margin:20px 0">'
+  + '      <h3 style="color:#2e7d32;margin:0 0 12px">Pay Advance - Rs.' + Number(d.amount).toLocaleString('en-IN') + '</h3>'
+  + '      <p style="font-size:13px;color:#555;margin:0 0 16px">Scan the QR code below and then submit the payment confirmation form.</p>'
+  + '      <div style="text-align:center;margin:16px 0">'
+  + '        <img src="' + d.qrCode + '" style="width:160px;height:160px;border:2px solid #e0e0e0;border-radius:6px">'
+  + '      </div>'
+  + '      <div style="text-align:center;margin-top:14px">'
+  + '        <a href="' + CONFIG.PAYMENT_FORM_LINK + '" style="background:#1f4e3d;color:#fff;padding:12px 26px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;display:inline-block">Submit Payment</a>'
+  + '      </div>'
+  + '      <p style="font-size:11px;color:#777;margin:12px 0 0;text-align:center">After paying, click the button to upload your screenshot and select date/time</p>'
+  + '    </div>'
+  + '    <div style="background:#f9f9f9;padding:16px;border-radius:8px">'
+  + '      <h4 style="color:#1f4e3d;margin:0 0 10px">What\'s Next</h4>'
+  + '      <ol style="margin:0;padding-left:20px;font-size:13px;color:#555;line-height:1.9">'
+  + '        <li>Pay Rs.' + Number(d.amount).toLocaleString('en-IN') + ' advance via the QR code above</li>'
+  + '        <li>Submit payment via the form and choose your date and time</li>'
+  + '        <li>Review the attached Terms and Conditions and Consent Form</li>'
+  + '        <li>Await your payment receipt and confirmation email</li>'
+  + '        <li>Arrive 15 min before your slot — wear comfortable shoes!</li>'
+  + '      </ol>'
+  + '    </div>'
+  + '  </div>'
+  + '  <div style="background:#1f4e3d;color:#fff;padding:18px 30px;text-align:center;font-size:12px">'
+  + '    <strong>Kings Equestrian Foundation</strong><br>Karnataka, India<br>+91-9980895533 | info@kingsequestrian.com'
+  + '  </div>'
+  + '</div>'
+  + '</body></html>';
 
   const ccEmails = getCCRecipients('welcome');
   // FIX #6: Use GmailApp (not MailApp) — requires Gmail send permission
@@ -133,7 +183,8 @@ function buildReceiptEmailHTML(d) {
     + '<body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0;color:#333">'
     + '<div style="max-width:620px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,.1)">'
     + '  <div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:28px 30px;text-align:center;color:#fff">'
-    + '    <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" style="width:64px;height:64px;border-radius:50%;border:3px solid rgba(255,255,255,.4);margin-bottom:10px">'
+    + '   <img src="https://drive.google.com/uc?export=view&id=1EAkJ8_EeOVmpX3L1RGLi8b9amX5wuLhb"'
++  '   style="width:72px;height:72px;border-radius:50%;border:3px solid #000;margin-bottom:12px"> '
     + '    <h1 style="margin:0;font-size:22px">Kings Equestrian Foundation</h1>'
     + '  </div>'
     + '  <div style="padding:28px 30px">'
@@ -180,7 +231,8 @@ function sendBookingConfirmationEmail(d) {
     + '<body style="font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0;color:#333">'
     + '<div style="max-width:620px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.1)">'
     + '  <div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:26px 30px;text-align:center;color:#fff">'
-    + '    <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" style="width:64px;height:64px;border-radius:50%;border:3px solid rgba(255,255,255,.4);margin-bottom:10px">'
+    + '    <img src="https://drive.google.com/uc?export=view&id=1EAkJ8_EeOVmpX3L1RGLi8b9amX5wuLhb"'
++  '   style="width:72px;height:72px;border-radius:50%;border:3px solid #000;margin-bottom:12px"> '
     + '    <h1 style="margin:0;font-size:22px">Sessions Booked</h1>'
     + '    <p style="margin:6px 0 0;font-size:13px;opacity:.9">Kings Equestrian Foundation</p>'
     + '  </div>'
@@ -238,7 +290,8 @@ function sendPresentEmail(d) {
     + '<body style="font-family:Georgia,serif;background:#f4f6f4;margin:0;padding:0;color:#333">'
     + '<div style="max-width:580px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.08)">'
     + '  <div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:28px 30px;text-align:center;color:#fff">'
-    + '    <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" style="width:68px;height:68px;border-radius:50%;border:3px solid rgba(255,255,255,.4);margin-bottom:12px">'
+    + '    <img src="https://drive.google.com/uc?export=view&id=1EAkJ8_EeOVmpX3L1RGLi8b9amX5wuLhb"'
++  '   style="width:72px;height:72px;border-radius:50%;border:3px solid #000;margin-bottom:12px"> '
     + '    <h1 style="margin:0;font-size:22px;font-family:Georgia,serif">Kings Equestrian Foundation</h1>'
     + '  </div>'
     + '  <div style="padding:32px 34px;line-height:1.9">'
@@ -280,13 +333,14 @@ function sendNoShowEmail(d) {
     + '<body style="font-family:Georgia,serif;background:#f4f6f4;margin:0;padding:0;color:#333">'
     + '<div style="max-width:580px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.08)">'
     + '  <div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:28px 30px;text-align:center;color:#fff">'
-    + '    <img src="https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg" style="width:68px;height:68px;border-radius:50%;border:3px solid rgba(255,255,255,.4);margin-bottom:12px">'
+    + '    <img src="https://drive.google.com/uc?export=view&id=1EAkJ8_EeOVmpX3L1RGLi8b9amX5wuLhb"'
++  '   style="width:72px;height:72px;border-radius:50%;border:3px solid #000;margin-bottom:12px"> '
     + '    <h1 style="margin:0;font-size:22px;font-family:Georgia,serif">Kings Equestrian Foundation</h1>'
     + '  </div>'
     + '  <div style="padding:32px 34px;line-height:1.9">'
     + '    <p style="font-size:15px;margin:0 0 18px">Dear <strong>' + d.name + '</strong>,</p>'
     + '    <p style="font-size:14px;margin:0 0 16px">We missed having you with us today and hope everything is well.</p>'
-    + '    <p style="font-size:14px;margin:0 0 16px">Whenever you feel ready, we\'ll be happy to welcome you back — just reply to this email and our team will assist you with the next steps.</p>'
+    + '    <p style="font-size:14px;margin:0 0 16px">Whenever you feel ready, we\'ll be happy to welcome you back.</p>'
     + '    <p style="font-size:14px;margin:0 0 24px">Wishing you ease and well-being,</p>'
     + '    <p style="font-size:14px;margin:0;color:#1f4e3d;font-style:italic"><strong>Kings Equestrian Foundation</strong></p>'
     + '  </div>'
@@ -311,7 +365,7 @@ function sendNoShowEmail(d) {
 // ────────────────────────────────────────────────────────────
 
 function generate80GReceipt(riderName, pan, amount, txnRef, receiptNo) {
-  const logoB64  = imgBase64FromUrl('https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg');
+  const logoB64  = imgBase64FromUrl('https://drive.google.com/uc?export=view&id=1EAkJ8_EeOVmpX3L1RGLi8b9amX5wuLhb');
   const stampB64 = imgBase64FromDrive('1fQVqA1ABWCaTJs4uJVxiNqIGhl5iWugJ');
   const signB64  = imgBase64FromDrive('1CI6H0JgysxanA0RimUwu7QwSSRospSwc');
   const dateStr  = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');

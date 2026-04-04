@@ -44,7 +44,8 @@ const CONFIG = {
   // FIX #7/#9: This ID was a published-web URL, not a Drive file ID.
   // Use the actual Drive file ID from the sharing link:
   // https://drive.google.com/file/d/1CpWYOphlAJzJSHtuS9au35tWdg743rAW/view
-  ADDITIONAL_PDF_DRIVE_LINK: 'https://drive.google.com/file/d/1CpWYOphlAJzJSHtuS9au35tWdg743rAW/view?usp=sharing',
+  ADDITIONAL_PDF_DRIVE_LINK: 'https://drive.google.com/file/d/1Wnh-GR2G7DE7SO_It1OtsaOq77YDfMxK/view?usp=sharing',
+  MYRIDES:'https://script.google.com/macros/s/AKfycbyzCGHcVGHQQFP-VTepIZ4ipsMjaoXAYSvowU-qahWrd45ckslE2kO1XafDNskxma0BFw/exec?app=portal',
 
   // ── Sheet names ─────────────────────────────────────────
   SHEETS: {
@@ -128,10 +129,12 @@ const CONFIG = {
     NAME       : 1,
     PHONE      : 2,
     AMOUNT     : 3,
-    PAY_DATE   : 4,   // payment date ONLY
-    TXN_REF    : 5,   // transaction ref ONLY
-    RECEIPT_NO : 6,
-    SENT_AT    : 7
+    SCREENSHOT :4,
+    PAY_DATE   : 5,
+    SCHEDULE_DATE: 6,   // payment date ONLY
+    TXN_REF    :7,  // transaction ref ONLY
+    RECEIPT_NO : 8,
+    SENT_AT    : 9
   },
 
   // ── Pricing sheet columns (0-based) ──────────────────────
@@ -178,6 +181,23 @@ function findRiderByPhone(phone) {
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     if (normalisePhone(data[i][CONFIG.RIDER_COLS.PHONE]) === target) {
+      return { rowIndex: i + 1, row: data[i] };
+    }
+  }
+  return null;
+}
+function findRiderByPhoneAndName(phone, name) {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.SHEETS.RIDERS);
+  if (!sheet) return null;
+  const target     = normalisePhone(phone);
+  const targetName = String(name || '').trim().toLowerCase();
+  if (!target || target.length < 10) return null;
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const rowPhone = normalisePhone(data[i][CONFIG.RIDER_COLS.PHONE]);
+    const rowName  = String(data[i][CONFIG.RIDER_COLS.NAME] || '').trim().toLowerCase();
+    if (rowPhone === target && rowName === targetName) {
       return { rowIndex: i + 1, row: data[i] };
     }
   }
@@ -471,7 +491,7 @@ function generateConsentPDF(name, email, phone, bookingDate) {
         return dateValue.toString();
     }
 
-    const logoUrl = 'https://kingsfarmequestrian.com/wp-content/uploads/2023/08/Logo2.jpg';
+    const logoUrl = 'https://drive.google.com/uc?export=view&id=1EAkJ8_EeOVmpX3L1RGLi8b9amX5wuLhb';
     let logoBlob;
     try {
         logoBlob = UrlFetchApp.fetch(logoUrl).getBlob();
@@ -637,6 +657,6 @@ function setupTriggers() {
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger('onBookingFormSubmit').forSpreadsheet(ss).onFormSubmit().create();
   ScriptApp.newTrigger('onPaymentFormSubmit').forSpreadsheet(ss).onFormSubmit().create();
-  ScriptApp.newTrigger('sendDailyAdminSummary').timeBased().everyDays(1).atHour(21).create();
+  ScriptApp.newTrigger('sendDailyAdminSummary').timeBased().everyDays(1).atHour(20).create();
   SpreadsheetApp.getUi().alert('Triggers set!\n\n- Booking form: welcome email + KE No\n- Payment form: receipt email\n- Nightly 9 PM: admin summary email');
 }

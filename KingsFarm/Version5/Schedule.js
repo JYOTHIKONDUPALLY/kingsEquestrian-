@@ -437,14 +437,16 @@ function bookMultipleSessions(keNo, sessionRequests) {
     const phone  = String(r[CONFIG.RIDER_COLS.PHONE] || '');
     const added  = [];
     const errors = [];
+    Logger.log(JSON.stringify(sessionRequests));
 
     sessionRequests.forEach((req, idx) => {
       try {
         if (!req.date || !req.service) throw new Error('Date and service are required');
         const newDateObj = new Date(req.date);
         if (isNaN(newDateObj.getTime())) throw new Error('Invalid date');
-        const today = new Date(); today.setHours(0,0,0,0);
-        if (newDateObj <= today) throw new Error('Date must be in the future');
+        // const today = new Date(); today.setHours(0,0,0,0);
+        // if (newDateObj <= today) throw new Error('Date must be in the future');
+        const riderPax = Number(r[CONFIG.RIDER_COLS.PARTICIPANTS]) || 1;
         addSessionToSchedule({ keNo, name, phone, email, service: req.service, date: newDateObj, timeSlot: req.timeSlot || '', participants: req.participants || 1, source: 'rider-portal', status: 'Scheduled' });
         added.push({ label: fmtDate(newDateObj) + ' — ' + req.service, service: req.service, date: fmtDate(newDateObj), timeSlot: req.timeSlot || '' });
       } catch (e) { errors.push('Request ' + (idx+1) + ': ' + e.message); }
@@ -457,12 +459,56 @@ function bookMultipleSessions(keNo, sessionRequests) {
     }
 
     // Admin notification
-    const adminEmails = getAdminEmails();
-    if (adminEmails.length && added.length > 0) {
-      GmailApp.sendEmail(adminEmails.join(','), 'New Portal Booking: ' + name + ' (' + keNo + ')',
-        name + ' (' + keNo + ') booked ' + added.length + ' session(s):\n\n' + added.map(a => a.label).join('\n'),
-        { name: 'Kings Equestrian System' });
-    }
+   const adminEmails = getAdminEmails();
+if (adminEmails.length && added.length > 0) {
+  const adminSessionRows = added.map(a =>
+    '<tr style="border-bottom:1px solid #eee">'
+    + '<td style="padding:9px 12px">' + (a.service || a.label) + '</td>'
+    + '<td style="padding:9px 12px">' + (a.date || '—') + '</td>'
+    + '<td style="padding:9px 12px">' + (a.timeSlot || '—') + '</td>'
+    + '</tr>'
+  ).join('');
+
+  const adminHtmlBody = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>'
+    + '<body style="font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0;color:#333">'
+    + '<div style="max-width:620px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.1)">'
+    + '  <div style="background:linear-gradient(135deg,#1f4e3d,#4f9c7a);padding:26px 30px;text-align:center;color:#fff">'
+    + '    <img src="https://drive.google.com/uc?export=view&id=1EAkJ8_EeOVmpX3L1RGLi8b9amX5wuLhb"'
++  '   style="width:72px;height:72px;border-radius:50%;border:3px solid #000;margin-bottom:12px"> '
+    + '    <h1 style="margin:0;font-size:22px">New Portal Booking</h1>'
+    + '    <p style="margin:6px 0 0;font-size:13px;opacity:.9">Kings Equestrian Foundation — Admin Alert</p>'
+    + '  </div>'
+    + '  <div style="padding:26px 30px">'
+    + '    <p style="font-size:15px">A new booking has been submitted by <strong>' + name + '</strong>.</p>'
+    + '    <div style="background:#d4edda;border-left:4px solid #28a745;padding:14px 18px;border-radius:6px;margin:16px 0">'
+    + '      <strong style="color:#155724">' + added.length + ' session' + (added.length !== 1 ? 's' : '') + ' booked</strong><br>'
+    + '      <span style="font-size:12px;color:#1e7e34">KE No: ' + keNo + '</span>'
+    + '    </div>'
+    + '    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px">'
+    + '      <thead><tr style="background:#1f4e3d;color:#fff">'
+    + '        <th style="padding:9px 12px;text-align:left">Service</th>'
+    + '        <th style="padding:9px 12px;text-align:left">Date</th>'
+    + '        <th style="padding:9px 12px;text-align:left">Time Slot</th>'
+    + '      </tr></thead>'
+    + '      <tbody>' + adminSessionRows + '</tbody>'
+    + '    </table>'
+    + '    <div style="background:#fff8e6;border-left:4px solid #f0a500;padding:13px;border-radius:4px;font-size:12px;color:#7a5000;margin-top:16px">'
+    + '      <strong>Action Required:</strong> Please review and confirm this booking in the system.'
+    + '    </div>'
+    + '  </div>'
+    + '  <div style="background:#1f4e3d;color:#fff;padding:16px 30px;text-align:center;font-size:12px">'
+    + '    <strong>Kings Equestrian Foundation</strong><br>Karnataka, India | +91-9980895533 | info@kingsequestrian.com'
+    + '  </div>'
+    + '</div>'
+    + '</body></html>';
+
+  GmailApp.sendEmail(
+    adminEmails.join(','),
+    'New Portal Booking: ' + name + ' (' + keNo + ')',
+    name + ' (' + keNo + ') booked ' + added.length + ' session(s):\n\n' + added.map(a => a.label).join('\n'),
+    { name: 'Kings Equestrian System', htmlBody: adminHtmlBody }
+  );
+}
 
     return { success: added.length > 0, added: added.length, failed: errors.length, errors, message: added.length + ' session(s) booked successfully!' };
   } catch (err) {

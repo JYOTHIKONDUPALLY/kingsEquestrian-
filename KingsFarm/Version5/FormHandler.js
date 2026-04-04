@@ -30,7 +30,7 @@ function onBookingFormSubmit(e) {
     }
 
     // Check if rider already exists
-    let existing  = findRiderByPhone(phone);
+    let existing = findRiderByPhoneAndName(phone, name);
     let keNo;
     let isFirstTime = false;
 
@@ -61,8 +61,8 @@ function onBookingFormSubmit(e) {
 
     sendWelcomeEmail({
       name, email, phone, services, participants,
-      amount, keNo, upiLink, qrCode,
-      bookingDate, isFirstTime,
+      amount, keNo, upiLink, qrCode,prefTime,
+      prefDate, isFirstTime,
       sheet, row
     });
 
@@ -119,7 +119,7 @@ function onPaymentFormSubmit(e) {
     const vals    = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
     const phone   = String(vals[CONFIG.PAYMENT_COLS.PHONE]   || '').trim();
     const amount  = Number(vals[CONFIG.PAYMENT_COLS.AMOUNT]);
-    const payDate = vals[CONFIG.PAYMENT_COLS.PAY_DATE];
+    const payDate = vals[CONFIG.PAYMENT_COLS.PAY_DATE];   // col 5
     const ts      = vals[CONFIG.PAYMENT_COLS.TIMESTAMP];
 
     if (_isDuplicatePayment(phone, amount, payDate, ts)) {
@@ -141,15 +141,15 @@ function _isDuplicatePayment(phone, amount, payDate, currentTs) {
     const ss    = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(CONFIG.SHEETS.PAYMENT_FORM);
     if (!sheet) return false;
-    const data    = sheet.getDataRange().getValues();
-    const normPh  = normalisePhone(phone);
-    const normDate = ymd(payDate);
+    const data      = sheet.getDataRange().getValues();
+    const normPh    = normalisePhone(phone);
+    const normDate  = ymd(payDate);
     const normCurTs = ymd(currentTs);
     for (let i = 1; i < data.length; i++) {
       if (ymd(data[i][CONFIG.PAYMENT_COLS.TIMESTAMP]) === normCurTs) continue;
       const rowPh  = normalisePhone(data[i][CONFIG.PAYMENT_COLS.PHONE]);
       const rowAmt = Number(data[i][CONFIG.PAYMENT_COLS.AMOUNT]);
-      const rowDt  = ymd(data[i][CONFIG.PAYMENT_COLS.PAY_DATE]);
+      const rowDt  = ymd(data[i][CONFIG.PAYMENT_COLS.PAY_DATE]);   // col 5
       const sent   = String(data[i][CONFIG.PAYMENT_COLS.RECEIPT_SENT] || '').toLowerCase();
       if (rowPh === normPh && rowAmt === amount && rowDt === normDate && sent === 'yes') return true;
     }
@@ -169,19 +169,21 @@ function sendReceiptForRow(rowIndex) {
   const paymentSheet = ss.getSheetByName(CONFIG.SHEETS.PAYMENT_FORM);
   if (!paymentSheet) throw new Error('Payment Form Response sheet not found');
 
-  const vals     = paymentSheet.getRange(rowIndex, 1, 1, paymentSheet.getLastColumn()).getValues()[0];
-  const keNo     = String(vals[CONFIG.PAYMENT_COLS.KE_NO]   || '').trim();
-  const phone    = String(vals[CONFIG.PAYMENT_COLS.PHONE]   || '').trim();
-  const amount   = Number(vals[CONFIG.PAYMENT_COLS.AMOUNT]);
-  const txnRef   = String(vals[CONFIG.PAYMENT_COLS.TXN_REF] || '').trim();
-  const pan      = String(vals[CONFIG.PAYMENT_COLS.PAN]     || '').trim();
-  const verified = String(vals[CONFIG.PAYMENT_COLS.VERIFIED]|| '').toLowerCase();
-  const timestamp = vals[CONFIG.PAYMENT_COLS.TIMESTAMP];
+  const vals = paymentSheet.getRange(rowIndex, 1, 1, paymentSheet.getLastColumn()).getValues()[0];
 
-  // FIX #4: Resolve payment date — use PAY_DATE if valid, else fall back to form TIMESTAMP
-  let payDate = vals[CONFIG.PAYMENT_COLS.PAY_DATE];
+  // Read all fields using updated PAYMENT_COLS
+  const keNo      = String(vals[CONFIG.PAYMENT_COLS.KE_NO]     || '').trim();
+  const phone     = String(vals[CONFIG.PAYMENT_COLS.PHONE]     || '').trim();
+  const amount    = Number(vals[CONFIG.PAYMENT_COLS.AMOUNT]);
+  const screenshot= String(vals[CONFIG.PAYMENT_COLS.SCREENSHOT]|| '').trim(); // col 4
+  const txnRef    = String(vals[CONFIG.PAYMENT_COLS.TXN_REF]   || '').trim(); // col 6
+  const pan       = String(vals[CONFIG.PAYMENT_COLS.PAN]       || '').trim(); // col 7
+  const verified  = String(vals[CONFIG.PAYMENT_COLS.VERIFIED]  || '').toLowerCase(); // col 8
+  const timestamp = vals[CONFIG.PAYMENT_COLS.TIMESTAMP]; // col 0
+
+  // Resolve payment date — use PAY_DATE (col 5) if valid, else fall back to form TIMESTAMP
+  let payDate = vals[CONFIG.PAYMENT_COLS.PAY_DATE]; // col 5
   if (!payDate || fmtDate(payDate) === '') {
-    // PAY_DATE is empty or epoch — fall back to form submission timestamp
     payDate = timestamp || new Date();
     Logger.log('sendReceiptForRow: PAY_DATE was empty/invalid, using TIMESTAMP instead');
   }
@@ -202,8 +204,7 @@ function sendReceiptForRow(rowIndex) {
 
   if (!rEmail) throw new Error('No email found for rider ' + rKeNo);
 
-  const receiptNo = _generateReceiptNo(rKeNo);
-
+  const receiptNo  = _generateReceiptNo(rKeNo);
   const receiptPDF = generate80GReceipt(rName, pan, amount, txnRef, receiptNo);
 
   // Store in Drive — non-fatal
@@ -211,9 +212,20 @@ function sendReceiptForRow(rowIndex) {
   try { driveInfo = storeReceiptInDrive(receiptPDF, rName, receiptNo); }
   catch (driveErr) { Logger.log('storeReceiptInDrive skipped: ' + driveErr); }
 
-  // FIX #11: Append to Payments Ledger with correct columns (payDate separate from txnRef)
-  try { _appendToLedger(ss, { keNo: rKeNo, name: rName, phone: rPhone, amount, payDate, txnRef, receiptNo }); }
-  catch (ledgerErr) { Logger.log('_appendToLedger error: ' + ledgerErr); }
+  // Append to Payments Ledger with updated 10-column schema
+  try {
+    _appendToLedger(ss, {
+      keNo      : rKeNo,
+      name      : rName,
+      phone     : rPhone,
+      amount,
+      screenshot,           // new — col 4 in ledger
+      payDate,              // col 5 in ledger
+      scheduleDate : '',    // col 6 — leave blank here; set manually if needed
+      txnRef,               // col 7 in ledger
+      receiptNo             // col 8 in ledger
+    });
+  } catch (ledgerErr) { Logger.log('_appendToLedger error: ' + ledgerErr); }
 
   // Send receipt email
   const ccEmails = getCCRecipients('receipt');
@@ -251,9 +263,11 @@ function _generateReceiptNo(keNo) {
 
 // ────────────────────────────────────────────────────────────
 //  APPEND TO PAYMENTS LEDGER
-//  FIX #11: Each column is written individually and correctly.
-//           PAY_DATE goes to col 4, TXN_REF goes to col 5.
-//           They will never overwrite each other.
+//  Updated for 10-column schema:
+//  [KE_NO, NAME, PHONE, AMOUNT, SCREENSHOT, PAY_DATE,
+//   SCHEDULE_DATE, TXN_REF, RECEIPT_NO, SENT_AT]
+//   col 0    1     2      3        4        5
+//            6         7          8         9
 // ────────────────────────────────────────────────────────────
 
 function _appendToLedger(ss, d) {
@@ -264,25 +278,32 @@ function _appendToLedger(ss, d) {
       return;
     }
 
-    // Build exactly 8-element row: [KE_NO, NAME, PHONE, AMOUNT, PAY_DATE, TXN_REF, RECEIPT_NO, SENT_AT]
-    const row = new Array(8).fill('');
-    row[CONFIG.LEDGER_COLS.KE_NO]      = d.keNo      || '';
-    row[CONFIG.LEDGER_COLS.NAME]       = d.name      || '';
-    row[CONFIG.LEDGER_COLS.PHONE]      = d.phone     || '';
-    row[CONFIG.LEDGER_COLS.AMOUNT]     = d.amount    || 0;
-    row[CONFIG.LEDGER_COLS.PAY_DATE]   = d.payDate   || '';  // col 4 — payment date ONLY
-    row[CONFIG.LEDGER_COLS.TXN_REF]    = d.txnRef    || '';  // col 5 — transaction ref ONLY
-    row[CONFIG.LEDGER_COLS.RECEIPT_NO] = d.receiptNo || '';
-    row[CONFIG.LEDGER_COLS.SENT_AT]    = new Date();
+    // 10-element row matching updated LEDGER_COLS
+    const row = new Array(10).fill('');
+    row[CONFIG.LEDGER_COLS.KE_NO]         = d.keNo         || '';
+    row[CONFIG.LEDGER_COLS.NAME]          = d.name         || '';
+    row[CONFIG.LEDGER_COLS.PHONE]         = d.phone        || '';
+    row[CONFIG.LEDGER_COLS.AMOUNT]        = d.amount       || 0;
+    row[CONFIG.LEDGER_COLS.SCREENSHOT]    = d.screenshot   || ''; // col 4
+    row[CONFIG.LEDGER_COLS.PAY_DATE]      = d.payDate      || ''; // col 5
+    row[CONFIG.LEDGER_COLS.SCHEDULE_DATE] = d.scheduleDate || ''; // col 6
+    row[CONFIG.LEDGER_COLS.TXN_REF]       = d.txnRef       || ''; // col 7
+    row[CONFIG.LEDGER_COLS.RECEIPT_NO]    = d.receiptNo    || ''; // col 8
+    row[CONFIG.LEDGER_COLS.SENT_AT]       = new Date();            // col 9
 
     sheet.appendRow(row);
 
     const lr = sheet.getLastRow();
+
+    // Format date columns
     if (d.payDate && fmtDate(d.payDate) !== '') {
       sheet.getRange(lr, CONFIG.LEDGER_COLS.PAY_DATE + 1).setNumberFormat('dd-MMM-yyyy');
     }
+    if (d.scheduleDate && fmtDate(d.scheduleDate) !== '') {
+      sheet.getRange(lr, CONFIG.LEDGER_COLS.SCHEDULE_DATE + 1).setNumberFormat('dd-MMM-yyyy');
+    }
     sheet.getRange(lr, CONFIG.LEDGER_COLS.SENT_AT + 1).setNumberFormat('dd-MMM-yyyy HH:mm');
-    sheet.getRange(lr, 1, 1, 8).setBackground('#f0faf5');
+    sheet.getRange(lr, 1, 1, 10).setBackground('#f0faf5');
 
     Logger.log('_appendToLedger: row ' + lr + ' for ' + d.keNo + ' — Rs.' + d.amount + ' on ' + fmtDate(d.payDate));
   } catch (e) {
@@ -316,11 +337,11 @@ function sendPaymentReceiptMenu() {
       Utilities.sleep(800);
     } catch (err) {
       fail++;
-      errors.push('Row ' + (startRow+i) + ': ' + err.message);
+      errors.push('Row ' + (startRow + i) + ': ' + err.message);
     }
   }
   ui.alert('Done!\n' + ok + ' sent\n' + fail + ' failed'
-    + (errors.length ? '\n\n' + errors.slice(0,5).join('\n') : ''));
+    + (errors.length ? '\n\n' + errors.slice(0, 5).join('\n') : ''));
 }
 
 function resendWelcomeEmail() {
@@ -346,20 +367,24 @@ function resendWelcomeEmail() {
       const phone        = String(vals[CONFIG.BOOKING_COLS.PHONE]        || '').trim();
       const services     = String(vals[CONFIG.BOOKING_COLS.SERVICES]     || '').trim();
       const participants = Number(vals[CONFIG.BOOKING_COLS.PARTICIPANTS]) || 1;
+      const prefTime     = String(vals[CONFIG.BOOKING_COLS.PREF_TIME]    || '').trim();
       const keNo         = String(vals[CONFIG.BOOKING_COLS.KE_NO]        || '').trim();
-      const bookingDate  = vals[CONFIG.BOOKING_COLS.TIMESTAMP];
+      const prefDate  = vals[CONFIG.BOOKING_COLS.PREF_DATE];
       if (!email || !keNo) throw new Error('Missing email or KE No');
       const amount  = CONFIG.ADVANCE_BOOKING_AMOUNT;
       const upiLink = createUPILink(amount, keNo);
       const qrCode  = createQRCode(upiLink);
-      sendWelcomeEmail({ name, email, phone, services, participants,
-        amount, keNo, upiLink, qrCode, bookingDate, isFirstTime: false,
-        sheet: bookingSheet, row: rowIdx });
+      sendWelcomeEmail({
+        name, email, phone, services, participants,
+        amount, keNo, upiLink, qrCode,prefTime,
+        prefDate, isFirstTime: false,
+        sheet: bookingSheet, row: rowIdx
+      });
       ok++;
       Utilities.sleep(800);
     } catch (err) {
       fail++;
-      Logger.log('resendWelcomeEmail row ' + (start+i) + ': ' + err.message);
+      Logger.log('resendWelcomeEmail row ' + (start + i) + ': ' + err.message);
     }
   }
   ui.alert('Done!\n' + ok + ' sent\n' + fail + ' failed');

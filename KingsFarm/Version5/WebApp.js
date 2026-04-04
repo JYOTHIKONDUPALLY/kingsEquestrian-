@@ -75,9 +75,7 @@ function _buildRiderData(rider) {
   const sessions        = getSessionsForRider(keNo);
   const classesAttended = _countClassesAttended(ss, keNo);
   const noShowCount     = sessions.filter(function(s) { return String(s.attendance || '').toLowerCase() === 'no-show'; }).length;
-  const totalParticipants = sessions.reduce(function(acc, s) {
-    return acc + (Number(s.participants) || 1);
-  }, 0);
+const totalParticipants = Number(r[CONFIG.RIDER_COLS.PARTICIPANTS]) || 1;
 
   return {
     found            : true,

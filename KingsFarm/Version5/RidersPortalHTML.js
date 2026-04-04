@@ -1,10 +1,11 @@
-// ============================================================
+]// ============================================================
 // KINGS EQUESTRIAN — NEW SYSTEM
 // File: 8_RiderPortalHTML.gs
 // Changes:
 //   Change 1: Time slots in 30-min increments
 //   Change 6: Multi-profile picker when phone matches multiple riders
 //   Change 7: Participants field shown only for One-Time services
+//   Change 8: Allow backdating — removed min-date restrictions
 // ============================================================
 
 function getRiderPortalHtml() {
@@ -329,9 +330,7 @@ function _portalHTML(payLink, servicesJson) {
     '  if (past.length)     { h += "<div class=\\"sec-div\\">Past</div>";     h += past.map(buildSessCard).join(""); }',
     '  if (!sessions.length) h += "<div class=\\"empty-st\\">No sessions yet. Use the Book tab!</div>";',
     '  document.getElementById("tc-sessions").innerHTML = h;',
-    '  var tmr = new Date(); tmr.setDate(tmr.getDate() + 1);',
-    '  var md = tmr.toISOString().split("T")[0];',
-    '  document.querySelectorAll(".rs-date").forEach(function(el) { el.min = md; });',
+    // Change 8: REMOVED min-date restriction on reschedule date pickers — backdating now allowed
     '  document.querySelectorAll(".rs-trigger").forEach(function(el) {',
     '    el.addEventListener("click", function() {',
     '      var rid = el.getAttribute("data-rid");',
@@ -356,6 +355,7 @@ function _portalHTML(payLink, servicesJson) {
     '    rHtml += "<div class=\\"rs-trigger\\" data-rid=\\"" + rid + "\\">Reschedule</div>";',
     '    rHtml += "<div class=\\"rs-panel\\" id=\\"rsp-" + rid + "\\">";',
     '    rHtml += "<div class=\\"rs-from\\">Moving: <strong>" + esc(s.date) + " &middot; " + esc(s.timeSlot || "TBD") + "</strong></div>";',
+    // Change 8: no min attribute on reschedule date input — backdating allowed
     '    rHtml += "<label class=\\"fl\\">New Date</label><input type=\\"date\\" class=\\"fi rs-date\\" id=\\"rsd-" + rid + "\\" style=\\"margin-bottom:10px\\">";',
     '    rHtml += "<label class=\\"fl\\">New Time</label><select class=\\"fi\\" id=\\"rst-" + rid + "\\" style=\\"margin-bottom:10px\\"><option value=\\"\\">Same (" + esc(s.timeSlot || "TBD") + ")</option>" + buildTimeOpts() + "</select>";',
     '    rHtml += "<label class=\\"fl\\">Reason</label><input type=\\"text\\" class=\\"fi\\" id=\\"rsr-" + rid + "\\" placeholder=\\"Optional...\\" style=\\"margin-bottom:10px\\">";',
@@ -370,8 +370,8 @@ function _portalHTML(payLink, servicesJson) {
     '    + "<span class=\\"bdg " + bCls + "\\">" + lbl + "</span>"',
     '    + "</div>"',
     '    + (s.timeSlot ? "<div class=\\"sc-tm\\">&#128336; " + esc(s.timeSlot) + "</div>" : "")',
-    '    + "<div class=\"sc-tm\">&#128101; " + (Number(s.participants) || 1) + " participant" + ((Number(s.participants) || 1) !== 1 ? "s" : "") + "</div>"',
-'    + rHtml + "</div></div>";',
+    '    + "<div class=\\"sc-tm\\">&#128101; " + (Number(s.participants) || 1) + " participant" + ((Number(s.participants) || 1) !== 1 ? "s" : "") + "</div>"',
+    '    + rHtml + "</div></div>";',
     '}',
 
     'function submitResched(rowIndex) {',
@@ -411,9 +411,7 @@ function _portalHTML(payLink, servicesJson) {
     '  h += "<button class=\\"btn-sub\\" id=\\"btn-book\\">Submit Sessions</button>";',
     '  h += "<div id=\\"book-result\\" class=\\"result\\"></div>";',
     '  document.getElementById("tc-book").innerHTML = h;',
-    '  var tmr = new Date(); tmr.setDate(tmr.getDate() + 1);',
-    '  var md = tmr.toISOString().split("T")[0];',
-    '  document.querySelectorAll(".sd-input").forEach(function(el) { el.min = md; });',
+    // Change 8: REMOVED min-date enforcement on single slot date pickers — backdating now allowed
     '  var now = new Date();',
     '  var mv = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");',
     '  var mi = document.getElementById("recur-month"); if (mi) { mi.value = mv; mi.min = mv; }',
@@ -449,6 +447,7 @@ function _portalHTML(payLink, servicesJson) {
     '  h += "<select class=\\"fi\\" id=\\"svc-" + n + "\\" data-slot=\\"" + n + "\\" style=\\"margin-bottom:10px\\">";',
     '  h += "<option value=\\"\\">Select a service...</option>" + opts + "</select>";',
     '  h += "<label class=\\"fl\\">Date</label>";',
+    // Change 8: no min attribute on date input — backdating allowed
     '  h += "<input type=\\"date\\" class=\\"fi sd-input\\" id=\\"sdate-" + n + "\\" style=\\"margin-bottom:10px\\">";',
     '  h += "<label class=\\"fl\\">Time Slot</label>";',
     '  h += "<select class=\\"fi\\" id=\\"stime-" + n + "\\" style=\\"margin-bottom:10px\\"><option value=\\"\\">Select time...</option>" + buildTimeOpts() + "</select>";',
@@ -466,13 +465,8 @@ function _portalHTML(payLink, servicesJson) {
     '  var sel = document.getElementById("svc-" + n);',
     '  if (!sel) return;',
     '  var updatePaxDisplay = function() {',
-    '    var idx = parseInt(sel.value, 10);',
-    '    var pr  = document.getElementById("pax-" + n);',
-    '    if (!pr) return;',
-    '    function wireSlotSvcChange(n) {',
-    '     var pr = document.getElementById("pax-" + n);',
-  '       if (pr) pr.style.display = "block";',
-       '}',
+    '    var pr = document.getElementById("pax-" + n);',
+    '    if (pr) pr.style.display = "block";',
     '  };',
     '  sel.addEventListener("change", updatePaxDisplay);',
     '  updatePaxDisplay();',
@@ -484,9 +478,7 @@ function _portalHTML(payLink, servicesJson) {
     '  var div = document.createElement("div");',
     '  div.innerHTML = buildSlotCard(slotCount);',
     '  wrap.appendChild(div.firstChild);',
-    '  var tmr = new Date(); tmr.setDate(tmr.getDate() + 1);',
-    '  var nd = document.getElementById("sdate-" + slotCount);',
-    '  if (nd) nd.min = tmr.toISOString().split("T")[0];',
+    // Change 8: REMOVED min-date setting when adding new slot — backdating allowed
     '  wireSlotSvcChange(slotCount);',
     '  var rb = document.querySelector("#slot-" + slotCount + " .rm-slot");',
     '  if (rb) rb.addEventListener("click", function() { document.getElementById("slot-" + slotCount).remove(); });',
@@ -575,10 +567,10 @@ function _portalHTML(payLink, servicesJson) {
     '  else if (recurPattern === "wkdy") tgt = [1, 2, 3, 4, 5];',
     '  else if (recurPattern === "cust") tgt = recurSelDays.slice();',
     '  else return [];',
-    '  var today = new Date(); today.setHours(0,0,0,0);',
+    // Change 8: REMOVED future-only filter — all dates in month included (past and future)
     '  var dates = [], d = new Date(year, month, 1);',
     '  while (d.getMonth() === month) {',
-    '    if (tgt.indexOf(d.getDay()) > -1) { var c = new Date(d); if (c > today) dates.push(c); }',
+    '    if (tgt.indexOf(d.getDay()) > -1) { dates.push(new Date(d)); }',
     '    d.setDate(d.getDate() + 1);',
     '  }',
     '  return dates;',
@@ -622,7 +614,7 @@ function _portalHTML(payLink, servicesJson) {
     '    if (!rSvcIdx) { toast("Please select a service"); return; }',
     '    if (!recurPattern) { toast("Please select a day pattern"); return; }',
     '    var rdates = getRecurDates();',
-    '    if (!rdates.length) { toast("No upcoming dates in selected month"); return; }',
+    '    if (!rdates.length) { toast("No dates in selected month"); return; }',
     '    var rsvc = SERVICES[parseInt(rSvcIdx, 10)];',
     '    var rpax = (rsvc && rsvc.showPax && rpi) ? parseInt(rpi.value || 1, 10) : 1;',
     '    rdates.forEach(function(d) {',
@@ -730,7 +722,7 @@ function _portalHTML(payLink, servicesJson) {
     +   '<div class="picker-card">'
     +     '<div class="brand-icon" style="margin:0 auto 1rem">&#128101;</div>'
     +     '<div class="picker-title">Choose a Profile</div>'
-    +     '<div class="picker-sub">Multiple riders are registered with this number.<br>Select the profile you want to view.</div>'
+    +     '<div class="picker-sub">Multiple profiles found for this number.<br>Select a family member to view their bookings.</div>'
     +     '<div id="profile-list"></div>'
     +     '<button class="btn-back" id="btn-back-login">&#8592; Use a different number</button>'
     +   '</div>'
