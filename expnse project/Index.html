@@ -96,6 +96,25 @@ textarea{resize:vertical;min-height:78px}
 .file-upload-label:hover{border-color:var(--gold);color:var(--text)}
 .file-name{font-size:.78rem;color:var(--gold);margin-top:.3rem}
 
+/* ── SEARCHABLE COMBOBOX ── */
+.combobox-wrap{position:relative;width:100%}
+.combobox-input-row{display:flex;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;transition:border-color .2s;overflow:hidden}
+.combobox-input-row:focus-within{border-color:var(--gold)}
+.combobox-search{flex:1;background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;padding:.6rem .85rem;outline:none;min-width:0}
+.combobox-search::placeholder{color:var(--muted)}
+.combobox-clear{background:none;border:none;color:var(--muted);cursor:pointer;padding:0 .7rem;font-size:1rem;line-height:1;flex-shrink:0;transition:color .2s}
+.combobox-clear:hover{color:var(--text)}
+.combobox-arrow{color:var(--muted);padding:0 .7rem;font-size:.7rem;pointer-events:none;flex-shrink:0}
+.combobox-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1e1e1e;border:1px solid var(--border);border-radius:8px;z-index:500;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none}
+.combobox-dropdown.open{display:block}
+.combobox-option{padding:.55rem .85rem;font-size:.87rem;color:var(--text);cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s}
+.combobox-option:last-child{border-bottom:none}
+.combobox-option:hover,.combobox-option.focused{background:rgba(201,168,76,.12);color:var(--gold-light)}
+.combobox-option .opt-id{font-size:.72rem;color:var(--muted);margin-left:.4rem}
+.combobox-option.selected{background:rgba(201,168,76,.18);color:var(--gold)}
+.combobox-empty{padding:.65rem .85rem;font-size:.83rem;color:var(--muted);font-style:italic}
+.combobox-count{padding:.35rem .85rem;font-size:.68rem;color:var(--muted);border-bottom:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02)}
+
 /* ── PAYEE BANK INFO ── */
 .payee-bank-box{background:rgba(201,168,76,.05);border:1px solid var(--border);border-radius:8px;padding:.9rem 1rem;margin-top:.9rem}
 .bank-box-title{font-size:.7rem;color:var(--gold);font-weight:600;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.65rem}
@@ -120,12 +139,8 @@ textarea{resize:vertical;min-height:78px}
 
 /* ── REQUEST CARDS ── */
 .requests-list{display:flex;flex-direction:column;gap:.9rem}
-
-/* The main card */
 .req-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s}
 .req-card:hover{border-color:rgba(201,168,76,.45)}
-
-/* Top click-area */
 .req-card-clickable{padding:1.1rem 1.25rem;cursor:pointer}
 .req-top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.65rem}
 .req-id{font-size:.75rem;font-weight:700;color:var(--gold);letter-spacing:.05em;margin-bottom:.2rem}
@@ -134,23 +149,17 @@ textarea{resize:vertical;min-height:78px}
 .req-right{text-align:right;flex-shrink:0}
 .req-amount{font-size:1.15rem;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif}
 .req-date{font-size:.72rem;color:var(--muted);margin-top:.2rem}
-
-/* Meta chips */
 .req-meta{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.6rem}
 .meta-chip{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:50px;padding:.18rem .6rem;font-size:.72rem;color:var(--muted)}
-
-/* Status badge */
 .status-badge{padding:.22rem .75rem;border-radius:50px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;display:inline-block}
 .st-Pending{background:rgba(224,138,50,.2);color:var(--orange);border:1px solid rgba(224,138,50,.4)}
 .st-Approved{background:rgba(76,175,117,.2);color:var(--green);border:1px solid rgba(76,175,117,.4)}
 .st-Rejected{background:rgba(224,82,82,.2);color:var(--red);border:1px solid rgba(224,82,82,.4)}
 .st-Paid{background:rgba(82,149,224,.2);color:var(--blue);border:1px solid rgba(82,149,224,.4)}
-
-/* ── INLINE ADMIN ACTIONS ── */
 .req-admin-actions{border-top:1px solid var(--border);padding:.9rem 1.25rem;background:rgba(201,168,76,.03);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
 .req-admin-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-right:.25rem}
 
-/* ── ACCOUNTS SETTLEMENT CARD ── */
+/* ── ACCOUNTS SETTLEMENT ── */
 .settlement-card{background:var(--card);border:1px solid rgba(82,149,224,.3);border-radius:var(--radius);overflow:hidden}
 .settlement-head{padding:1.1rem 1.25rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;cursor:pointer}
 .settlement-head:hover{background:rgba(82,149,224,.05)}
@@ -177,8 +186,6 @@ textarea{resize:vertical;min-height:78px}
 .detail-item label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500}
 .detail-item .val{font-size:.9rem;color:var(--text);font-weight:500}
 .modal-divider{border:none;border-top:1px solid var(--border);margin:1.2rem 0}
-
-/* Logs */
 .logs-title{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.7rem}
 .log-entry{background:rgba(255,255,255,.03);border-left:3px solid var(--border);padding:.65rem .9rem;border-radius:0 7px 7px 0;margin-bottom:.6rem;font-size:.83rem}
 .log-entry.log-approve{border-left-color:var(--green)}
@@ -186,8 +193,6 @@ textarea{resize:vertical;min-height:78px}
 .log-entry.log-paid{border-left-color:var(--blue)}
 .log-action{font-weight:600;color:var(--text)}
 .log-meta{color:var(--muted);font-size:.76rem;margin-top:.2rem;line-height:1.5}
-
-/* Modal confirm */
 .confirm-warning{background:rgba(224,82,82,.08);border:1px solid rgba(224,82,82,.25);border-radius:8px;padding:.85rem 1rem;font-size:.85rem;margin-bottom:1rem;color:var(--text)}
 .confirm-warning.green{background:rgba(76,175,117,.08);border-color:rgba(76,175,117,.25)}
 .modal-form-group{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.9rem}
@@ -282,9 +287,21 @@ textarea{resize:vertical;min-height:78px}
         <div class="form-grid">
           <div class="form-group">
             <label>Requestor Name <span class="req">*</span></label>
-            <select id="f-employee" required onchange="onEmployeeChange()">
-              <option value="">— Select Employee —</option>
-            </select>
+            <!-- SEARCHABLE COMBOBOX for employee -->
+            <div class="combobox-wrap" id="cb-employee-wrap">
+              <div class="combobox-input-row">
+                <input type="text" class="combobox-search" id="cb-employee-search"
+                  placeholder="🔍 Type to search employee…"
+                  autocomplete="off"
+                  oninput="cbFilter('employee')"
+                  onfocus="cbOpen('employee')"
+                  onkeydown="cbKeydown(event,'employee')">
+                <button class="combobox-clear" id="cb-employee-clear" onclick="cbClear('employee')" style="display:none" title="Clear">✕</button>
+                <span class="combobox-arrow">▾</span>
+              </div>
+              <div class="combobox-dropdown" id="cb-employee-dropdown"></div>
+              <input type="hidden" id="f-employee">
+            </div>
           </div>
           <div class="form-group">
             <label>Department <span class="req">*</span></label>
@@ -318,22 +335,22 @@ textarea{resize:vertical;min-height:78px}
             </select>
           </div>
           <div class="form-group full">
-  <label>Location(s) <span class="req">*</span></label>
-  <div style="display:flex;flex-wrap:wrap;gap:1rem;margin-top:.3rem">
-    <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
-      <input type="checkbox" name="location" value="Hyderabad" style="width:auto"> Hyderabad
-    </label>
-    <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
-      <input type="checkbox" name="location" value="Bangalore" style="width:auto"> Bangalore
-    </label>
-    <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
-      <input type="checkbox" name="location" value="Pune" style="width:auto"> Pune
-    </label>
-    <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
-      <input type="checkbox" name="location" value="Farm" style="width:auto"> Farm
-    </label>
-  </div>
-</div>
+            <label>Location(s) <span class="req">*</span></label>
+            <div style="display:flex;flex-wrap:wrap;gap:1rem;margin-top:.3rem">
+              <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
+                <input type="checkbox" name="location" value="Hyderabad" style="width:auto"> Hyderabad
+              </label>
+              <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
+                <input type="checkbox" name="location" value="Bangalore" style="width:auto"> Bangalore
+              </label>
+              <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
+                <input type="checkbox" name="location" value="Pune" style="width:auto"> Pune
+              </label>
+              <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
+                <input type="checkbox" name="location" value="Farm" style="width:auto"> Farm
+              </label>
+            </div>
+          </div>
           <div class="form-group">
             <label>Expense Category <span class="req">*</span></label>
             <select id="f-category" required>
@@ -384,12 +401,27 @@ textarea{resize:vertical;min-height:78px}
               <option>Organization</option>
             </select>
           </div>
+
+          <!-- SEARCHABLE COMBOBOX for payee (shown for Vendor/Staff/Employee) -->
           <div class="form-group" id="payee-dd-group">
             <label>Payee Name <span class="req">*</span></label>
-            <select id="f-payee-name" required onchange="onPayeeNameChange()">
-              <option value="">— Select Payee —</option>
-            </select>
+            <div class="combobox-wrap" id="cb-payee-wrap">
+              <div class="combobox-input-row">
+                <input type="text" class="combobox-search" id="cb-payee-search"
+                  placeholder="🔍 Type to search payee…"
+                  autocomplete="off"
+                  oninput="cbFilter('payee')"
+                  onfocus="cbOpen('payee')"
+                  onkeydown="cbKeydown(event,'payee')">
+                <button class="combobox-clear" id="cb-payee-clear" onclick="cbClear('payee')" style="display:none" title="Clear">✕</button>
+                <span class="combobox-arrow">▾</span>
+              </div>
+              <div class="combobox-dropdown" id="cb-payee-dropdown"></div>
+              <input type="hidden" id="f-payee-name">
+            </div>
           </div>
+
+          <!-- Plain text for Organization -->
           <div class="form-group" id="payee-txt-group" style="display:none">
             <label>Payee Name <span class="req">*</span></label>
             <input type="text" id="f-payee-name-text" placeholder="Enter organisation / payee name">
@@ -463,7 +495,6 @@ textarea{resize:vertical;min-height:78px}
       <button class="btn btn-ghost" onclick="loadRequests()">🔄 Refresh</button>
     </div>
 
-    <!-- KPIs -->
     <div class="stats-grid" id="stats-grid">
       <div class="stat-card gold"><div class="stat-label">Total</div><div class="stat-value" id="s-total">—</div></div>
       <div class="stat-card orange"><div class="stat-label">Pending</div><div class="stat-value" id="s-pending">—</div><div class="stat-sub" id="s-pending-amt"></div></div>
@@ -472,7 +503,6 @@ textarea{resize:vertical;min-height:78px}
       <div class="stat-card red"><div class="stat-label">Rejected</div><div class="stat-value" id="s-rejected">—</div></div>
     </div>
 
-    <!-- Filters -->
     <div class="filters">
       <select id="f-status" onchange="applyListFilters()">
         <option value="">All Status</option>
@@ -559,6 +589,158 @@ let allRequests  = [];
 let vendorList   = [];
 let employeeList = [];
 
+// Combobox state per instance
+const cbState = {
+  employee: { items: [], filtered: [], focusIdx: -1, selectedValue: '' },
+  payee:    { items: [], filtered: [], focusIdx: -1, selectedValue: '' }
+};
+
+// ══════════════════════════════════════════
+// COMBOBOX ENGINE
+// ══════════════════════════════════════════
+
+// Build option objects from a raw list
+function cbBuildItems(list) {
+  return list.map(item => ({
+    value: (item.regNo || '') + '||' + item.name,
+    label: item.name,
+    badge: item.empId || item.regNo || '',
+    raw: item
+  }));
+}
+
+function cbRenderDropdown(name) {
+  const s = cbState[name];
+  const dd = document.getElementById('cb-' + name + '-dropdown');
+  if (!s.filtered.length) {
+    dd.innerHTML = '<div class="combobox-empty">No results found</div>';
+    return;
+  }
+  const total = s.items.length;
+  const shown = s.filtered.length;
+  const countHtml = shown < total
+    ? `<div class="combobox-count">Showing ${shown} of ${total} — type to narrow</div>` : '';
+  dd.innerHTML = countHtml + s.filtered.map((item, i) => {
+    const sel = item.value === s.selectedValue ? ' selected' : '';
+    const foc = i === s.focusIdx ? ' focused' : '';
+    const badge = item.badge ? `<span class="opt-id">[${esc(item.badge)}]</span>` : '';
+    return `<div class="combobox-option${sel}${foc}" data-value="${esc(item.value)}" data-label="${esc(item.label)}" onmousedown="cbSelect('${name}',this)">${esc(item.label)}${badge}</div>`;
+  }).join('');
+}
+
+function cbOpen(name) {
+  const s = cbState[name];
+  const dd = document.getElementById('cb-' + name + '-dropdown');
+  s.focusIdx = -1;
+  // If nothing typed yet show all
+  const q = document.getElementById('cb-' + name + '-search').value.trim().toLowerCase();
+  s.filtered = q ? s.items.filter(i => i.label.toLowerCase().includes(q) || i.badge.toLowerCase().includes(q)) : s.items.slice();
+  cbRenderDropdown(name);
+  dd.classList.add('open');
+  // Close others
+  Object.keys(cbState).forEach(n => { if (n !== name) document.getElementById('cb-' + n + '-dropdown').classList.remove('open'); });
+}
+
+function cbFilter(name) {
+  const s = cbState[name];
+  const q = document.getElementById('cb-' + name + '-search').value.trim().toLowerCase();
+  s.filtered = q ? s.items.filter(i => i.label.toLowerCase().includes(q) || i.badge.toLowerCase().includes(q)) : s.items.slice();
+  s.focusIdx = -1;
+  cbRenderDropdown(name);
+  const dd = document.getElementById('cb-' + name + '-dropdown');
+  dd.classList.add('open');
+  // Show/hide clear button
+  document.getElementById('cb-' + name + '-clear').style.display = q ? '' : 'none';
+  // Reset hidden value if user is typing (deselect)
+  document.getElementById('f-' + (name === 'employee' ? 'employee' : 'payee-name')).value = '';
+  s.selectedValue = '';
+}
+
+function cbSelect(name, el) {
+  const val   = el.getAttribute('data-value');
+  const label = el.getAttribute('data-label');
+  const s     = cbState[name];
+  s.selectedValue = val;
+  document.getElementById('cb-' + name + '-search').value = label;
+  document.getElementById('cb-' + name + '-clear').style.display = '';
+  // Write to hidden input
+  const hiddenId = name === 'employee' ? 'f-employee' : 'f-payee-name';
+  document.getElementById(hiddenId).value = val;
+  document.getElementById('cb-' + name + '-dropdown').classList.remove('open');
+  // Trigger downstream logic
+  if (name === 'payee') onPayeeSelected(val);
+}
+
+function cbClear(name) {
+  const s = cbState[name];
+  s.selectedValue = '';
+  s.focusIdx = -1;
+  document.getElementById('cb-' + name + '-search').value = '';
+  document.getElementById('cb-' + name + '-clear').style.display = 'none';
+  const hiddenId = name === 'employee' ? 'f-employee' : 'f-payee-name';
+  document.getElementById(hiddenId).value = '';
+  document.getElementById('cb-' + name + '-dropdown').classList.remove('open');
+  if (name === 'payee') document.getElementById('payee-bank-info').classList.add('hidden');
+}
+
+function cbKeydown(event, name) {
+  const s  = cbState[name];
+  const dd = document.getElementById('cb-' + name + '-dropdown');
+  const isOpen = dd.classList.contains('open');
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    if (!isOpen) cbOpen(name);
+    s.focusIdx = Math.min(s.focusIdx + 1, s.filtered.length - 1);
+    cbRenderDropdown(name);
+    scrollFocused(name);
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    s.focusIdx = Math.max(s.focusIdx - 1, 0);
+    cbRenderDropdown(name);
+    scrollFocused(name);
+  } else if (event.key === 'Enter') {
+    event.preventDefault();
+    if (isOpen && s.focusIdx >= 0 && s.filtered[s.focusIdx]) {
+      const item = s.filtered[s.focusIdx];
+      const fakeEl = { getAttribute: (a) => a === 'data-value' ? item.value : item.label };
+      cbSelect(name, fakeEl);
+    }
+  } else if (event.key === 'Escape') {
+    dd.classList.remove('open');
+  } else if (event.key === 'Tab') {
+    dd.classList.remove('open');
+  }
+}
+
+function scrollFocused(name) {
+  const dd = document.getElementById('cb-' + name + '-dropdown');
+  const focused = dd.querySelector('.focused');
+  if (focused) focused.scrollIntoView({ block: 'nearest' });
+}
+
+// Close dropdowns on outside click
+document.addEventListener('mousedown', function(e) {
+  Object.keys(cbState).forEach(name => {
+    const wrap = document.getElementById('cb-' + name + '-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+      document.getElementById('cb-' + name + '-dropdown').classList.remove('open');
+    }
+  });
+});
+
+// Populate comboboxes
+function populateEmployeeCombobox() {
+  cbState.employee.items = cbBuildItems(employeeList);
+  cbState.employee.filtered = cbState.employee.items.slice();
+}
+
+function populatePayeeCombobox(list) {
+  cbState.payee.items = cbBuildItems(list);
+  cbState.payee.filtered = cbState.payee.items.slice();
+  // Reset UI
+  cbClear('payee');
+}
+
 // ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
@@ -566,38 +748,30 @@ window.onload = async function () {
   try {
     currentUser = await gg('getUserInfo');
 
-    // ── DEPLOYMENT CHECK ──────────────────────────────────────────
-    // If email is empty the app is deployed as "Execute as: Me" which
-    // never exposes the viewer's identity. Show a clear fix message.
     if (currentUser._authError) {
       document.getElementById('loader').innerHTML = `
         <div style="text-align:center;max-width:480px;padding:2rem">
           <div style="font-size:2.5rem;margin-bottom:1rem">🔐</div>
-          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold);margin-bottom:.75rem">
-            Re-deployment Required
-          </div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold);margin-bottom:.75rem">Re-deployment Required</div>
           <div style="color:var(--muted);font-size:.87rem;line-height:1.7;margin-bottom:1.5rem">
             The web app is currently deployed as <strong style="color:var(--text)">"Execute as: Me"</strong>
             which prevents reading the signed-in user's identity.<br><br>
             To fix: go to <strong style="color:var(--text)">Deploy → Manage deployments → Edit</strong>,
-            change <em>Execute as</em> to
-            <strong style="color:var(--gold)">"User accessing the web app"</strong>,
+            change <em>Execute as</em> to <strong style="color:var(--gold)">"User accessing the web app"</strong>,
             then click <strong style="color:var(--gold)">Deploy</strong> and use the new URL.
           </div>
           <div style="background:rgba(201,168,76,.08);border:1px solid var(--border);border-radius:10px;padding:1rem;font-size:.78rem;color:var(--muted);text-align:left">
             <strong style="color:var(--gold)">Who has access</strong> should be set to
-            <strong style="color:var(--text)">Anyone with Google Account</strong>
-            (or your organisation domain).
+            <strong style="color:var(--text)">Anyone with Google Account</strong> (or your organisation domain).
           </div>
         </div>`;
       return;
     }
-    // ─────────────────────────────────────────────────────────────
 
     renderHeader();
     setupTabs();
     await Promise.all([loadVendors(), loadEmployees()]);
-    populateEmployeeDropdown();
+    populateEmployeeCombobox();
     await loadRequests();
 
     document.getElementById('loader').classList.add('hidden');
@@ -639,7 +813,6 @@ function renderHeader() {
 }
 
 function setupTabs() {
-  // Only accounts role gets the Settlement tab
   if (currentUser.role === 'accounts') {
     document.getElementById('tab-accounts-btn').removeAttribute('disabled');
   }
@@ -650,7 +823,6 @@ function switchTab(name, btn) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-
   if (name === 'accounts') renderAccTab();
   if (name === 'list')     applyListFilters();
 }
@@ -658,8 +830,14 @@ function switchTab(name, btn) {
 // ══════════════════════════════════════════
 // DATA LOADERS
 // ══════════════════════════════════════════
-async function loadVendors()   { vendorList   = await gg('getVendorList');   }
-async function loadEmployees() { employeeList = await gg('getEmployeeList'); }
+async function loadVendors() {
+  const data = await gg('getVendorList');
+  vendorList = Array.isArray(data) ? data : (data ? [data] : []);
+}
+async function loadEmployees() {
+  const data = await gg('getEmployeeList');
+  employeeList = Array.isArray(data) ? data : (data ? [data] : []);
+}
 
 async function loadRequests() {
   allRequests = await gg('getAllRequests');
@@ -697,23 +875,7 @@ function renderStats() {
   sv('s-paid',     paid);     sv('s-paid-amt',     fmtAmt(paidAmt));
   sv('s-rejected', rejected);
 }
-
 function sv(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
-
-// ══════════════════════════════════════════
-// EMPLOYEE DROPDOWN
-// ══════════════════════════════════════════
-function populateEmployeeDropdown() {
-  const sel = document.getElementById('f-employee');
-  sel.innerHTML = '<option value="">— Select Employee —</option>';
-  employeeList.forEach(e => {
-    const o = document.createElement('option');
-    o.value       = (e.regNo||'') + '||' + e.name;
-    o.textContent = (e.empId ? '['+e.empId+'] ' : '') + e.name;
-    sel.appendChild(o);
-  });
-}
-function onEmployeeChange() { /* reserved */ }
 
 // ══════════════════════════════════════════
 // FORM LOGIC
@@ -724,14 +886,13 @@ function onExpenseTypeChange() {
 }
 
 function onPayeeTypeChange() {
-  const type = document.getElementById('f-payee-type').value;
-  const sel  = document.getElementById('f-payee-name');
-  const ddGrp  = document.getElementById('payee-dd-group');
-  const txtGrp = document.getElementById('payee-txt-group');
+  const type    = document.getElementById('f-payee-type').value;
+  const ddGrp   = document.getElementById('payee-dd-group');
+  const txtGrp  = document.getElementById('payee-txt-group');
   const bankBox = document.getElementById('payee-bank-info');
 
-  sel.innerHTML = '<option value="">— Select Payee —</option>';
   bankBox.classList.add('hidden');
+  cbClear('payee');
 
   if (type === 'Organization') {
     ddGrp.style.display  = 'none';
@@ -743,40 +904,32 @@ function onPayeeTypeChange() {
   txtGrp.style.display = 'none';
 
   const list = (type === 'Vendor') ? vendorList : employeeList;
-  list.forEach(item => {
-    const o = document.createElement('option');
-    o.value       = (item.regNo||'') + '||' + item.name;
-    o.textContent = (item.regNo ? '['+item.regNo+'] ' : '') + item.name;
-    sel.appendChild(o);
-  });
+  populatePayeeCombobox(Array.isArray(list) ? list : []);
 }
 
-function onPayeeNameChange() {
+function onPayeeSelected(selVal) {
   const type    = document.getElementById('f-payee-type').value;
-  const selVal  = document.getElementById('f-payee-name').value;
   const bankBox = document.getElementById('payee-bank-info');
 
   if (!selVal) { bankBox.classList.add('hidden'); return; }
 
-  // Parse "regNo||name" — name is everything after first '||'
   const sepIdx  = selVal.indexOf('||');
   const regNo   = sepIdx >= 0 ? selVal.slice(0, sepIdx) : '';
   const selName = sepIdx >= 0 ? selVal.slice(sepIdx + 2) : selVal;
 
   const list = (type === 'Vendor') ? vendorList : employeeList;
-  // Match by regNo first, fall back to name
   const item = list.find(i => (regNo && i.regNo === regNo) || i.name === selName);
 
   if (!item) { bankBox.classList.add('hidden'); return; }
 
   const rows = [
-    ['Bank',         item.bank],
-    ['Beneficiary',  item.beneficiary],
-    ['Account No.',  item.accountNo],
-    ['IFSC',         item.ifsc],
+    ['Bank',        item.bank],
+    ['Beneficiary', item.beneficiary],
+    ['Account No.', item.accountNo],
+    ['IFSC',        item.ifsc],
   ];
-  if (item.panGst)  rows.unshift(['PAN / GST', item.panGst]);
-  if (item.pan)     rows.unshift(['PAN',        item.pan]);
+  if (item.panGst) rows.unshift(['PAN / GST', item.panGst]);
+  if (item.pan)    rows.unshift(['PAN',        item.pan]);
   if (item.address) rows.push(['Address', item.address]);
 
   document.getElementById('payee-bank-content').innerHTML = rows
@@ -813,9 +966,9 @@ async function submitRequestForm() {
   const amount     = v('f-amount');
   const date       = v('f-date');
   const payeeType  = v('f-payee-type');
-  const locations = [...document.querySelectorAll('input[name="location"]:checked')]
-  .map(cb => cb.value).join(', ');
-if (!locations) return toast('Please select at least one location', 'error');
+  const locations  = [...document.querySelectorAll('input[name="location"]:checked')]
+    .map(cb => cb.value).join(', ');
+  if (!locations) return toast('Please select at least one location', 'error');
 
   if (!requestorName||!dept||!expType||!cat||!desc||!amount||!date||!payeeType)
     return toast('Please fill in all required fields', 'error');
@@ -881,17 +1034,19 @@ function toBase64(file) {
 }
 
 function resetForm() {
-  ['f-employee','f-dept','f-expense-type','f-category','f-desc',
+  ['f-dept','f-expense-type','f-category','f-desc',
    'f-amount','f-date','f-payee-type','f-advance-reason','f-expected-date']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value=''; });
-  document.getElementById('f-payee-name').innerHTML = '<option value="">— Select Payee —</option>';
+  cbClear('employee');
+  cbClear('payee');
   document.getElementById('f-payee-name-text').value = '';
   document.getElementById('f-confirm').checked = false;
   document.getElementById('advance-section').style.display = 'none';
   document.getElementById('payee-bank-info').classList.add('hidden');
-  document.getElementById('file-name-display').classList.add('hidden');
   document.getElementById('payee-dd-group').style.display  = '';
   document.getElementById('payee-txt-group').style.display = 'none';
+  document.querySelectorAll('input[name="location"]').forEach(cb => cb.checked = false);
+  document.getElementById('file-name-display').classList.add('hidden');
 }
 
 // ══════════════════════════════════════════
@@ -938,7 +1093,7 @@ function applyAccFilters() {
 }
 
 // ══════════════════════════════════════════
-// RENDER — REQUEST CARDS (with inline admin actions)
+// RENDER — REQUEST CARDS
 // ══════════════════════════════════════════
 function renderRequestCards(requests, containerId, role) {
   const c = document.getElementById(containerId);
@@ -952,8 +1107,6 @@ function renderRequestCards(requests, containerId, role) {
 function buildRequestCard(r, role) {
   const amt = Number(r.amount||0).toLocaleString('en-IN',{minimumFractionDigits:2});
   const isAdmin = (role === 'admin');
-
-  // Inline admin actions strip — only shown if user is admin AND status is Pending
   let adminStrip = '';
   if (isAdmin && r.status === 'Pending') {
     adminStrip = `
@@ -963,7 +1116,6 @@ function buildRequestCard(r, role) {
         <button class="btn btn-reject btn-sm"  onclick="event.stopPropagation();openRejectModal('${r.id}')">❌ Reject</button>
       </div>`;
   }
-
   return `
     <div class="req-card">
       <div class="req-card-clickable" onclick="openDetailModal('${r.id}')">
@@ -990,7 +1142,7 @@ function buildRequestCard(r, role) {
 }
 
 // ══════════════════════════════════════════
-// RENDER — SETTLEMENT CARDS (accounts tab)
+// RENDER — SETTLEMENT CARDS
 // ══════════════════════════════════════════
 function renderSettlementCards(requests, containerId) {
   const c = document.getElementById(containerId);
@@ -1005,8 +1157,6 @@ function buildSettlementCard(r) {
   const amt      = Number(r.amount||0).toLocaleString('en-IN',{minimumFractionDigits:2});
   const isPaid   = r.status === 'Paid';
   const isApproved = r.status === 'Approved';
-
-  // Settlement form — only for Approved status
   let settleForm = '';
   if (isApproved) {
     settleForm = `
@@ -1014,14 +1164,11 @@ function buildSettlementCard(r) {
         <div class="settlement-grid">
           <div class="settle-field">
             <div class="settle-label">Settlement Amount (₹) <span style="color:var(--red)">*</span></div>
-            <input type="number" class="settle-input" id="s-amount-${r.id}"
-              placeholder="Enter actual amount paid" min="1" step="0.01"
-              value="${Number(r.amount||0)}" >
+            <input type="number" class="settle-input" id="s-amount-${r.id}" placeholder="Enter actual amount paid" min="1" step="0.01" value="${Number(r.amount||0)}">
           </div>
           <div class="settle-field">
             <div class="settle-label">UTR / Reference No. <span style="color:var(--red)">*</span></div>
-            <input type="text" class="settle-input" id="s-utr-${r.id}"
-              placeholder="e.g. UTR123456789 or NEFT ref" style="font-family:monospace">
+            <input type="text" class="settle-input" id="s-utr-${r.id}" placeholder="e.g. UTR123456789 or NEFT ref" style="font-family:monospace">
           </div>
           <div class="settle-field">
             <div class="settle-label">Payment Mode <span style="color:var(--red)">*</span></div>
@@ -1034,27 +1181,21 @@ function buildSettlementCard(r) {
           </div>
           <div class="settle-field">
             <div class="settle-label">Payment Date <span style="color:var(--red)">*</span></div>
-            <input type="date" class="settle-input" id="s-date-${r.id}"
-              value="${new Date().toISOString().split('T')[0]}">
+            <input type="date" class="settle-input" id="s-date-${r.id}" value="${new Date().toISOString().split('T')[0]}">
           </div>
           <div class="settle-field" style="grid-column:1/-1">
             <div class="settle-label">Remarks</div>
-            <input type="text" class="settle-input" id="s-remarks-${r.id}"
-              placeholder="Optional notes (e.g. partial payment, split payment)">
+            <input type="text" class="settle-input" id="s-remarks-${r.id}" placeholder="Optional notes">
           </div>
         </div>
         <div class="settle-actions">
-          <button class="btn btn-pay" onclick="doSettle('${r.id}')">
-            💳 Confirm Payment Done
-          </button>
+          <button class="btn btn-pay" onclick="doSettle('${r.id}')">💳 Confirm Payment Done</button>
           <span class="settle-hint">This will mark the request as Paid and send an email confirmation to the requestor.</span>
         </div>
       </div>`;
   }
-
   const paidBadge = isPaid
     ? `<div style="margin-top:.5rem;font-size:.75rem;color:var(--blue)">✓ Payment recorded</div>` : '';
-
   return `
     <div class="settlement-card">
       <div class="settlement-head" onclick="toggleSettleBody('${r.id}', ${isApproved})">
@@ -1080,8 +1221,6 @@ function buildSettlementCard(r) {
 }
 
 function toggleSettleBody(reqId, isApproved) {
-  if (!isApproved) { openDetailModal(reqId); return; }
-  // Approved cards have inline form — clicking header opens detail instead
   openDetailModal(reqId);
 }
 
@@ -1091,10 +1230,7 @@ function toggleSettleBody(reqId, isApproved) {
 function openApproveModal(reqId) {
   document.getElementById('modal-title').textContent = 'Approve Request';
   document.getElementById('modal-body').innerHTML = `
-    <div class="confirm-warning green">
-      Approve request <strong style="color:var(--gold)">${reqId}</strong>?
-      This will move it to Accounts for payment processing.
-    </div>
+    <div class="confirm-warning green">Approve request <strong style="color:var(--gold)">${reqId}</strong>? This will move it to Accounts for payment processing.</div>
     <div class="modal-form-group">
       <label>Remarks (optional)</label>
       <textarea class="modal-textarea" id="approve-remarks" placeholder="Add any remarks…"></textarea>
@@ -1109,10 +1245,7 @@ function openApproveModal(reqId) {
 function openRejectModal(reqId) {
   document.getElementById('modal-title').textContent = 'Reject Request';
   document.getElementById('modal-body').innerHTML = `
-    <div class="confirm-warning">
-      Reject request <strong style="color:var(--gold)">${reqId}</strong>?
-      Please provide a reason below.
-    </div>
+    <div class="confirm-warning">Reject request <strong style="color:var(--gold)">${reqId}</strong>? Please provide a reason below.</div>
     <div class="modal-form-group">
       <label>Reason for Rejection <span class="req">*</span></label>
       <textarea class="modal-textarea" id="reject-remarks" placeholder="Required — please explain the reason…"></textarea>
@@ -1188,7 +1321,6 @@ async function openDetailModal(reqId) {
     gg('getPaymentLogs',  reqId)
   ]);
 
-  // Payee bank details
   let bankHtml = '';
   try {
     const bd = await gg('getPayeeBankDetails', r.payeeName, r.payeeType);
@@ -1210,7 +1342,7 @@ async function openDetailModal(reqId) {
           ${brows.map(([l,v2])=>`<div class="detail-item"><label>${l}</label><div class="val" style="font-family:monospace">${esc(v2)}</div></div>`).join('')}
         </div>`;
     }
-  } catch(e) { /* no bank details */ }
+  } catch(e) {}
 
   const amt = Number(r.amount||0).toLocaleString('en-IN',{minimumFractionDigits:2});
 

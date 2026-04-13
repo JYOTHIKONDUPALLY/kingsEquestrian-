@@ -226,13 +226,22 @@ function getEmployeeList() {
 function getVendorList() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(SHEET_CONFIG.VENDOR_RESPONSES);
-  if (!sh) return [];
+  
+  if (!sh) {
+    // Logger.log("Sheet not found: " + SHEET_CONFIG.VENDOR_RESPONSES);
+    return [];
+  }
+
   const data = sh.getDataRange().getValues();
+  // Logger.log("Total rows (including header): " + data.length);
+
   const list = [];
+
   for (let i = 1; i < data.length; i++) {
     const nameVal = (data[i][VENDOR_COLS.NAME] || "").toString().trim();
+
     if (nameVal) {
-      list.push({
+      const vendorObj = {
         regNo      : (data[i][VENDOR_COLS.REG_NO]     || "").toString().trim(),
         name       : nameVal,
         address    : (data[i][VENDOR_COLS.ADDRESS]    || "").toString().trim(),
@@ -242,9 +251,19 @@ function getVendorList() {
         beneficiary: (data[i][VENDOR_COLS.BENEFICIARY]|| "").toString().trim(),
         accountNo  : (data[i][VENDOR_COLS.ACCOUNT_NO] || "").toString().trim(),
         ifsc       : (data[i][VENDOR_COLS.IFSC]       || "").toString().trim(),
-      });
+      };
+
+       Logger.log("Row " + i + " Vendor: " + JSON.stringify(vendorObj));
+
+      list.push(vendorObj);
+    } else {
+      // Logger.log("Row " + i + " skipped (no name)");
     }
   }
+
+  // Logger.log("Final Vendor List Count: " + list.length);
+  // Logger.log("Final Vendor List: " + JSON.stringify(list));
+
   return list;
 }
 

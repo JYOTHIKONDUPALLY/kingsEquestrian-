@@ -3,7 +3,26 @@
 // File: 3_Emails.gs
 // All email construction and sending functions
 // ============================================================
+function formatPrefDate(dateVal) {
+  if (!dateVal) return '';
+  var d = (dateVal instanceof Date) ? dateVal : new Date(dateVal);
+  if (isNaN(d.getTime())) return String(dateVal);
+  var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var months = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+  return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate() + ' ' + d.getFullYear();
+}
 
+function formatPrefTime(timeVal) {
+  if (!timeVal) return '';
+  // handles "18:00 - 18:30" or "18:00-18:30" style strings
+  return String(timeVal).replace(/(\d{1,2}):(\d{2})/g, function(_, h, m) {
+    var hour = parseInt(h, 10);
+    var ampm = hour >= 12 ? 'PM' : 'AM';
+    var h12  = hour % 12 || 12;
+    return h12 + ':' + m + ' ' + ampm;
+  });
+}
 // ────────────────────────────────────────────────────────────
 //  WELCOME EMAIL
 //  FIX #7/#9: Removed getAdditionalPDF() attachment entirely.
@@ -83,8 +102,8 @@ const htmlBody = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="v
 + '      <strong>KE Number:</strong> <span style="font-size:20px;color:#1f4e3d;font-weight:bold">' + d.keNo + '</span><br>'
 + '      <strong>Service:</strong> ' + d.services + '<br>'
 + '      <strong>Participants:</strong> ' + d.participants + '<br>'
-+ '      <strong>Preferred Date:</strong> <br>'+d.prefDate
-+ '      <strong>Time Slot:</strong> '+d.prefTime
++ '      <strong>Preferred Date:</strong> <br>'+formatPrefDate(d.prefDate)
++ '      <strong>Time Slot:</strong> '+formatPrefTime(d.prefTime)
 + '      </p>'
 + '    </div>'
 

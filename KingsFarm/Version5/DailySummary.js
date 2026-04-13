@@ -23,7 +23,7 @@ function sendDailyAdminSummary() {
 
     Logger.log('Today: ' + todaySessions.length + ' | Tomorrow: ' + tomorrowSessions.length + ' | New bookings: ' + newBookings.length + ' | New riders: ' + newRiders.length);
 
-    const pdfBlob  = _buildSummaryPDF(todaySessions, tomorrowSessions, newBookings, todayLbl, tmrwLbl);
+   const pdfBlob  = _buildSummaryPDF(todaySessions, tomorrowSessions, newBookings, newRiders, todayLbl, tmrwLbl);
     const driveUrl = _storeSummaryInDrive(pdfBlob, today);
 
     const htmlBody = _buildSummaryEmail(todaySessions, tomorrowSessions, newBookings, newRiders, todayLbl, tmrwLbl, driveUrl);
@@ -88,7 +88,9 @@ function _getNewBookingsLast24h() {
         keNo    : data[i][CONFIG.BOOKING_COLS.KE_NO]    || '',
         services: data[i][CONFIG.BOOKING_COLS.SERVICES] || '',
         phone   : data[i][CONFIG.BOOKING_COLS.PHONE]    || '',
-        time    : fmtDateTime(ts)
+        time    : fmtDateTime(ts),
+         prefDate: data[i][CONFIG.BOOKING_COLS.PREF_DATE] || '',   // ← ADD
+  prefTime: data[i][CONFIG.BOOKING_COLS.PREF_TIME] || ''    // ← ADD
       });
     }
     return out;
@@ -120,7 +122,9 @@ function _getNewRidersToday() {
           keNo    : data[i][CONFIG.RIDER_COLS.KE_NO]      || '',
           name    : data[i][CONFIG.RIDER_COLS.NAME]        || '',
           phone   : String(data[i][CONFIG.RIDER_COLS.PHONE] || ''),
-          services: data[i][CONFIG.RIDER_COLS.SERVICES]    || ''
+          services: data[i][CONFIG.RIDER_COLS.SERVICES]    || '',
+          prefDate: data[i][CONFIG.RIDER_COLS.PREF_DATE]    || '',   // ← ADD
+  prefTime: data[i][CONFIG.RIDER_COLS.PREF_TIME]    || ''    // ← ADD
         });
       }
     }
@@ -178,18 +182,22 @@ function _buildSummaryEmail(todaySess, tomorrowSess, newBookings, newRiders, tod
       <td style="padding:8px 10px;font-weight:600;color:#1f4e3d">${b.keNo}</td>
       <td style="padding:8px 10px;font-size:12px">${b.services}</td>
       <td style="padding:8px 10px;font-size:12px">${b.phone}</td>
+       <td style="padding:8px 10px;font-size:12px;color:#1f4e3d;font-weight:600">${formatPrefDate(b.prefDate)}</td>
+    <td style="padding:8px 10px;font-size:12px;color:#555">${formatPrefTime(b.prefTime)}</td>
       <td style="padding:8px 10px;font-size:11px;color:#888">${b.time}</td>
     </tr>`;
   }
 
-  function newRiderRow(r, idx) {
-    return `<tr style="background:${idx%2===0?'#fff':'#fafafa'}">
-      <td style="padding:8px 10px;font-weight:600;color:#0c5460">${r.keNo}</td>
-      <td style="padding:8px 10px">${r.name}</td>
-      <td style="padding:8px 10px;font-size:12px">${r.phone}</td>
-      <td style="padding:8px 10px;font-size:12px">${r.services}</td>
-    </tr>`;
-  }
+ function newRiderRow(r, idx) {
+  return `<tr style="background:${idx%2===0?'#fff':'#fafafa'}">
+    <td style="padding:8px 10px;font-weight:600;color:#0c5460">${r.keNo}</td>
+    <td style="padding:8px 10px">${r.name}</td>
+    <td style="padding:8px 10px;font-size:12px">${r.phone}</td>
+    <td style="padding:8px 10px;font-size:12px">${r.services}</td>
+    <td style="padding:8px 10px;font-size:12px;color:#1f4e3d;font-weight:600">${formatPrefDate(r.prefDate)}</td>
+    <td style="padding:8px 10px;font-size:12px;color:#555">${formatPrefTime(r.prefTime)}</td>
+  </tr>`;
+}
 
   const noSess  = (cols) => `<tr><td colspan="${cols}" style="text-align:center;color:#999;padding:18px">None</td></tr>`;
 
@@ -234,12 +242,12 @@ function _buildSummaryEmail(todaySess, tomorrowSess, newBookings, newRiders, tod
     <h2 style="color:#6c3483;border-bottom:3px solid #6c3483;padding-bottom:7px;margin-bottom:14px;font-size:17px"> New Riders Today (${newRiders.length})</h2>
     <div style="overflow-x:auto;margin-bottom:26px">
       <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:420px">
-        <thead><tr style="background:#6c3483;color:#fff">
-          <th style="padding:9px 10px;text-align:left">KE No</th>
-          <th style="padding:9px 10px;text-align:left">Name</th>
-          <th style="padding:9px 10px;text-align:left">Phone</th>
-          <th style="padding:9px 10px;text-align:left">Service</th>
-        </tr></thead>
+       <thead><tr style="background:#6c3483;color:#fff">
+  <th style="padding:9px 10px;text-align:left">KE No</th>
+  <th style="padding:9px 10px;text-align:left">Name</th>
+  <th style="padding:9px 10px;text-align:left">Phone</th>
+  <th style="padding:9px 10px;text-align:left">Service</th>
+</tr></thead>
         <tbody>${newRiders.map(newRiderRow).join('')}</tbody>
       </table>
     </div>` : ''}
@@ -249,13 +257,15 @@ function _buildSummaryEmail(todaySess, tomorrowSess, newBookings, newRiders, tod
     <div style="overflow-x:auto;margin-bottom:26px">
       <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:500px">
         <thead><tr style="background:#0c5460;color:#fff">
-          <th style="padding:9px 10px;text-align:left">Name</th>
-          <th style="padding:9px 10px;text-align:left">KE No</th>
-          <th style="padding:9px 10px;text-align:left">Service</th>
-          <th style="padding:9px 10px;text-align:left">Phone</th>
-          <th style="padding:9px 10px;text-align:left">Booked At</th>
-        </tr></thead>
-        <tbody>${newBookings.length ? newBookings.map(newBookingRow).join('') : noSess(5)}</tbody>
+  <th style="padding:9px 10px;text-align:left">Name</th>
+  <th style="padding:9px 10px;text-align:left">KE No</th>
+  <th style="padding:9px 10px;text-align:left">Service</th>
+  <th style="padding:9px 10px;text-align:left">Phone</th>
+  <th style="padding:9px 10px;text-align:left">Booked For (Date)</th>
+  <th style="padding:9px 10px;text-align:left">Time Slot</th>
+  <th style="padding:9px 10px;text-align:left">Booked At</th>
+</tr></thead>
+        <tbody>${newBookings.length ? newBookings.map(newBookingRow).join('') : noSess(7)}</tbody>
       </table>
     </div>
 
@@ -303,8 +313,7 @@ function _buildSummaryEmail(todaySess, tomorrowSess, newBookings, newRiders, tod
 // ────────────────────────────────────────────────────────────
 //  PDF BUILDER
 // ────────────────────────────────────────────────────────────
-
-function _buildSummaryPDF(todaySess, tomorrowSess, newBookings, todayLbl, tmrwLbl) {
+function _buildSummaryPDF(todaySess, tomorrowSess, newBookings, newRiders, todayLbl, tmrwLbl) {
   const tz         = Session.getScriptTimeZone();
   const reportDate = Utilities.formatDate(new Date(), tz, 'dd MMM yyyy HH:mm');
 
@@ -316,9 +325,30 @@ function _buildSummaryPDF(todaySess, tomorrowSess, newBookings, todayLbl, tmrwLb
       <td>${s.attendance||'Unmarked'}</td></tr>`).join('');
   }
 
-  function nRows(bs) {
-    if (!bs.length) return '<tr><td colspan="4" style="text-align:center;color:#aaa">None</td></tr>';
-    return bs.map(b => `<tr><td>${b.name}</td><td>${b.keNo}</td><td style="font-size:11px">${b.services}</td><td>${b.phone}</td></tr>`).join('');
+
+function rRows(riders) {
+    if (!riders.length) return '<tr><td colspan="6" style="text-align:center;color:#aaa">None</td></tr>';
+    return riders.map(r => `<tr>
+      <td style="font-weight:600;color:#6c3483">${r.keNo}</td>
+      <td>${r.name}</td>
+      <td>${r.phone}</td>
+      <td style="font-size:11px">${r.services}</td>
+      <td style="font-weight:600;color:#1f4e3d">${formatPrefDate(r.prefDate)}</td>
+      <td>${formatPrefTime(r.prefTime)}</td>
+    </tr>`).join('');
+  }
+
+
+function nRows(bs) {
+    if (!bs.length) return '<tr><td colspan="6" style="text-align:center;color:#aaa">None</td></tr>';
+    return bs.map(b => `<tr>
+      <td>${b.name}</td>
+      <td>${b.keNo}</td>
+      <td style="font-size:11px">${b.services}</td>
+      <td>${b.phone}</td>
+      <td style="font-weight:600;color:#1f4e3d">${formatPrefDate(b.prefDate)}</td>
+      <td>${formatPrefTime(b.prefTime)}</td>
+    </tr>`).join('');
   }
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -349,8 +379,12 @@ footer{margin-top:16px;font-size:10px;color:#aaa;text-align:center;border-top:1p
   <div class="s"><div class="sn">${tomorrowSess.length}</div><div class="sl">Tomorrow</div></div>
 </div>
 
+<h2>New Riders Today (${newRiders.length})</h2>
+<table><thead><tr><th>KE No</th><th>Name</th><th>Phone</th><th>Service</th><th>Booked For</th><th>Time Slot</th></tr></thead>
+<tbody>${rRows(newRiders)}</tbody></table>
+
 <h2>New Bookings (Last 24h)</h2>
-<table><thead><tr><th>Name</th><th>KE No</th><th>Service</th><th>Phone</th></tr></thead>
+<table><thead><tr><th>Name</th><th>KE No</th><th>Service</th><th>Phone</th><th>Booked For</th><th>Time Slot</th></tr></thead>
 <tbody>${nRows(newBookings)}</tbody></table>
 
 <h2>Today — ${todayLbl}</h2>
