@@ -35,6 +35,7 @@ function sendDailyAdminSummary() {
     const primaryAdmin = adminEmails[0];
     const ccAdmins     = adminEmails.slice(1);
 
+try{
     GmailApp.sendEmail(
       primaryAdmin,
       'KE Nightly Summary: ' + todayLbl,
@@ -46,6 +47,10 @@ function sendDailyAdminSummary() {
         name        : 'Kings Equestrian System'
       }
     );
+      logEmail('NightlySummary', primaryAdmin, ccAdmins.join(','), 'KE Nightly Summary: ' + todayLbl, '', 'Sent', '');
+} catch (e) {
+  logEmailFailed('NightlySummary', primaryAdmin, ccAdmins.join(','), 'KE Nightly Summary: ' + todayLbl, '', String(e));
+}
 
     Logger.log('Nightly summary sent to: ' + primaryAdmin + (ccAdmins.length ? ' (CC: ' + ccAdmins.join(', ') + ')' : ''));
   } catch (err) {

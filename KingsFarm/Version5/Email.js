@@ -102,7 +102,7 @@ const htmlBody = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="v
 + '      <strong>KE Number:</strong> <span style="font-size:20px;color:#1f4e3d;font-weight:bold">' + d.keNo + '</span><br>'
 + '      <strong>Service:</strong> ' + d.services + '<br>'
 + '      <strong>Participants:</strong> ' + d.participants + '<br>'
-+ '      <strong>Preferred Date:</strong> <br>'+formatPrefDate(d.prefDate)
++ '      <strong>Preferred Date:</strong>'+formatPrefDate(d.prefDate)+'<br>'
 + '      <strong>Time Slot:</strong> '+formatPrefTime(d.prefTime)
 + '      </p>'
 + '    </div>'
@@ -178,12 +178,18 @@ const htmlBody = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="v
 
   const ccEmails = getCCRecipients('welcome');
   // FIX #6: Use GmailApp (not MailApp) — requires Gmail send permission
+  try{
   GmailApp.sendEmail(d.email, subject, '', {
     htmlBody    : htmlBody,
     attachments : attachments,
     cc          : ccEmails.join(','),
     name        : 'Kings Equestrian Foundation'
   });
+  logEmail('Welcome', d.email, ccEmails.join(','), subject, d.keNo, 'Sent', '');
+  } catch (e) {
+  logEmailFailed('Welcome', d.email, ccEmails.join(','), subject, d.keNo, String(e));
+  throw e; // re-throw so caller knows it failed
+}
 
   if (d.sheet && d.row) {
     d.sheet.getRange(d.row, CONFIG.BOOKING_COLS.WELCOME_SENT + 1).setValue('Yes').setBackground('#d4edda').setFontColor('#155724').setFontWeight('bold');
@@ -283,6 +289,7 @@ function sendBookingConfirmationEmail(d) {
     + '</div>'
     + '</body></html>';
 
+try{
   const ccEmails = getCCRecipients('welcome');
   // FIX #6: GmailApp
   GmailApp.sendEmail(d.email, 'Sessions Booked - Kings Equestrian (' + d.keNo + ')', '', {
@@ -291,6 +298,11 @@ function sendBookingConfirmationEmail(d) {
     name     : 'Kings Equestrian Foundation'
   });
   Logger.log('Booking confirmation sent to ' + d.email);
+  logEmail('Welcome-sessionBooking', d.email, ccEmails.join(','), subject, d.keNo, 'Sent', '');
+} catch (e) {
+  logEmailFailed('Welcome-sessionBooking', d.email, ccEmails.join(','), subject, d.keNo, String(e));
+  throw e; // re-throw so caller knows it failed
+}
 }
 
 // ────────────────────────────────────────────────────────────
@@ -325,7 +337,7 @@ function sendPresentEmail(d) {
     + '  </div>'
     + '</div>'
     + '</body></html>';
-
+try{
   const ccEmails = getCCRecipients('welcome');
   GmailApp.sendEmail(cleanEmail, 'Thank you for riding with us today - Kings Equestrian', '', {
     htmlBody : htmlBody,
@@ -333,7 +345,12 @@ function sendPresentEmail(d) {
     name     : 'Kings Equestrian Foundation'
   });
   Logger.log('Present email sent to ' + cleanEmail);
+  logEmail('Welcome-present', d.email, ccEmails.join(','), subject, d.name, 'Sent', '');
   return true;
+} catch (e) {
+  logEmailFailed('Welcome-present', d.email, ccEmails.join(','), subject, d.name, String(e));
+  throw e; // re-throw so caller knows it failed
+}
 }
 
 // ────────────────────────────────────────────────────────────
@@ -369,6 +386,7 @@ function sendNoShowEmail(d) {
     + '</div>'
     + '</body></html>';
 
+try{
   const ccEmails = getCCRecipients('welcome');
   GmailApp.sendEmail(cleanEmail, 'We missed you today - Kings Equestrian', '', {
     htmlBody : htmlBody,
@@ -376,7 +394,12 @@ function sendNoShowEmail(d) {
     name     : 'Kings Equestrian Foundation'
   });
   Logger.log('No-show email sent to ' + cleanEmail);
+  logEmail('Welcome-noShow',cleanEmail, ccEmails.join(','), subject, d.name, 'Sent', '');
   return true;
+} catch (e) {
+  logEmailFailed('Welcome-noShow', cleanEmail, ccEmails.join(','), subject, d.name, String(e));
+  throw e; // re-throw so caller knows it failed
+}
 }
 
 // ────────────────────────────────────────────────────────────
@@ -486,4 +509,176 @@ function generate80GReceipt(riderName, pan, amount, txnRef, receiptNo) {
   blob.setName('80G_Receipt_' + riderName.replace(/\s+/g,'_') + '_' + receiptNo.replace(/\//g,'-') + '.pdf');
   tmp.setTrashed(true);
   return blob;
+}
+
+
+
+// ────────────────────────────────────────────────────────────
+//  EMAIL LOG — setup + write
+// ────────────────────────────────────────────────────────────
+
+function _getOrCreateEmailLogSheet() {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet   = ss.getSheetByName(CONFIG.SHEETS.EMAIL_LOG);
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.SHEETS.EMAIL_LOG);
+    const headers = [
+      'Timestamp', 'Type', 'To', 'CC', 'Subject',
+      'KE No', 'Status', 'Error', 'Retry Count', 'Last Retry At'
+    ];
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length)
+      .setBackground('#1f4e3d').setFontColor('#fff').setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(1, 160);  // Timestamp
+    sheet.setColumnWidth(3, 200);  // To
+    sheet.setColumnWidth(4, 200);  // CC
+    sheet.setColumnWidth(5, 260);  // Subject
+    sheet.setColumnWidth(8, 200);  // Error
+  }
+  return sheet;
+}
+
+function logEmail(type, to, cc, subject, keNo, status, errorMsg) {
+  try {
+    const sheet = _getOrCreateEmailLogSheet();
+    sheet.appendRow([
+      new Date(),
+      type      || '',
+      to        || '',
+      cc        || '',
+      subject   || '',
+      keNo      || '',
+      status    || 'Sent',
+      errorMsg  || '',
+      0,          // retry count
+      ''          // last retry at
+    ]);
+  } catch (e) {
+    Logger.log('logEmail error: ' + e);
+  }
+}
+
+function logEmailFailed(type, to, cc, subject, keNo, errorMsg) {
+  logEmail(type, to, cc, subject, keNo, 'Failed', errorMsg);
+}
+
+// ────────────────────────────────────────────────────────────
+//  RETRY FAILED EMAILS
+// ────────────────────────────────────────────────────────────
+
+function retryFailedEmails() {
+  try {
+    const sheet   = _getOrCreateEmailLogSheet();
+    const data    = sheet.getDataRange().getValues();
+    const MAX_RETRIES = 3;
+    let retried = 0, skipped = 0;
+
+    for (let i = 1; i < data.length; i++) {
+      const status     = data[i][6];  // Status col
+      const retryCount = Number(data[i][8]) || 0;
+      const type       = data[i][1];
+      const to         = data[i][2];
+      const cc         = data[i][3];
+      const subject    = data[i][4];
+      const keNo       = data[i][5];
+      const row        = i + 1;
+
+      if (status !== 'Failed') continue;
+      if (retryCount >= MAX_RETRIES) {
+        // Mark as permanently failed
+        sheet.getRange(row, 7).setValue('Abandoned').setBackground('#f8d7da').setFontColor('#721c24');
+        skipped++;
+        continue;
+      }
+
+      try {
+        // Re-send based on type
+        if (type === 'Welcome') {
+          _retrySendWelcome(keNo, to, cc, subject);
+        } else if (type === 'NightlySummary') {
+          sendDailyAdminSummary(); // just re-trigger the whole summary
+        } else {
+          // Generic fallback — send a plain alert to admin
+          GmailApp.sendEmail(to, '[RETRY] ' + subject, 
+            'This is a retry of a previously failed email. Please check the system.');
+        }
+
+        // Mark success
+        sheet.getRange(row, 7).setValue('Sent (Retried)').setBackground('#d4edda').setFontColor('#155724');
+        sheet.getRange(row, 9).setValue(retryCount + 1);
+        sheet.getRange(row, 10).setValue(new Date());
+        retried++;
+        Logger.log('Retried row ' + row + ': ' + to);
+
+      } catch (err) {
+        // Increment retry count, keep as Failed
+        sheet.getRange(row, 8).setValue(String(err));
+        sheet.getRange(row, 9).setValue(retryCount + 1);
+        sheet.getRange(row, 10).setValue(new Date());
+        Logger.log('Retry failed row ' + row + ': ' + err);
+      }
+    }
+
+    Logger.log('Retry complete — retried: ' + retried + ', abandoned: ' + skipped);
+    SpreadsheetApp.getUi().alert('Retry complete.\nSent: ' + retried + '\nAbandoned (3 attempts): ' + skipped);
+  } catch (e) {
+    Logger.log('retryFailedEmails ERROR: ' + e);
+  }
+}
+
+// Pulls rider data by KE No and re-sends welcome
+function _retrySendWelcome(keNo, to, cc, subject) {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.SHEETS.BOOKING_FORM);
+  if (!sheet) throw new Error('Booking sheet not found');
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][CONFIG.BOOKING_COLS.KE_NO]) === String(keNo)) {
+      // Re-trigger welcome email for this row
+      processWelcomeEmailForRow(sheet, i + 1, data[i]); // your existing fn
+      return;
+    }
+  }
+  throw new Error('KE No not found: ' + keNo);
+}
+
+
+// ────────────────────────────────────────────────────────────
+//  EMAIL SEND COUNT + DETAILS REPORT
+// ────────────────────────────────────────────────────────────
+
+function showEmailSendReport() {
+  const sheet = _getOrCreateEmailLogSheet();
+  const data  = sheet.getDataRange().getValues();
+  if (data.length <= 1) {
+    SpreadsheetApp.getUi().alert('No emails logged yet.');
+    return;
+  }
+
+  const counts  = {};
+  const byType  = {};
+  let total = 0, failed = 0, retried = 0;
+
+  for (let i = 1; i < data.length; i++) {
+    const type   = data[i][1] || 'Unknown';
+    const status = data[i][6] || '';
+    total++;
+    counts[type]  = (counts[type]  || 0) + 1;
+    byType[status] = (byType[status] || 0) + 1;
+    if (status === 'Failed')        failed++;
+    if (status === 'Sent (Retried)') retried++;
+  }
+
+  let msg = '📧 EMAIL SEND REPORT\n';
+  msg += '─────────────────────\n';
+  msg += 'Total emails logged: ' + total + '\n\n';
+  msg += 'By Type:\n';
+  Object.keys(counts).forEach(t => { msg += '  • ' + t + ': ' + counts[t] + '\n'; });
+  msg += '\nBy Status:\n';
+  Object.keys(byType).forEach(s => { msg += '  • ' + s + ': ' + byType[s] + '\n'; });
+  msg += '\nFailed (pending retry): ' + failed;
+  msg += '\nSuccessfully retried:   ' + retried;
+
+  SpreadsheetApp.getUi().alert(msg);
 }

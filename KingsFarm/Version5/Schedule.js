@@ -409,8 +409,13 @@ function rescheduleSession(keNo, schedRowIndex, newDate, newTime, reason) {
         const email = String(rider.row[CONFIG.RIDER_COLS.EMAIL] || '').trim();
         if (email) {
           const name = rider.row[CONFIG.RIDER_COLS.NAME] || '';
-          GmailApp.sendEmail(email, 'Session Rescheduled: ' + fmtDate(newDateObj) + ' (' + keNo + ')', '',
+          try{          GmailApp.sendEmail(email, 'Session Rescheduled: ' + fmtDate(newDateObj) + ' (' + keNo + ')', '',
             { htmlBody: '<div style="font-family:Arial,sans-serif;padding:20px;max-width:540px"><h2 style="color:#1f4e3d">Session Rescheduled</h2><p>Hi <strong>' + name + '</strong>, your session has been moved.</p><p><strong>New Date:</strong> ' + fmtDate(newDateObj) + '<br><strong>New Time:</strong> ' + (newTime || rowData[CONFIG.SCHED_COLS.TIME_SLOT] || 'TBD') + '<br><strong>Reason:</strong> ' + (reason || 'Not specified') + '</p><p>Kings Equestrian Foundation</p></div>', name: 'Kings Equestrian Foundation' });
+            logEmail('Welcome-reschedule', email, ccEmails.join(','), subject, keNo, 'Sent', '');
+          } catch (e) {
+  logEmailFailed('Welcome-reschedule', email, ccEmails.join(','), 'Session Rescheduled: ' + fmtDate(newDateObj) + ' (' + keNo + ')', keNo, String(e));
+  throw e; // re-throw so caller knows it failed
+}
         }
       }
     } catch (mailErr) { Logger.log('Reschedule email failed (non-fatal): ' + mailErr); }
@@ -502,12 +507,12 @@ if (adminEmails.length && added.length > 0) {
     + '</div>'
     + '</body></html>';
 
-  GmailApp.sendEmail(
-    adminEmails.join(','),
-    'New Portal Booking: ' + name + ' (' + keNo + ')',
-    name + ' (' + keNo + ') booked ' + added.length + ' session(s):\n\n' + added.map(a => a.label).join('\n'),
-    { name: 'Kings Equestrian System', htmlBody: adminHtmlBody }
-  );
+  // GmailApp.sendEmail(
+  //   adminEmails.join(','),
+  //   'New Portal Booking: ' + name + ' (' + keNo + ')',
+  //   name + ' (' + keNo + ') booked ' + added.length + ' session(s):\n\n' + added.map(a => a.label).join('\n'),
+  //   { name: 'Kings Equestrian System', htmlBody: adminHtmlBody }
+  // );
 }
 
     return { success: added.length > 0, added: added.length, failed: errors.length, errors, message: added.length + ' session(s) booked successfully!' };

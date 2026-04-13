@@ -55,7 +55,8 @@ const CONFIG = {
     SCHEDULE     : 'Schedule',
     PAYMENTS     : 'Payments Ledger',
     PRICING      : 'Pricing',
-    MAIL_INFO    : 'Mail Info'
+    MAIL_INFO    : 'Mail Info',
+    EMAIL_LOG: 'Email Log'
   },
 
   // ── Booking Form Response columns (0-based) ──────────────
@@ -649,6 +650,8 @@ function onOpen() {
     .addSeparator()
     .addItem('Setup All Triggers',      'setupTriggers')
     .addItem('Diagnose Payment Columns','diagnosPaymentFormColumns')
+    .addItem('📧 Email Send Report',   'showEmailSendReport')
+    .addItem('🔁 Retry Failed Emails', 'retryFailedEmails')
     .addToUi();
 }
 
