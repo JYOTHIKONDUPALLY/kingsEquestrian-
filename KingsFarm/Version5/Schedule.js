@@ -564,3 +564,179 @@ function _createCalEvent(d) {
 
   return event.getId();
 }
+
+// ============================================================
+// OPTIMIZED FUNCTIONS — used only by the Attendance PWA
+// All original functions above are completely unchanged.
+// These _Fast variants read each sheet once and build lookup
+// maps instead of calling the original helpers in a loop.
+// ============================================================
+
+/**
+ * Drop-in fast replacement for getSessionsForDate, called by the PWA.
+ * Reads Schedule + Payments once each instead of N times per session.
+ */
+function getSessionsForDate_Fast(dateStr) {
+  const tz = Session.getScriptTimeZone();
+  let target;
+  if (dateStr === 'today')         { target = new Date(); }
+  else if (dateStr === 'tomorrow') { target = new Date(); target.setDate(target.getDate() + 1); }
+  else                             { target = new Date(dateStr); }
+  const targetYMD = Utilities.formatDate(target, tz, 'yyyy-MM-dd');
+
+  const ss         = SpreadsheetApp.getActiveSpreadsheet();
+  const schedSheet = ss.getSheetByName(CONFIG.SHEETS.SCHEDULE);
+  if (!schedSheet) return [];
+  const schedData = schedSheet.getDataRange().getValues();
+
+  const paySheet = ss.getSheetByName(CONFIG.SHEETS.PAYMENTS);
+  const payData  = paySheet ? paySheet.getDataRange().getValues() : [];
+
+  const payMap = _buildPaymentMap_Fast(payData);
+  const attMap = _buildAttendanceMap_Fast(schedData);
+
+  const results = [];
+  for (let i = 1; i < schedData.length; i++) {
+    const row  = schedData[i];
+    const date = row[CONFIG.SCHED_COLS.DATE];
+    if (!date) continue;
+    let rowYMD;
+    try { rowYMD = Utilities.formatDate(new Date(date), tz, 'yyyy-MM-dd'); } catch(e) { continue; }
+    if (rowYMD !== targetYMD) continue;
+    if (String(row[CONFIG.SCHED_COLS.STATUS] || '').toLowerCase() === 'cancelled') continue;
+
+    const keNo = String(row[CONFIG.SCHED_COLS.KE_NO] || '').trim();
+    results.push({
+      rowIndex        : i + 1,
+      keNo            : keNo,
+      name            : row[CONFIG.SCHED_COLS.NAME]         || '',
+      phone           : String(row[CONFIG.SCHED_COLS.PHONE] || ''),
+      email           : row[CONFIG.SCHED_COLS.EMAIL]        || '',
+      service         : row[CONFIG.SCHED_COLS.SERVICE]      || '',
+      timeSlot        : row[CONFIG.SCHED_COLS.TIME_SLOT]    || '',
+      participants    : row[CONFIG.SCHED_COLS.PARTICIPANTS]  || 1,
+      status          : row[CONFIG.SCHED_COLS.STATUS]       || '',
+      attendance      : row[CONFIG.SCHED_COLS.ATTENDANCE]   || '',
+      staffNotes      : row[CONFIG.SCHED_COLS.STAFF_NOTES]  || '',
+      source          : row[CONFIG.SCHED_COLS.SOURCE]       || '',
+      payments        : payMap[keNo]  || [],
+      classesAttended : attMap[keNo]  || 0
+    });
+  }
+
+  results.sort((a, b) => (a.timeSlot || '').localeCompare(b.timeSlot || ''));
+  return results;
+}
+
+/**
+ * Drop-in fast replacement for getAllRidersWithStats, called by the PWA.
+ * Reads Riders, Payments, Schedule once each instead of 3× per rider.
+ */
+function getAllRidersWithStats_Fast() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  const ridersSheet = ss.getSheetByName(CONFIG.SHEETS.RIDERS);
+  if (!ridersSheet) return [];
+  const ridersData = ridersSheet.getDataRange().getValues();
+
+  const paySheet  = ss.getSheetByName(CONFIG.SHEETS.PAYMENTS);
+  const payData   = paySheet ? paySheet.getDataRange().getValues() : [];
+
+  const schedSheet = ss.getSheetByName(CONFIG.SHEETS.SCHEDULE);
+  const schedData  = schedSheet ? schedSheet.getDataRange().getValues() : [];
+
+  const payMap  = _buildPaymentMap_Fast(payData);
+  const attMap  = _buildAttendanceMap_Fast(schedData);
+  const nextMap = _buildNextSessionMap_Fast(schedData);
+
+  const results = [];
+  for (let i = 1; i < ridersData.length; i++) {
+    const row  = ridersData[i];
+    const keNo = String(row[CONFIG.RIDER_COLS.KE_NO] || '').trim();
+    if (!keNo) continue;
+
+    results.push({
+      keNo            : keNo,
+      name            : row[CONFIG.RIDER_COLS.NAME]         || '',
+      phone           : String(row[CONFIG.RIDER_COLS.PHONE] || ''),
+      email           : row[CONFIG.RIDER_COLS.EMAIL]        || '',
+      services        : row[CONFIG.RIDER_COLS.SERVICES]     || '',
+      participants    : row[CONFIG.RIDER_COLS.PARTICIPANTS]  || 1,
+      registeredOn    : row[CONFIG.RIDER_COLS.REGISTERED]   ? fmtDate(new Date(row[CONFIG.RIDER_COLS.REGISTERED])) : '',
+      payments        : payMap[keNo]  || [],
+      classesAttended : attMap[keNo]  || 0,
+      nextSession     : nextMap[keNo] || null
+    });
+  }
+
+  results.sort((a, b) => a.name.localeCompare(b.name));
+  return results;
+}
+
+// ── Internal map builders — zero sheet I/O, accept pre-loaded arrays ──
+
+/** keNo → payment[] built from pre-loaded payments data. */
+function _buildPaymentMap_Fast(payData) {
+  const map = {};
+  for (let i = 1; i < payData.length; i++) {
+    const keNo = String(payData[i][CONFIG.LEDGER_COLS.KE_NO] || '').trim();
+    if (!keNo) continue;
+    if (!map[keNo]) map[keNo] = [];
+    map[keNo].push({
+      amount    : Number(payData[i][CONFIG.LEDGER_COLS.AMOUNT]) || 0,
+      payDate   : fmtDate(payData[i][CONFIG.LEDGER_COLS.PAY_DATE]),
+      txnRef    : String(payData[i][CONFIG.LEDGER_COLS.TXN_REF]    || ''),
+      receiptNo : String(payData[i][CONFIG.LEDGER_COLS.RECEIPT_NO] || ''),
+      paidOn    : fmtDateTime(payData[i][CONFIG.LEDGER_COLS.TIMESTAMP])
+    });
+  }
+  Object.keys(map).forEach(k => map[k].reverse()); // newest first — matches original
+  return map;
+}
+
+/** keNo → classesAttended built from pre-loaded schedule data. */
+function _buildAttendanceMap_Fast(schedData) {
+  const map = {};
+  for (let i = 1; i < schedData.length; i++) {
+    const keNo = String(schedData[i][CONFIG.SCHED_COLS.KE_NO] || '').trim();
+    if (!keNo) continue;
+    if (String(schedData[i][CONFIG.SCHED_COLS.ATTENDANCE] || '').toLowerCase() === 'present') {
+      map[keNo] = (map[keNo] || 0) + _calculate30MinBlocks(String(schedData[i][CONFIG.SCHED_COLS.TIME_SLOT] || ''));
+    }
+  }
+  return map;
+}
+
+/** keNo → next upcoming session built from pre-loaded schedule data. */
+function _buildNextSessionMap_Fast(schedData) {
+  const tz    = Session.getScriptTimeZone();
+  const today = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+  const best  = {}; // keNo → { dateStr, row } — earliest upcoming per rider
+
+  for (let i = 1; i < schedData.length; i++) {
+    const row  = schedData[i];
+    const keNo = String(row[CONFIG.SCHED_COLS.KE_NO] || '').trim();
+    if (!keNo) continue;
+    const att = String(row[CONFIG.SCHED_COLS.ATTENDANCE] || '').toLowerCase();
+    if (att === 'present' || att === 'no-show') continue;
+    const dt = row[CONFIG.SCHED_COLS.DATE];
+    if (!dt) continue;
+    let dStr;
+    try { dStr = Utilities.formatDate(new Date(dt), tz, 'yyyy-MM-dd'); } catch(e) { continue; }
+    if (dStr < today) continue;
+    if (!best[keNo] || dStr < best[keNo].dateStr) {
+      best[keNo] = { dateStr: dStr, row: row };
+    }
+  }
+
+  const result = {};
+  Object.keys(best).forEach(keNo => {
+    const r = best[keNo].row;
+    result[keNo] = {
+      date     : fmtDate(r[CONFIG.SCHED_COLS.DATE]),
+      timeSlot : r[CONFIG.SCHED_COLS.TIME_SLOT] || '',
+      service  : r[CONFIG.SCHED_COLS.SERVICE]   || ''
+    };
+  });
+  return result;
+}

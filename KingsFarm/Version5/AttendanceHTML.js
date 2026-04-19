@@ -2,8 +2,7 @@
 // KINGS EQUESTRIAN — NEW SYSTEM
 // File: 7_AttendanceHTML.gs
 // Premium Attendance PWA — dark green theme, Space Mono stats
-// All HTML built with string concat (no template literals)
-// to avoid GAS quote-escaping issues.
+// OPTIMIZED: background preload of riders/transactions
 // ============================================================
 
 function getAttendanceAppHtml() {
@@ -141,6 +140,12 @@ function getAttendanceAppHtml() {
     '.custom-date-wrap{padding:8px 14px;background:var(--white);border-bottom:1px solid var(--border);display:none}',
     'input[type=date]{border:1.5px solid var(--border-strong);border-radius:9px;padding:7px 12px;font-size:12px;background:var(--white);color:var(--text-primary);font-family:Outfit,sans-serif}',
 
+    // Preload indicator
+    '.preload-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--green-pale);background:rgba(255,255,255,.08);padding:3px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.1)}',
+    '.preload-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:pulse 1.2s ease-in-out infinite}',
+    '.preload-dot.done{background:#4fae82;animation:none}',
+    '@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}',
+
     // Toast
     '#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--green-dark);color:#fff;font-size:12px;font-weight:600;padding:10px 20px;border-radius:100px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:9999;border:1px solid var(--green-mid)}',
     '#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}',
@@ -150,7 +155,8 @@ function getAttendanceAppHtml() {
   ].join('\n');
 
   // ── JavaScript ─────────────────────────────────────────
-  var js = 'var currentDate="today",currentMain="sessions",sessions=[],allRiders=[],ridersLoaded=false;\n'
+  var js = ''
+    + 'var currentDate="today",currentMain="sessions",sessions=[],allRiders=[],ridersLoaded=false,ridersLoading=false;\n'
 
     + 'function switchDate(tab,el){'
     +   'currentDate=tab;'
@@ -168,8 +174,15 @@ function getAttendanceAppHtml() {
     +   'document.getElementById("tab-transactions").style.display=tab==="transactions"?"block":"none";'
     +   'document.getElementById("tab-riders").style.display=tab==="riders"?"block":"none";'
     +   'document.getElementById("statsBar").style.display=tab==="sessions"?"flex":"none";'
-    +   'if(tab==="riders"&&!ridersLoaded)loadRiders();'
-    +   'if(tab==="transactions"&&!ridersLoaded)loadRiders();'
+    // If already loaded, render immediately — no waiting
+    +   'if(tab==="riders"){'
+    +     'if(ridersLoaded){renderRiders(allRiders);}'
+    +     'else if(!ridersLoading){loadRiders();}'
+    +   '}'
+    +   'if(tab==="transactions"){'
+    +     'if(ridersLoaded){renderTransactions(allRiders);}'
+    +     'else if(!ridersLoading){loadRiders();}'
+    +   '}'
     + '}\n'
 
     + 'function getDateParam(){'
@@ -183,7 +196,7 @@ function getAttendanceAppHtml() {
     +   'google.script.run'
     +     '.withSuccessHandler(renderSessions)'
     +     '.withFailureHandler(function(e){document.getElementById("sessionList").innerHTML="<div class=\\"empty\\"><p>"+e.message+"</p></div>";})'
-    +     '.getSessionsForDate(getDateParam());'
+    +     '.getSessionsForDate_Fast(getDateParam());'
     + '}\n'
 
     + 'function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}\n'
@@ -215,8 +228,6 @@ function getAttendanceAppHtml() {
     +   'var cardCls="session-card"+(isPresent?" present":isNoShow?" no-show":"");'
     +   'var badgeCls=isPresent?"badge-present":isNoShow?"badge-noshow":"badge-pending";'
     +   'var badgeTxt=isPresent?"&#10003; Present":isNoShow?"&#10007; No-Show":"Pending";'
-
-    // payment rows
     +   'var txnRows="";'
     +   'if(s.payments&&s.payments.length>0){'
     +     'txnRows=s.payments.map(function(p){'
@@ -231,24 +242,17 @@ function getAttendanceAppHtml() {
     +   '}else{'
     +     'txnRows="<div style=\\"padding:12px 14px;font-size:12px;color:var(--text-muted);text-align:center\\">No payment records found</div>";'
     +   '}'
-
     +   'var dis=isMarked?" disabled":"";'
     +   'var initP=isPresent?" active":"";'
     +   'var initN=isNoShow?" active":"";'
-
-    // present button uses &quot; for the string arg
-    +   'var btnP="<button class=\\"att-btn btn-present"+initP+"\\""+dis'
-    +     '+" data-idx=\\""+idx+"\\" data-status=\\"Present\\" onclick=\\"markAtt(this)\\">&#10003; Present</button>";'
-    +   'var btnN="<button class=\\"att-btn btn-noshow"+initN+"\\""+dis'
-    +     '+" data-idx=\\""+idx+"\\" data-status=\\"No-Show\\" onclick=\\"markAtt(this)\\">&#10007; No-Show</button>";'
+    +   'var btnP="<button class=\\"att-btn btn-present"+initP+"\\""+dis+" data-idx=\\""+idx+"\\" data-status=\\"Present\\" onclick=\\"markAtt(this)\\">&#10003; Present</button>";'
+    +   'var btnN="<button class=\\"att-btn btn-noshow"+initN+"\\""+dis+" data-idx=\\""+idx+"\\" data-status=\\"No-Show\\" onclick=\\"markAtt(this)\\">&#10007; No-Show</button>";'
     +   'var btnNote="<button class=\\"btn-note-toggle\\" data-idx=\\""+idx+"\\" onclick=\\"toggleNote(this)\\">&#128221;</button>";'
-
     +   'var noteArea="<div class=\\"note-area"+(s.staffNotes?" open":"")+"\\""'
     +     '+" id=\\"note-area-"+idx+"\\">"'
     +     '+"<textarea class=\\"note-textarea\\" id=\\"note-"+idx+"\\" placeholder=\\"Add staff note&hellip;\\">"+esc(s.staffNotes||"")+"</textarea>"'
     +     '+"<button class=\\"save-note-btn\\" data-idx=\\""+idx+"\\" onclick=\\"saveNote(this)\\">&#128190; Save Note</button>"'
     +     '+"</div>";'
-
     +   'var txnPanel="<button class=\\"txn-toggle-btn\\" data-idx=\\""+idx+"\\" onclick=\\"toggleTxn(this)\\">"'
     +     '+"<div class=\\"txn-toggle-left\\">"'
     +     '+"<div class=\\"txn-icon-wrap\\">&#128179;</div>"'
@@ -264,7 +268,6 @@ function getAttendanceAppHtml() {
     +     '+"<div class=\\"txn-drawer-header\\"><div class=\\"txn-drawer-title\\">Transaction History</div></div>"'
     +     '+"<div class=\\"txn-list\\">"+txnRows+"</div>"'
     +     '+"</div>";'
-
     +   'return "<div class=\\""+cardCls+"\\" id=\\"card-"+idx+"\\">"'
     +     '+"<div class=\\"sc-accent\\"></div><div class=\\"sc-body\\">"'
     +     '+"<div class=\\"sc-top\\">"'
@@ -302,7 +305,7 @@ function getAttendanceAppHtml() {
     +     '.withSuccessHandler(function(res){'
     +       'if(!res||!res.success){showToast("Error: "+(res?res.error:"Unknown"));return;}'
     +       'if(res.emailSent){showToast("📧 Email sent successfully");}'
-    +       'else{showToast("⚠️ Email not sent (no address or invalid email); attendance updated");}'
+    +       'else{showToast("⚠️ Attendance updated (no email sent)");}'
     +     '})'
     +     '.withFailureHandler(function(e){showToast("Error: "+e.message);})'
     +     '.saveAttendance(s.rowIndex,status,null);'
@@ -340,12 +343,34 @@ function getAttendanceAppHtml() {
     +   'if(arrow){arrow.innerHTML=open?"&#9660;":"&#9654;";arrow.className="txn-arrow"+(open?" open":"");}'+
     '}\n'
 
+    // ── OPTIMIZED loadRiders ─────────────────────────────
+    // ridersLoading flag prevents duplicate in-flight calls.
+    // Both txnPageContent and riderList get error messages on failure.
+    // After load, if the user is on either tab, render immediately.
     + 'function loadRiders(){'
-    +   'document.getElementById("riderList").innerHTML="<div class=\\"empty\\"><div class=\\"empty-icon\\">&#9203;</div><p>Loading&hellip;</p></div>";'
+    +   'if(ridersLoading)return;'
+    +   'ridersLoading=true;'
+    +   'var riderEl=document.getElementById("riderList");'
+    +   'var txnEl=document.getElementById("txnPageContent");'
+    +   'if(riderEl)riderEl.innerHTML="<div class=\\"empty\\"><div class=\\"empty-icon\\">&#9203;</div><p>Loading&hellip;</p></div>";'
+    +   'if(txnEl)txnEl.innerHTML="<div class=\\"empty\\"><div class=\\"empty-icon\\">&#9203;</div><p>Loading&hellip;</p></div>";'
     +   'google.script.run'
-    +     '.withSuccessHandler(function(data){allRiders=data||[];ridersLoaded=true;renderRiders(allRiders);renderTransactions(allRiders);})'
-    +     '.withFailureHandler(function(e){document.getElementById("riderList").innerHTML="<div class=\\"empty\\"><p>"+e.message+"</p></div>";})'
-    +     '.getAllRidersWithStats();'
+    +     '.withSuccessHandler(function(data){'
+    +       'allRiders=data||[];'
+    +       'ridersLoaded=true;'
+    +       'ridersLoading=false;'
+    +       'setPreloadDone();'
+    // Always render both — whichever tab is active will show, hidden ones are ready
+    +       'renderRiders(allRiders);'
+    +       'renderTransactions(allRiders);'
+    +     '})'
+    +     '.withFailureHandler(function(e){'
+    +       'ridersLoading=false;'
+    +       'var msg="<div class=\\"empty\\"><p>Error: "+e.message+"</p></div>";'
+    +       'if(riderEl)riderEl.innerHTML=msg;'
+    +       'if(txnEl)txnEl.innerHTML=msg;'
+    +     '})'
+    +     '.getAllRidersWithStats_Fast();'
     + '}\n'
 
     + 'function filterRiders(query){'
@@ -424,7 +449,18 @@ function getAttendanceAppHtml() {
     +   'document.getElementById("headerDate").textContent=d.toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"});'
     + '}\n'
 
-    + 'updateHeaderDate();loadAttendance();\n';
+    // Preload indicator helpers
+    + 'function setPreloadDone(){'
+    +   'var dot=document.getElementById("preloadDot");'
+    +   'var lbl=document.getElementById("preloadLbl");'
+    +   'if(dot){dot.className="preload-dot done";}'
+    +   'if(lbl){lbl.textContent="Ready";}'
+    + '}\n'
+
+    // Start sessions load, then kick off riders in background after a short delay
+    + 'updateHeaderDate();'
+    + 'loadAttendance();'
+    + 'setTimeout(function(){if(!ridersLoaded&&!ridersLoading){loadRiders();}},1200);\n';
 
   // ── Assemble HTML ───────────────────────────────────────
   return '<!DOCTYPE html>\n'
@@ -444,6 +480,11 @@ function getAttendanceAppHtml() {
     +   '<div class="logo-wrap">&#128052;</div>'
     +   '<div class="header-text"><h1>KE Attendance</h1><p id="headerDate">Loading&hellip;</p></div>'
     +   '<div class="header-right">'
+    // Preload indicator — shows loading dot while riders fetch in background
+    +     '<div class="preload-badge">'
+    +       '<div class="preload-dot" id="preloadDot"></div>'
+    +       '<span id="preloadLbl" style="font-size:10px">Syncing</span>'
+    +     '</div>'
     +     '<button class="hbtn" onclick="loadAttendance()" title="Refresh">&#8635;</button>'
     +   '</div>'
     + '</header>\n'
