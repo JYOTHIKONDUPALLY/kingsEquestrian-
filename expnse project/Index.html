@@ -17,26 +17,113 @@
 body{background:var(--dark);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
 
 /* ── LOADER ── */
-#loader{position:fixed;inset:0;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999}
+#loader{position:fixed;inset:0;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .3s}
 .loader-logo{font-family:'Playfair Display',serif;font-size:2.2rem;color:var(--gold);letter-spacing:.08em;margin-bottom:.75rem}
 .loader-sub{color:var(--muted);font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;margin-bottom:2rem}
 .loader-ring{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .hidden{display:none!important}
 
+/* ── LOGIN PAGE ── */
+#login-page{
+  position:fixed;inset:0;background:var(--dark);
+  display:flex;align-items:center;justify-content:center;
+  z-index:200;padding:1rem;
+  background-image:radial-gradient(ellipse at 20% 50%,rgba(201,168,76,.06) 0,transparent 60%),
+                   radial-gradient(ellipse at 80% 20%,rgba(201,168,76,.04) 0,transparent 50%);
+}
+.login-card{
+  background:var(--card);border:1px solid var(--border);border-radius:20px;
+  width:100%;max-width:440px;padding:2.75rem 2.5rem;box-shadow:var(--shadow);
+  position:relative;overflow:hidden;
+}
+.login-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+}
+.login-brand{text-align:center;margin-bottom:2.25rem}
+.login-horse{font-size:2.8rem;margin-bottom:.7rem;display:block}
+.login-title{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--gold);margin-bottom:.3rem}
+.login-subtitle{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.15em}
+.login-field{display:flex;flex-direction:column;gap:.4rem;margin-bottom:1.25rem}
+.login-field label{font-size:.78rem;font-weight:500;color:var(--muted);letter-spacing:.04em}
+.login-input{
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;
+  font-size:.95rem;padding:.7rem 1rem;width:100%;transition:border-color .2s,box-shadow .2s;
+}
+.login-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.12)}
+.login-input::placeholder{color:var(--muted)}
+.login-btn{
+  background:var(--gold);color:var(--dark);border:none;border-radius:10px;
+  padding:.8rem 1.5rem;width:100%;font-family:'DM Sans',sans-serif;
+  font-size:.95rem;font-weight:700;cursor:pointer;transition:background .2s,transform .1s;
+  margin-top:.5rem;letter-spacing:.03em;
+}
+.login-btn:hover{background:var(--gold-light)}
+.login-btn:active{transform:scale(.99)}
+.login-btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.login-btn-ghost{
+  background:transparent;border:1px solid var(--border);color:var(--muted);
+  border-radius:10px;padding:.7rem 1.5rem;width:100%;font-family:'DM Sans',sans-serif;
+  font-size:.88rem;font-weight:500;cursor:pointer;transition:all .2s;margin-top:.6rem;
+}
+.login-btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.login-error{
+  background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.3);
+  color:var(--red);padding:.75rem 1rem;border-radius:9px;font-size:.84rem;
+  text-align:center;margin-top:.85rem;
+}
+.login-success{
+  background:rgba(76,175,117,.1);border:1px solid rgba(76,175,117,.3);
+  color:var(--green);padding:.75rem 1rem;border-radius:9px;font-size:.84rem;
+  text-align:center;margin-top:.85rem;
+}
+.login-footer{font-size:.72rem;color:var(--muted);text-align:center;margin-top:1.75rem;display:flex;align-items:center;justify-content:center;gap:.5rem}
+.login-footer-dot{width:4px;height:4px;background:var(--muted);border-radius:50%;opacity:.4}
+
+/* OTP input */
+.otp-input{
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;color:var(--text);font-family:monospace;
+  font-size:1.6rem;padding:.7rem;width:100%;text-align:center;
+  letter-spacing:.5em;transition:border-color .2s,box-shadow .2s;
+}
+.otp-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.12)}
+.otp-hint{font-size:.78rem;color:var(--muted);text-align:center;margin-top:.6rem}
+.back-link{font-size:.8rem;color:var(--muted);text-align:center;margin-top:1rem;cursor:pointer}
+.back-link:hover{color:var(--gold)}
+.back-link span{color:var(--gold);text-decoration:underline}
+
 /* ── HEADER ── */
-header{background:linear-gradient(135deg,var(--charcoal),var(--mid));border-bottom:1px solid var(--border);padding:.9rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:1rem;flex-wrap:wrap}
+header{
+  background:linear-gradient(135deg,var(--charcoal),var(--mid));
+  border-bottom:1px solid var(--border);padding:.85rem 1.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;gap:1rem;flex-wrap:wrap;
+}
 .brand{display:flex;align-items:center;gap:.9rem}
 .brand-icon{width:40px;height:40px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
 .brand-name{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--gold);font-weight:700;line-height:1.1}
 .brand-sub{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.13em}
-.user-badge{display:flex;align-items:center;gap:.7rem;background:var(--card);padding:.4rem .9rem;border-radius:50px;border:1px solid var(--border);flex-shrink:0}
-.user-email{font-size:.75rem;color:var(--muted)}
-.user-name{font-size:.85rem;font-weight:500}
-.role-pill{padding:.2rem .7rem;border-radius:50px;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+.header-right{display:flex;align-items:center;gap:.75rem;flex-shrink:0;flex-wrap:wrap}
+.user-badge{display:flex;align-items:center;gap:.65rem;background:rgba(255,255,255,.04);padding:.4rem .9rem;border-radius:50px;border:1px solid var(--border)}
+.user-avatar{width:30px;height:30px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:var(--dark);flex-shrink:0}
+.user-info{display:flex;flex-direction:column;gap:.05rem}
+.user-name{font-size:.85rem;font-weight:600;color:var(--text);line-height:1.2}
+.user-email{font-size:.7rem;color:var(--muted)}
+.role-pill{padding:.22rem .75rem;border-radius:50px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
 .role-admin{background:rgba(201,168,76,.2);color:var(--gold);border:1px solid var(--gold-dark)}
 .role-accounts{background:rgba(82,149,224,.2);color:var(--blue);border:1px solid var(--blue)}
+.role-user{background:rgba(76,175,117,.18);color:var(--green);border:1px solid rgba(76,175,117,.35)}
 .role-viewer{background:rgba(138,133,128,.2);color:var(--muted);border:1px solid #555}
+.logout-btn{
+  background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.25);
+  color:var(--red);border-radius:8px;padding:.42rem .9rem;font-size:.8rem;
+  font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;
+  transition:all .2s;display:flex;align-items:center;gap:.4rem;white-space:nowrap;
+}
+.logout-btn:hover{background:rgba(224,82,82,.2);border-color:var(--red)}
 
 /* ── TABS ── */
 .tabs-bar{background:var(--charcoal);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;padding:0 1.5rem;gap:0;scrollbar-width:none}
@@ -52,8 +139,6 @@ header{background:linear-gradient(135deg,var(--charcoal),var(--mid));border-bott
 main{max-width:1100px;margin:0 auto;padding:1.75rem 1.5rem}
 .tab-panel{display:none}
 .tab-panel.active{display:block}
-
-/* ── SECTION HEADER ── */
 .sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem}
 .sec-title{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--gold)}
 .sec-desc{font-size:.78rem;color:var(--muted);margin-top:.2rem}
@@ -137,6 +222,11 @@ textarea{resize:vertical;min-height:78px}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 .btn-sm{padding:.38rem .85rem;font-size:.78rem}
 
+/* ── SESSION INFO BAR ── */
+.session-bar{background:rgba(201,168,76,.06);border-bottom:1px solid rgba(201,168,76,.12);padding:.4rem 1.5rem;font-size:.72rem;color:var(--muted);display:flex;align-items:center;gap:.5rem}
+.session-bar-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
 /* ── REQUEST CARDS ── */
 .requests-list{display:flex;flex-direction:column;gap:.9rem}
 .req-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s}
@@ -159,7 +249,7 @@ textarea{resize:vertical;min-height:78px}
 .req-admin-actions{border-top:1px solid var(--border);padding:.9rem 1.25rem;background:rgba(201,168,76,.03);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
 .req-admin-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-right:.25rem}
 
-/* ── ACCOUNTS SETTLEMENT ── */
+/* ── SETTLEMENT ── */
 .settlement-card{background:var(--card);border:1px solid rgba(82,149,224,.3);border-radius:var(--radius);overflow:hidden}
 .settlement-head{padding:1.1rem 1.25rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;cursor:pointer}
 .settlement-head:hover{background:rgba(82,149,224,.05)}
@@ -173,7 +263,7 @@ textarea{resize:vertical;min-height:78px}
 .settle-hint{font-size:.75rem;color:var(--muted);margin-top:.5rem}
 
 /* ── MODAL ── */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:600;display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px)}
 .modal{background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow)}
 .modal-header{display:flex;align-items:center;justify-content:space-between;padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card);z-index:1}
 .modal-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--gold)}
@@ -210,11 +300,19 @@ textarea{resize:vertical;min-height:78px}
 
 /* ── TOAST ── */
 .toast-container{position:fixed;bottom:1.25rem;right:1.25rem;z-index:9999;display:flex;flex-direction:column;gap:.45rem}
-.toast{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.8rem 1.15rem;font-size:.84rem;box-shadow:var(--shadow);max-width:300px;animation:slideIn .3s ease}
+.toast{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.8rem 1.15rem;font-size:.84rem;box-shadow:var(--shadow);max-width:320px;animation:slideIn .3s ease}
 .toast.success{border-color:var(--green);color:var(--green)}
 .toast.error{border-color:var(--red);color:var(--red)}
 .toast.info{border-color:var(--blue);color:var(--blue)}
-@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast.warning{border-color:var(--orange);color:var(--orange)}
+@keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── LOGOUT CONFIRM MODAL ── */
+.logout-modal{background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:380px;width:100%;padding:2rem;box-shadow:var(--shadow);text-align:center}
+.logout-modal-icon{font-size:2.5rem;margin-bottom:1rem}
+.logout-modal-title{font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--text);margin-bottom:.5rem}
+.logout-modal-sub{font-size:.84rem;color:var(--muted);margin-bottom:1.75rem;line-height:1.6}
+.logout-modal-btns{display:flex;gap:.75rem;justify-content:center}
 
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -226,6 +324,7 @@ textarea{resize:vertical;min-height:78px}
   main{padding:1rem}
   .detail-grid{grid-template-columns:1fr}
   .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .login-card{padding:2rem 1.5rem}
 }
 </style>
 </head>
@@ -238,6 +337,69 @@ textarea{resize:vertical;min-height:78px}
   <div class="loader-ring"></div>
 </div>
 
+<!-- ═══ LOGIN PAGE ═══ -->
+<div id="login-page" class="hidden">
+  <div class="login-card">
+    <div class="login-brand">
+      <span class="login-horse">🐴</span>
+      <div class="login-title">Kings Equestrian</div>
+      <div class="login-subtitle">Expense &amp; Payment Portal</div>
+    </div>
+
+    <!-- Step 1: Email + Password -->
+    <div id="step-login">
+      <div class="login-field">
+        <label>User ID / Email</label>
+        <input class="login-input" type="text" id="login-email" placeholder="Enter your user ID"
+          onkeydown="if(event.key==='Enter') document.getElementById('login-password').focus()">
+      </div>
+      <div class="login-field">
+        <label>Password</label>
+        <input class="login-input" type="password" id="login-password" placeholder="••••••••"
+          onkeydown="if(event.key==='Enter') performLogin()">
+      </div>
+      <button class="login-btn" id="login-submit-btn" onclick="performLogin()">Sign In →</button>
+      <div id="login-error" class="login-error hidden"></div>
+    </div>
+
+    <!-- Step 2: OTP (2FA) -->
+    <div id="step-otp" class="hidden">
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <div style="font-size:2rem;margin-bottom:.5rem">🔐</div>
+        <div style="font-size:.95rem;color:var(--text);font-weight:600;margin-bottom:.3rem">Two-Factor Authentication</div>
+        <div style="font-size:.78rem;color:var(--muted)">A 6-digit code has been sent to your registered email</div>
+      </div>
+      <div class="login-field">
+        <label>Verification Code</label>
+        <input class="otp-input" type="text" id="otp-code" placeholder="000000" maxlength="6"
+          onkeydown="if(event.key==='Enter') verifyOTPCode()">
+      </div>
+      <div class="otp-hint" id="otp-timer-text">Code expires in <strong id="otp-countdown">5:00</strong></div>
+      <button class="login-btn" onclick="verifyOTPCode()" id="otp-verify-btn" style="margin-top:1rem">Verify Code →</button>
+      <button class="login-btn-ghost" onclick="resendOTP()" id="resend-btn">Resend Code</button>
+      <div id="otp-error" class="login-error hidden"></div>
+      <div id="otp-success" class="login-success hidden"></div>
+      <div class="back-link" onclick="backToLogin()">← Back to <span>Sign In</span></div>
+    </div>
+
+    <div class="login-footer">
+      <span>🔒 SHA-256 Encrypted</span>
+      <div class="login-footer-dot"></div>
+      <span>Session: 24 hours</span>
+      <div class="login-footer-dot"></div>
+      <span>Kings Equestrian</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APP SHELL ═══ -->
+
+<!-- SESSION BAR -->
+<div id="session-bar" class="session-bar hidden">
+  <div class="session-bar-dot"></div>
+  <span id="session-bar-text">Signed in</span>
+</div>
+
 <!-- HEADER -->
 <header id="app-header" class="hidden">
   <div class="brand">
@@ -247,12 +409,16 @@ textarea{resize:vertical;min-height:78px}
       <div class="brand-sub">Expense &amp; Payment Portal</div>
     </div>
   </div>
-  <div class="user-badge">
-    <div>
-      <div id="user-name" class="user-name"></div>
-      <div id="user-email" class="user-email"></div>
+  <div class="header-right">
+    <div class="user-badge">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <div class="user-info">
+        <div id="user-name" class="user-name"></div>
+        <div id="user-email" class="user-email"></div>
+      </div>
+      <span id="role-pill" class="role-pill"></span>
     </div>
-    <span id="role-pill" class="role-pill"></span>
+    <button class="logout-btn" onclick="confirmLogout()">⏏ Sign Out</button>
   </div>
 </header>
 
@@ -278,24 +444,19 @@ textarea{resize:vertical;min-height:78px}
         <div class="sec-desc">Submit before 3:00 PM · Advances settled within 3–5 working days</div>
       </div>
     </div>
-
     <div class="form-card">
 
-      <!-- Requestor -->
       <div class="form-section">
         <div class="form-section-title">👤 Requestor Details</div>
         <div class="form-grid">
           <div class="form-group">
             <label>Requestor Name <span class="req">*</span></label>
-            <!-- SEARCHABLE COMBOBOX for employee -->
+            <div style="font-size:.72rem;color:var(--gold);margin-bottom:.45rem">Auto-filled from the signed-in employee account</div>
             <div class="combobox-wrap" id="cb-employee-wrap">
               <div class="combobox-input-row">
                 <input type="text" class="combobox-search" id="cb-employee-search"
-                  placeholder="🔍 Type to search employee…"
-                  autocomplete="off"
-                  oninput="cbFilter('employee')"
-                  onfocus="cbOpen('employee')"
-                  onkeydown="cbKeydown(event,'employee')">
+                  placeholder="Auto-filled from login" autocomplete="off" readonly
+                  onkeydown="return false;">
                 <button class="combobox-clear" id="cb-employee-clear" onclick="cbClear('employee')" style="display:none" title="Clear">✕</button>
                 <span class="combobox-arrow">▾</span>
               </div>
@@ -318,7 +479,6 @@ textarea{resize:vertical;min-height:78px}
         </div>
       </div>
 
-      <!-- Expense -->
       <div class="form-section">
         <div class="form-section-title">💰 Expense Details</div>
         <div class="form-grid">
@@ -326,29 +486,18 @@ textarea{resize:vertical;min-height:78px}
             <label>Expense Type <span class="req">*</span></label>
             <select id="f-expense-type" required onchange="onExpenseTypeChange()">
               <option value="">— Select Type —</option>
-              <option>Vendor Payment</option>
-              <option>Reimbursement</option>
-              <option>Advance Request</option>
-              <option>Advance Settlement</option>
-              <option>Staff Salary</option>
-              <option>Adjustment / Reversal</option>
+              <option>Vendor Payment</option><option>Reimbursement</option>
+              <option>Advance Request</option><option>Advance Settlement</option>
+              <option>Staff Salary</option><option>Adjustment / Reversal</option>
             </select>
           </div>
           <div class="form-group full">
             <label>Location(s) <span class="req">*</span></label>
             <div style="display:flex;flex-wrap:wrap;gap:1rem;margin-top:.3rem">
-              <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
-                <input type="checkbox" name="location" value="Hyderabad" style="width:auto"> Hyderabad
-              </label>
-              <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
-                <input type="checkbox" name="location" value="Bangalore" style="width:auto"> Bangalore
-              </label>
-              <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
-                <input type="checkbox" name="location" value="Pune" style="width:auto"> Pune
-              </label>
-              <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer">
-                <input type="checkbox" name="location" value="Farm" style="width:auto"> Farm
-              </label>
+              <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer"><input type="checkbox" name="location" value="Hyderabad" style="width:auto"> Hyderabad</label>
+              <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer"><input type="checkbox" name="location" value="Bangalore" style="width:auto"> Bangalore</label>
+              <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer"><input type="checkbox" name="location" value="Pune" style="width:auto"> Pune</label>
+              <label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.9rem;cursor:pointer"><input type="checkbox" name="location" value="Farm" style="width:auto"> Farm</label>
             </div>
           </div>
           <div class="form-group">
@@ -387,7 +536,6 @@ textarea{resize:vertical;min-height:78px}
         </div>
       </div>
 
-      <!-- Payee -->
       <div class="form-section">
         <div class="form-section-title">🏦 Payee Details</div>
         <div class="form-grid">
@@ -395,24 +543,17 @@ textarea{resize:vertical;min-height:78px}
             <label>Payee Type <span class="req">*</span></label>
             <select id="f-payee-type" required onchange="onPayeeTypeChange()">
               <option value="">— Select Payee Type —</option>
-              <option>Vendor</option>
-              <option>Staff</option>
-              <option>Employee</option>
-              <option>Organization</option>
+              <option>Vendor</option><option>Staff</option>
+              <option>Employee</option><option>Organization</option>
             </select>
           </div>
-
-          <!-- SEARCHABLE COMBOBOX for payee (shown for Vendor/Staff/Employee) -->
           <div class="form-group" id="payee-dd-group">
             <label>Payee Name <span class="req">*</span></label>
             <div class="combobox-wrap" id="cb-payee-wrap">
               <div class="combobox-input-row">
                 <input type="text" class="combobox-search" id="cb-payee-search"
-                  placeholder="🔍 Type to search payee…"
-                  autocomplete="off"
-                  oninput="cbFilter('payee')"
-                  onfocus="cbOpen('payee')"
-                  onkeydown="cbKeydown(event,'payee')">
+                  placeholder="🔍 Type to search payee…" autocomplete="off"
+                  oninput="cbFilter('payee')" onfocus="cbOpen('payee')" onkeydown="cbKeydown(event,'payee')">
                 <button class="combobox-clear" id="cb-payee-clear" onclick="cbClear('payee')" style="display:none" title="Clear">✕</button>
                 <span class="combobox-arrow">▾</span>
               </div>
@@ -420,38 +561,29 @@ textarea{resize:vertical;min-height:78px}
               <input type="hidden" id="f-payee-name">
             </div>
           </div>
-
-          <!-- Plain text for Organization -->
           <div class="form-group" id="payee-txt-group" style="display:none">
             <label>Payee Name <span class="req">*</span></label>
             <input type="text" id="f-payee-name-text" placeholder="Enter organisation / payee name">
           </div>
         </div>
-
-        <!-- Bank details auto-populated -->
         <div id="payee-bank-info" class="payee-bank-box hidden">
           <div class="bank-box-title">📋 Registered Bank Details</div>
           <div id="payee-bank-content" class="bank-grid"></div>
         </div>
       </div>
 
-      <!-- Invoice -->
       <div class="form-section">
         <div class="form-section-title">📎 Invoice / Receipt</div>
         <div class="form-group full">
           <label>Upload Invoice / Bill</label>
           <div class="file-upload">
             <input type="file" id="f-invoice" accept=".pdf,.jpg,.jpeg,.png" onchange="onFileChange(this)">
-            <div class="file-upload-label">
-              <span>📄</span>
-              <span>Click to upload PDF, JPG, or PNG</span>
-            </div>
+            <div class="file-upload-label"><span>📄</span><span>Click to upload PDF, JPG, or PNG</span></div>
           </div>
           <div id="file-name-display" class="file-name hidden"></div>
         </div>
       </div>
 
-      <!-- Advance (conditional) -->
       <div class="form-section" id="advance-section" style="display:none">
         <div class="form-section-title">⏳ Advance Details</div>
         <div class="form-grid">
@@ -466,7 +598,6 @@ textarea{resize:vertical;min-height:78px}
         </div>
       </div>
 
-      <!-- Confirm + Submit -->
       <div class="form-section">
         <div class="form-group">
           <label style="display:flex;align-items:flex-start;gap:.7rem;cursor:pointer;color:var(--text);font-size:.87rem">
@@ -480,8 +611,7 @@ textarea{resize:vertical;min-height:78px}
         </div>
       </div>
     </div>
-  </div><!-- /tab-request -->
-
+  </div>
 
   <!-- ═══ ALL REQUESTS TAB ═══ -->
   <div id="tab-list" class="tab-panel">
@@ -489,25 +619,22 @@ textarea{resize:vertical;min-height:78px}
       <div>
         <div class="sec-title">All Requests</div>
         <div class="sec-desc">All submitted requests · newest first
-          <span id="admin-hint" class="hidden" style="color:var(--gold);font-weight:600"> · You can approve / reject pending requests inline below</span>
+          <span id="admin-hint" class="hidden" style="color:var(--gold);font-weight:600"> · Approve / reject pending requests inline below</span>
         </div>
       </div>
       <button class="btn btn-ghost" onclick="loadRequests()">🔄 Refresh</button>
     </div>
-
-    <div class="stats-grid" id="stats-grid">
+    <div class="stats-grid">
       <div class="stat-card gold"><div class="stat-label">Total</div><div class="stat-value" id="s-total">—</div></div>
       <div class="stat-card orange"><div class="stat-label">Pending</div><div class="stat-value" id="s-pending">—</div><div class="stat-sub" id="s-pending-amt"></div></div>
       <div class="stat-card green"><div class="stat-label">Approved</div><div class="stat-value" id="s-approved">—</div><div class="stat-sub" id="s-approved-amt"></div></div>
       <div class="stat-card blue"><div class="stat-label">Paid</div><div class="stat-value" id="s-paid">—</div><div class="stat-sub" id="s-paid-amt"></div></div>
       <div class="stat-card red"><div class="stat-label">Rejected</div><div class="stat-value" id="s-rejected">—</div></div>
     </div>
-
     <div class="filters">
       <select id="f-status" onchange="applyListFilters()">
         <option value="">All Status</option>
-        <option>Pending</option><option>Approved</option>
-        <option>Rejected</option><option>Paid</option>
+        <option>Pending</option><option>Approved</option><option>Rejected</option><option>Paid</option>
       </select>
       <select id="f-type" onchange="applyListFilters()">
         <option value="">All Types</option>
@@ -517,21 +644,16 @@ textarea{resize:vertical;min-height:78px}
       </select>
       <select id="f-dept-filter" onchange="applyListFilters()">
         <option value="">All Departments</option>
-        <option>Stable Operations</option>
-        <option>Competitions / Sports Development</option>
-        <option>Equine Therapy Program</option>
-        <option>Education &amp; Outreach</option>
-        <option>Administration</option>
-        <option>Accounts</option>
+        <option>Stable Operations</option><option>Competitions / Sports Development</option>
+        <option>Equine Therapy Program</option><option>Education &amp; Outreach</option>
+        <option>Administration</option><option>Accounts</option>
       </select>
       <input type="text" id="f-search" placeholder="🔍 Search name, ID, description..." oninput="applyListFilters()" style="min-width:220px;flex:1">
     </div>
-
     <div id="requests-list" class="requests-list">
       <div class="loading-row"><span class="spin-sm"></span>Loading requests…</div>
     </div>
-  </div><!-- /tab-list -->
-
+  </div>
 
   <!-- ═══ ACCOUNTS & SETTLEMENT TAB ═══ -->
   <div id="tab-accounts" class="tab-panel">
@@ -542,20 +664,14 @@ textarea{resize:vertical;min-height:78px}
       </div>
       <button class="btn btn-ghost" onclick="loadRequests()">🔄 Refresh</button>
     </div>
-
     <div id="acc-unauthorized" class="hidden">
-      <div class="empty-state">
-        <div class="empty-icon">🔒</div>
-        <div class="empty-text">Access restricted to Accounts team only</div>
-      </div>
+      <div class="empty-state"><div class="empty-icon">🔒</div><div class="empty-text">Access restricted to Accounts team only</div></div>
     </div>
-
     <div id="acc-content">
       <div class="filters">
         <select id="acc-filter-status" onchange="applyAccFilters()">
           <option value="Approved">Approved – Pending Payment</option>
-          <option value="">All Status</option>
-          <option value="Paid">Paid</option>
+          <option value="">All Status</option><option value="Paid">Paid</option>
         </select>
         <input type="text" id="acc-filter-search" placeholder="🔍 Search name or ID..." oninput="applyAccFilters()" style="min-width:200px;flex:1">
       </div>
@@ -563,11 +679,11 @@ textarea{resize:vertical;min-height:78px}
         <div class="loading-row"><span class="spin-sm"></span>Loading…</div>
       </div>
     </div>
-  </div><!-- /tab-accounts -->
+  </div>
 
 </main>
 
-<!-- MODAL -->
+<!-- DETAIL MODAL -->
 <div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-header">
@@ -578,6 +694,19 @@ textarea{resize:vertical;min-height:78px}
   </div>
 </div>
 
+<!-- LOGOUT CONFIRM MODAL -->
+<div class="modal-overlay hidden" id="logout-modal-overlay" onclick="closeLogoutModal(event)">
+  <div class="logout-modal" onclick="event.stopPropagation()">
+    <div class="logout-modal-icon">👋</div>
+    <div class="logout-modal-title">Sign out of Kings Equestrian?</div>
+    <div class="logout-modal-sub">You'll need to sign in again to access the portal. Your session data will be cleared.</div>
+    <div class="logout-modal-btns">
+      <button class="btn btn-ghost" onclick="closeLogoutModal()">Cancel</button>
+      <button class="btn btn-reject" onclick="performLogout()">⏏ Sign Out</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-container" id="toast-container"></div>
 
 <script>
@@ -585,11 +714,14 @@ textarea{resize:vertical;min-height:78px}
 // STATE
 // ══════════════════════════════════════════
 let currentUser  = null;
+let currentEmail = null;
+let sessionToken = null;
 let allRequests  = [];
 let vendorList   = [];
 let employeeList = [];
+let otpTimer     = null;
+let otpExpiry    = null;
 
-// Combobox state per instance
 const cbState = {
   employee: { items: [], filtered: [], focusIdx: -1, selectedValue: '' },
   payee:    { items: [], filtered: [], focusIdx: -1, selectedValue: '' }
@@ -598,8 +730,6 @@ const cbState = {
 // ══════════════════════════════════════════
 // COMBOBOX ENGINE
 // ══════════════════════════════════════════
-
-// Build option objects from a raw list
 function cbBuildItems(list) {
   return list.map(item => ({
     value: (item.regNo || '') + '||' + item.name,
@@ -610,16 +740,11 @@ function cbBuildItems(list) {
 }
 
 function cbRenderDropdown(name) {
-  const s = cbState[name];
+  const s  = cbState[name];
   const dd = document.getElementById('cb-' + name + '-dropdown');
-  if (!s.filtered.length) {
-    dd.innerHTML = '<div class="combobox-empty">No results found</div>';
-    return;
-  }
-  const total = s.items.length;
-  const shown = s.filtered.length;
-  const countHtml = shown < total
-    ? `<div class="combobox-count">Showing ${shown} of ${total} — type to narrow</div>` : '';
+  if (!s.filtered.length) { dd.innerHTML = '<div class="combobox-empty">No results found</div>'; return; }
+  const countHtml = s.filtered.length < s.items.length
+    ? `<div class="combobox-count">Showing ${s.filtered.length} of ${s.items.length} — type to narrow</div>` : '';
   dd.innerHTML = countHtml + s.filtered.map((item, i) => {
     const sel = item.value === s.selectedValue ? ' selected' : '';
     const foc = i === s.focusIdx ? ' focused' : '';
@@ -632,12 +757,10 @@ function cbOpen(name) {
   const s = cbState[name];
   const dd = document.getElementById('cb-' + name + '-dropdown');
   s.focusIdx = -1;
-  // If nothing typed yet show all
   const q = document.getElementById('cb-' + name + '-search').value.trim().toLowerCase();
   s.filtered = q ? s.items.filter(i => i.label.toLowerCase().includes(q) || i.badge.toLowerCase().includes(q)) : s.items.slice();
   cbRenderDropdown(name);
   dd.classList.add('open');
-  // Close others
   Object.keys(cbState).forEach(n => { if (n !== name) document.getElementById('cb-' + n + '-dropdown').classList.remove('open'); });
 }
 
@@ -647,38 +770,28 @@ function cbFilter(name) {
   s.filtered = q ? s.items.filter(i => i.label.toLowerCase().includes(q) || i.badge.toLowerCase().includes(q)) : s.items.slice();
   s.focusIdx = -1;
   cbRenderDropdown(name);
-  const dd = document.getElementById('cb-' + name + '-dropdown');
-  dd.classList.add('open');
-  // Show/hide clear button
+  document.getElementById('cb-' + name + '-dropdown').classList.add('open');
   document.getElementById('cb-' + name + '-clear').style.display = q ? '' : 'none';
-  // Reset hidden value if user is typing (deselect)
   document.getElementById('f-' + (name === 'employee' ? 'employee' : 'payee-name')).value = '';
   s.selectedValue = '';
 }
 
 function cbSelect(name, el) {
-  const val   = el.getAttribute('data-value');
-  const label = el.getAttribute('data-label');
-  const s     = cbState[name];
-  s.selectedValue = val;
-  document.getElementById('cb-' + name + '-search').value = label;
+  const val = el.getAttribute('data-value');
+  cbState[name].selectedValue = val;
+  document.getElementById('cb-' + name + '-search').value = el.getAttribute('data-label');
   document.getElementById('cb-' + name + '-clear').style.display = '';
-  // Write to hidden input
-  const hiddenId = name === 'employee' ? 'f-employee' : 'f-payee-name';
-  document.getElementById(hiddenId).value = val;
+  document.getElementById('f-' + (name === 'employee' ? 'employee' : 'payee-name')).value = val;
   document.getElementById('cb-' + name + '-dropdown').classList.remove('open');
-  // Trigger downstream logic
   if (name === 'payee') onPayeeSelected(val);
 }
 
 function cbClear(name) {
-  const s = cbState[name];
-  s.selectedValue = '';
-  s.focusIdx = -1;
+  cbState[name].selectedValue = '';
+  cbState[name].focusIdx = -1;
   document.getElementById('cb-' + name + '-search').value = '';
   document.getElementById('cb-' + name + '-clear').style.display = 'none';
-  const hiddenId = name === 'employee' ? 'f-employee' : 'f-payee-name';
-  document.getElementById(hiddenId).value = '';
+  document.getElementById('f-' + (name === 'employee' ? 'employee' : 'payee-name')).value = '';
   document.getElementById('cb-' + name + '-dropdown').classList.remove('open');
   if (name === 'payee') document.getElementById('payee-bank-info').classList.add('hidden');
 }
@@ -692,52 +805,36 @@ function cbKeydown(event, name) {
     if (!isOpen) cbOpen(name);
     s.focusIdx = Math.min(s.focusIdx + 1, s.filtered.length - 1);
     cbRenderDropdown(name);
-    scrollFocused(name);
+    const focused = dd.querySelector('.focused'); if (focused) focused.scrollIntoView({ block:'nearest' });
   } else if (event.key === 'ArrowUp') {
     event.preventDefault();
     s.focusIdx = Math.max(s.focusIdx - 1, 0);
     cbRenderDropdown(name);
-    scrollFocused(name);
   } else if (event.key === 'Enter') {
     event.preventDefault();
     if (isOpen && s.focusIdx >= 0 && s.filtered[s.focusIdx]) {
       const item = s.filtered[s.focusIdx];
-      const fakeEl = { getAttribute: (a) => a === 'data-value' ? item.value : item.label };
-      cbSelect(name, fakeEl);
+      cbSelect(name, { getAttribute: a => a === 'data-value' ? item.value : item.label });
     }
-  } else if (event.key === 'Escape') {
-    dd.classList.remove('open');
-  } else if (event.key === 'Tab') {
+  } else if (event.key === 'Escape' || event.key === 'Tab') {
     dd.classList.remove('open');
   }
 }
 
-function scrollFocused(name) {
-  const dd = document.getElementById('cb-' + name + '-dropdown');
-  const focused = dd.querySelector('.focused');
-  if (focused) focused.scrollIntoView({ block: 'nearest' });
-}
-
-// Close dropdowns on outside click
-document.addEventListener('mousedown', function(e) {
+document.addEventListener('mousedown', e => {
   Object.keys(cbState).forEach(name => {
     const wrap = document.getElementById('cb-' + name + '-wrap');
-    if (wrap && !wrap.contains(e.target)) {
-      document.getElementById('cb-' + name + '-dropdown').classList.remove('open');
-    }
+    if (wrap && !wrap.contains(e.target)) document.getElementById('cb-' + name + '-dropdown').classList.remove('open');
   });
 });
 
-// Populate comboboxes
 function populateEmployeeCombobox() {
   cbState.employee.items = cbBuildItems(employeeList);
   cbState.employee.filtered = cbState.employee.items.slice();
 }
-
 function populatePayeeCombobox(list) {
   cbState.payee.items = cbBuildItems(list);
   cbState.payee.filtered = cbState.payee.items.slice();
-  // Reset UI
   cbClear('payee');
 }
 
@@ -745,75 +842,302 @@ function populatePayeeCombobox(list) {
 // INIT
 // ══════════════════════════════════════════
 window.onload = async function () {
+  // Try restoring session from localStorage
+  const savedEmail = localStorage.getItem('ke_auth_email');
+  const savedToken = localStorage.getItem('ke_auth_token');
+
+  if (savedEmail && savedToken) {
+    try {
+      const userInfo = await gg('getCurrentUser', savedEmail, savedToken);
+      if (userInfo && userInfo.status === 'SUCCESS') {
+        currentEmail = savedEmail;
+        sessionToken = savedToken;
+        currentUser  = userInfo;
+        showApp();
+        return;
+      }
+    } catch (e) { /* session invalid */ }
+    clearSession();
+  }
+
+  // No valid session — show login
+  document.getElementById('loader').classList.add('hidden');
+  document.getElementById('login-page').classList.remove('hidden');
+};
+
+function gg(fnName, ...args) {
+  return new Promise((res, rej) =>
+    google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fnName](...args)
+  );
+}
+
+// ══════════════════════════════════════════
+// LOGIN FLOW
+// ══════════════════════════════════════════
+async function performLogin() {
+  const identifier = document.getElementById('login-email').value.trim();
+  const password   = document.getElementById('login-password').value;
+  const errDiv     = document.getElementById('login-error');
+  const btn        = document.getElementById('login-submit-btn');
+
+  errDiv.classList.add('hidden');
+  if (!identifier || !password) { showLoginError('Please enter your user ID and password.'); return; }
+
+  btn.disabled    = true;
+  btn.textContent = 'Signing in…';
+
   try {
-    currentUser = await gg('getUserInfo');
-
-    if (currentUser._authError) {
-      document.getElementById('loader').innerHTML = `
-        <div style="text-align:center;max-width:480px;padding:2rem">
-          <div style="font-size:2.5rem;margin-bottom:1rem">🔐</div>
-          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold);margin-bottom:.75rem">Re-deployment Required</div>
-          <div style="color:var(--muted);font-size:.87rem;line-height:1.7;margin-bottom:1.5rem">
-            The web app is currently deployed as <strong style="color:var(--text)">"Execute as: Me"</strong>
-            which prevents reading the signed-in user's identity.<br><br>
-            To fix: go to <strong style="color:var(--text)">Deploy → Manage deployments → Edit</strong>,
-            change <em>Execute as</em> to <strong style="color:var(--gold)">"User accessing the web app"</strong>,
-            then click <strong style="color:var(--gold)">Deploy</strong> and use the new URL.
-          </div>
-          <div style="background:rgba(201,168,76,.08);border:1px solid var(--border);border-radius:10px;padding:1rem;font-size:.78rem;color:var(--muted);text-align:left">
-            <strong style="color:var(--gold)">Who has access</strong> should be set to
-            <strong style="color:var(--text)">Anyone with Google Account</strong> (or your organisation domain).
-          </div>
-        </div>`;
-      return;
+    const res = await gg('loginUser', identifier, password);
+    if (res.status === 'SUCCESS') {
+      currentEmail = res.email || identifier;
+      sessionToken = res.sessionToken;
+      currentUser  = res;
+      saveSession(currentEmail, res.sessionToken);
+      showApp();
+    } else if (res.status === '2FA_REQUIRED') {
+      currentEmail = res.email || identifier;
+      currentUser  = res;
+      showOTPStep();
+      sendOTPToUser();
+    } else {
+      showLoginError(res.message || 'Invalid user ID/email or password.');
     }
+  } catch (e) {
+    showLoginError('Connection error. Please try again.');
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Sign In →';
+  }
+}
 
+function showLoginError(msg) {
+  const d = document.getElementById('login-error');
+  d.textContent = msg;
+  d.classList.remove('hidden');
+}
+
+function showOTPStep() {
+  document.getElementById('step-login').classList.add('hidden');
+  document.getElementById('step-otp').classList.remove('hidden');
+  document.getElementById('otp-code').focus();
+}
+
+function backToLogin() {
+  clearOTPTimer();
+  document.getElementById('step-otp').classList.add('hidden');
+  document.getElementById('step-login').classList.remove('hidden');
+  document.getElementById('otp-error').classList.add('hidden');
+  document.getElementById('otp-success').classList.add('hidden');
+  document.getElementById('otp-code').value = '';
+}
+
+async function sendOTPToUser() {
+  try {
+    const res = await gg('sendOTP', currentEmail);
+    if (res.status === 'SUCCESS') {
+      showOTPSuccess(res.message || 'Code sent to your registered email.');
+      startOTPCountdown(5 * 60); // 5 minutes
+    } else {
+      showOTPError(res.message || 'Failed to send code. Try again.');
+    }
+  } catch (e) {
+    showOTPError('Could not send OTP. Check your connection.');
+  }
+}
+
+async function resendOTP() {
+  clearOTPTimer();
+  document.getElementById('otp-code').value = '';
+  document.getElementById('otp-error').classList.add('hidden');
+  document.getElementById('otp-success').classList.add('hidden');
+  const btn = document.getElementById('resend-btn');
+  btn.disabled = true;
+  await sendOTPToUser();
+  setTimeout(() => btn.disabled = false, 30000);
+}
+
+async function verifyOTPCode() {
+  const otp    = document.getElementById('otp-code').value.trim();
+  const errDiv = document.getElementById('otp-error');
+  const btn    = document.getElementById('otp-verify-btn');
+
+  document.getElementById('otp-error').classList.add('hidden');
+  if (!otp || otp.length < 6) { showOTPError('Please enter the 6-digit code.'); return; }
+
+  btn.disabled    = true;
+  btn.textContent = 'Verifying…';
+
+  try {
+    const res = await gg('verifyOTP', currentEmail, otp);
+    if (res.status === 'SUCCESS') {
+      clearOTPTimer();
+      sessionToken = res.sessionToken;
+      // Fetch full user info
+      const userInfo = await gg('getCurrentUser', currentEmail, res.sessionToken);
+      currentUser  = userInfo.status === 'SUCCESS' ? userInfo : { email: currentEmail, role: 'admin', name: currentEmail };
+      saveSession(currentEmail, res.sessionToken);
+      showApp();
+    } else {
+      showOTPError(res.message || 'Invalid code. Please try again.');
+    }
+  } catch (e) {
+    showOTPError('Verification failed. Try again.');
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Verify Code →';
+  }
+}
+
+function showOTPError(msg)   { const d = document.getElementById('otp-error');   d.textContent = msg; d.classList.remove('hidden'); }
+function showOTPSuccess(msg) { const d = document.getElementById('otp-success'); d.textContent = msg; d.classList.remove('hidden'); }
+
+function startOTPCountdown(seconds) {
+  clearOTPTimer();
+  otpExpiry = Date.now() + seconds * 1000;
+  function tick() {
+    const remaining = Math.max(0, Math.round((otpExpiry - Date.now()) / 1000));
+    const m = Math.floor(remaining / 60);
+    const s = String(remaining % 60).padStart(2, '0');
+    const el = document.getElementById('otp-countdown');
+    if (el) el.textContent = m + ':' + s;
+    if (remaining <= 0) {
+      clearOTPTimer();
+      showOTPError('Code expired. Please request a new one.');
+    } else {
+      otpTimer = setTimeout(tick, 1000);
+    }
+  }
+  tick();
+}
+function clearOTPTimer() { if (otpTimer) { clearTimeout(otpTimer); otpTimer = null; } }
+
+// ══════════════════════════════════════════
+// LOGOUT
+// ══════════════════════════════════════════
+function confirmLogout() {
+  document.getElementById('logout-modal-overlay').classList.remove('hidden');
+}
+function closeLogoutModal(e) {
+  if (e && e.target !== document.getElementById('logout-modal-overlay')) return;
+  document.getElementById('logout-modal-overlay').classList.add('hidden');
+}
+function performLogout() {
+  document.getElementById('logout-modal-overlay').classList.add('hidden');
+  clearSession();
+  resetAppUI();
+  toast('You have been signed out.', 'info');
+}
+
+function clearSession() {
+  currentUser  = null;
+  currentEmail = null;
+  sessionToken = null;
+  localStorage.removeItem('ke_auth_email');
+  localStorage.removeItem('ke_auth_token');
+}
+
+function saveSession(email, token) {
+  localStorage.setItem('ke_auth_email', email);
+  localStorage.setItem('ke_auth_token', token);
+}
+
+function resetAppUI() {
+  // Hide app
+  document.getElementById('app-header').classList.add('hidden');
+  document.getElementById('tabs-bar').classList.add('hidden');
+  document.getElementById('app-main').classList.add('hidden');
+  document.getElementById('session-bar').classList.add('hidden');
+  // Reset login form
+  document.getElementById('login-email').value    = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('otp-code').value       = '';
+  document.getElementById('login-error').classList.add('hidden');
+  document.getElementById('otp-error').classList.add('hidden');
+  document.getElementById('otp-success').classList.add('hidden');
+  document.getElementById('step-login').classList.remove('hidden');
+  document.getElementById('step-otp').classList.add('hidden');
+  clearOTPTimer();
+  // Show login
+  document.getElementById('login-page').classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════
+// SHOW APP after auth
+// ══════════════════════════════════════════
+async function showApp() {
+  try {
+    document.getElementById('loader').classList.remove('hidden');
+    document.getElementById('login-page').classList.add('hidden');
+
+    await gg('initSheets');
     renderHeader();
     setupTabs();
     await Promise.all([loadVendors(), loadEmployees()]);
     populateEmployeeCombobox();
+    setLoggedInRequestor();
     await loadRequests();
 
     document.getElementById('loader').classList.add('hidden');
+    document.getElementById('session-bar').classList.remove('hidden');
     document.getElementById('app-header').classList.remove('hidden');
     document.getElementById('tabs-bar').classList.remove('hidden');
     document.getElementById('app-main').classList.remove('hidden');
 
-    if (currentUser.role === 'admin') {
-      document.getElementById('admin-hint').classList.remove('hidden');
-    }
-  } catch (e) {
-    document.getElementById('loader').innerHTML =
-      '<div style="color:#E05252;text-align:center;padding:2rem">' +
-      '<div style="font-size:2rem">⚠️</div>' +
-      '<div style="margin-top:1rem;font-size:.95rem">Something went wrong loading the app.</div>' +
-      '<div style="font-size:.78rem;color:#8A8580;margin-top:.75rem;word-break:break-all">' + e + '</div>' +
-      '<div style="margin-top:1rem;font-size:.78rem;color:var(--muted)">Make sure you are signed into Google and the sheet names in SHEET_CONFIG match exactly.</div>' +
-      '</div>';
-  }
-};
+    updateSessionBar();
 
-function gg(fnName, ...args) {
-  return new Promise((res, rej) => {
-    google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fnName](...args);
-  });
+    if (currentUser.role === 'admin') document.getElementById('admin-hint').classList.remove('hidden');
+
+    toast('Welcome back, ' + (currentUser.name || currentEmail).split(' ')[0] + '! 👋', 'success');
+  } catch (e) {
+    document.getElementById('loader').classList.add('hidden');
+    document.getElementById('login-page').classList.remove('hidden');
+    showLoginError('Failed to load app. Please try again.');
+  }
+}
+
+function updateSessionBar() {
+  const name  = currentUser.name || currentEmail;
+  const role  = (currentUser.role || 'viewer').charAt(0).toUpperCase() + currentUser.role.slice(1);
+  document.getElementById('session-bar-text').textContent =
+    `Active session · ${name} (${role}) · ${currentEmail}`;
 }
 
 // ══════════════════════════════════════════
 // HEADER & TABS
 // ══════════════════════════════════════════
 function renderHeader() {
-  document.getElementById('user-name').textContent  = currentUser.name || currentUser.email;
-  document.getElementById('user-email').textContent = currentUser.email;
-  const pill = document.getElementById('role-pill');
-  const roleMap = { admin: ['Admin', 'role-admin'], accounts: ['Accounts', 'role-accounts'] };
-  const [lbl, cls] = roleMap[currentUser.role] || ['Staff', 'role-viewer'];
+  const name   = currentUser.name || currentEmail || '';
+  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+  document.getElementById('user-avatar').textContent = initials;
+  document.getElementById('user-name').textContent   = name;
+  document.getElementById('user-email').textContent  = currentEmail;
+
+  const pill   = document.getElementById('role-pill');
+  const roleMap = { admin: ['Admin', 'role-admin'], accounts: ['Accounts', 'role-accounts'], user: ['User', 'role-user'], approver: ['Admin', 'role-admin'] };
+  const [lbl, cls] = roleMap[currentUser.role] || ['Viewer', 'role-viewer'];
   pill.textContent = lbl;
   pill.className   = 'role-pill ' + cls;
 }
 
+function setLoggedInRequestor() {
+  const nameInput = document.getElementById('cb-employee-search');
+  const hidden = document.getElementById('f-employee');
+  if (!nameInput || !hidden || !currentUser) return;
+
+  const requestorName = currentUser.name || currentEmail || '';
+  const requestorKey = (currentUser.userId || currentEmail || 'user') + '||' + requestorName;
+  nameInput.value = requestorName;
+  nameInput.readOnly = true;
+  nameInput.style.cursor = 'not-allowed';
+  hidden.value = requestorKey;
+  cbState.employee.selectedValue = requestorKey;
+  document.getElementById('cb-employee-clear').style.display = 'none';
+  document.getElementById('cb-employee-dropdown').classList.remove('open');
+}
+
 function setupTabs() {
-  if (currentUser.role === 'accounts') {
+  const r = currentUser.role;
+  if (r === 'accounts' || r === 'admin') {
     document.getElementById('tab-accounts-btn').removeAttribute('disabled');
   }
 }
@@ -830,50 +1154,50 @@ function switchTab(name, btn) {
 // ══════════════════════════════════════════
 // DATA LOADERS
 // ══════════════════════════════════════════
-async function loadVendors() {
-  const data = await gg('getVendorList');
-  vendorList = Array.isArray(data) ? data : (data ? [data] : []);
-}
-async function loadEmployees() {
-  const data = await gg('getEmployeeList');
-  employeeList = Array.isArray(data) ? data : (data ? [data] : []);
-}
+async function loadVendors()   { const d = await gg('getVendorList');   vendorList   = Array.isArray(d) ? d : (d ? [d] : []); }
+async function loadEmployees() { const d = await gg('getEmployeeList'); employeeList = Array.isArray(d) ? d : (d ? [d] : []); }
 
 async function loadRequests() {
-  allRequests = await gg('getAllRequests');
+  const rawRequests = await gg('getAllRequests');
+  allRequests = Array.isArray(rawRequests) ? rawRequests : [];
+
+  if (currentUser && currentUser.role === 'user') {
+    const myEmail = (currentEmail || '').toLowerCase();
+    const myName = (currentUser.name || '').toLowerCase();
+    allRequests = allRequests.filter(r =>
+      ((r.email || '').toLowerCase() === myEmail) || ((r.requestor || '').toLowerCase() === myName)
+    );
+  }
+
   updateTabCounts();
   renderStats();
   applyListFilters();
-  if (currentUser.role === 'accounts') renderAccTab();
+  if (currentUser.role === 'accounts' || currentUser.role === 'admin') renderAccTab();
 }
 
 function updateTabCounts() {
   document.getElementById('tc-all').textContent = allRequests.length;
-  const approved = allRequests.filter(r => r.status === 'Approved').length;
-  document.getElementById('tc-acc').textContent = approved;
+  document.getElementById('tc-acc').textContent = allRequests.filter(r => r.status === 'Approved').length;
 }
 
 // ══════════════════════════════════════════
 // STATS
 // ══════════════════════════════════════════
 function renderStats() {
-  let total=0,pending=0,approved=0,paid=0,rejected=0,
-      pendingAmt=0,approvedAmt=0,paidAmt=0;
+  let total=0,pending=0,approved=0,paid=0,rejected=0,pa=0,aa=0,pda=0;
   allRequests.forEach(r => {
     total++;
     const amt = Number(r.amount)||0;
     switch((r.status||'').toLowerCase()){
-      case 'pending' : pending++;  pendingAmt  += amt; break;
-      case 'approved': approved++; approvedAmt += amt; break;
-      case 'paid'    : paid++;     paidAmt     += amt; break;
+      case 'pending':  pending++;  pa  += amt; break;
+      case 'approved': approved++; aa  += amt; break;
+      case 'paid':     paid++;     pda += amt; break;
       case 'rejected': rejected++; break;
     }
   });
-  sv('s-total',    total);
-  sv('s-pending',  pending);  sv('s-pending-amt',  fmtAmt(pendingAmt));
-  sv('s-approved', approved); sv('s-approved-amt', fmtAmt(approvedAmt));
-  sv('s-paid',     paid);     sv('s-paid-amt',     fmtAmt(paidAmt));
-  sv('s-rejected', rejected);
+  sv('s-total',total); sv('s-pending',pending); sv('s-pending-amt',fmtAmt(pa));
+  sv('s-approved',approved); sv('s-approved-amt',fmtAmt(aa));
+  sv('s-paid',paid); sv('s-paid-amt',fmtAmt(pda)); sv('s-rejected',rejected);
 }
 function sv(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
 
@@ -881,496 +1205,316 @@ function sv(id,v){ const el=document.getElementById(id); if(el) el.textContent=v
 // FORM LOGIC
 // ══════════════════════════════════════════
 function onExpenseTypeChange() {
-  const t = document.getElementById('f-expense-type').value;
-  document.getElementById('advance-section').style.display = (t === 'Advance Request') ? 'block' : 'none';
+  document.getElementById('advance-section').style.display =
+    document.getElementById('f-expense-type').value === 'Advance Request' ? 'block' : 'none';
 }
 
 function onPayeeTypeChange() {
-  const type    = document.getElementById('f-payee-type').value;
-  const ddGrp   = document.getElementById('payee-dd-group');
-  const txtGrp  = document.getElementById('payee-txt-group');
-  const bankBox = document.getElementById('payee-bank-info');
-
-  bankBox.classList.add('hidden');
+  const type = document.getElementById('f-payee-type').value;
+  document.getElementById('payee-bank-info').classList.add('hidden');
   cbClear('payee');
-
   if (type === 'Organization') {
-    ddGrp.style.display  = 'none';
-    txtGrp.style.display = '';
+    document.getElementById('payee-dd-group').style.display  = 'none';
+    document.getElementById('payee-txt-group').style.display = '';
     return;
   }
-
-  ddGrp.style.display  = '';
-  txtGrp.style.display = 'none';
-
-  const list = (type === 'Vendor') ? vendorList : employeeList;
-  populatePayeeCombobox(Array.isArray(list) ? list : []);
+  document.getElementById('payee-dd-group').style.display  = '';
+  document.getElementById('payee-txt-group').style.display = 'none';
+  populatePayeeCombobox(Array.isArray(type === 'Vendor' ? vendorList : employeeList)
+    ? (type === 'Vendor' ? vendorList : employeeList) : []);
 }
 
 function onPayeeSelected(selVal) {
   const type    = document.getElementById('f-payee-type').value;
   const bankBox = document.getElementById('payee-bank-info');
-
   if (!selVal) { bankBox.classList.add('hidden'); return; }
-
   const sepIdx  = selVal.indexOf('||');
   const regNo   = sepIdx >= 0 ? selVal.slice(0, sepIdx) : '';
   const selName = sepIdx >= 0 ? selVal.slice(sepIdx + 2) : selVal;
-
-  const list = (type === 'Vendor') ? vendorList : employeeList;
-  const item = list.find(i => (regNo && i.regNo === regNo) || i.name === selName);
-
+  const list    = type === 'Vendor' ? vendorList : employeeList;
+  const item    = list.find(i => (regNo && i.regNo === regNo) || i.name === selName);
   if (!item) { bankBox.classList.add('hidden'); return; }
-
-  const rows = [
-    ['Bank',        item.bank],
-    ['Beneficiary', item.beneficiary],
-    ['Account No.', item.accountNo],
-    ['IFSC',        item.ifsc],
-  ];
-  if (item.panGst) rows.unshift(['PAN / GST', item.panGst]);
-  if (item.pan)    rows.unshift(['PAN',        item.pan]);
-  if (item.address) rows.push(['Address', item.address]);
-
-  document.getElementById('payee-bank-content').innerHTML = rows
-    .filter(([, v]) => v)
-    .map(([l, v]) =>
-      `<div><div class="bank-field-label">${l}</div><div class="bank-field-val">${esc(v)}</div></div>`
-    ).join('');
-
+  const rows = [['Bank',item.bank],['Beneficiary',item.beneficiary],['Account No.',item.accountNo],['IFSC',item.ifsc]];
+  if (item.panGst) rows.unshift(['PAN / GST',item.panGst]);
+  if (item.pan)    rows.unshift(['PAN',item.pan]);
+  if (item.address) rows.push(['Address',item.address]);
+  document.getElementById('payee-bank-content').innerHTML = rows.filter(([,v])=>v)
+    .map(([l,v])=>`<div><div class="bank-field-label">${l}</div><div class="bank-field-val">${esc(v)}</div></div>`).join('');
   bankBox.classList.remove('hidden');
 }
 
 function onFileChange(input) {
   const d = document.getElementById('file-name-display');
-  if (input.files && input.files[0]) {
-    d.textContent = '📎 ' + input.files[0].name;
-    d.classList.remove('hidden');
-  } else {
-    d.classList.add('hidden');
-  }
+  if (input.files && input.files[0]) { d.textContent='📎 '+input.files[0].name; d.classList.remove('hidden'); }
+  else d.classList.add('hidden');
 }
 
 // ══════════════════════════════════════════
 // SUBMIT REQUEST
 // ══════════════════════════════════════════
 async function submitRequestForm() {
-  const empVal = document.getElementById('f-employee').value;
-  if (!empVal) return toast('Please select a requestor name', 'error');
-  const requestorName = empVal.indexOf('||') >= 0 ? empVal.slice(empVal.indexOf('||') + 2) : empVal;
-
-  const dept       = v('f-dept');
-  const expType    = v('f-expense-type');
-  const cat        = v('f-category');
-  const desc       = v('f-desc');
-  const amount     = v('f-amount');
-  const date       = v('f-date');
-  const payeeType  = v('f-payee-type');
-  const locations  = [...document.querySelectorAll('input[name="location"]:checked')]
-    .map(cb => cb.value).join(', ');
-  if (!locations) return toast('Please select at least one location', 'error');
-
+  const requestorName = (currentUser && currentUser.name) ? currentUser.name : '';
+  if (!requestorName) return toast('Your signed-in user could not be resolved. Please log in again.', 'error');
+  const dept=v('f-dept'),expType=v('f-expense-type'),cat=v('f-category'),
+        desc=v('f-desc'),amount=v('f-amount'),date=v('f-date'),payeeType=v('f-payee-type');
+  const locations=[...document.querySelectorAll('input[name="location"]:checked')].map(c=>c.value).join(', ');
+  if (!locations) return toast('Please select at least one location','error');
   if (!requestorName||!dept||!expType||!cat||!desc||!amount||!date||!payeeType)
-    return toast('Please fill in all required fields', 'error');
+    return toast('Please fill in all required fields','error');
   if (!document.getElementById('f-confirm').checked)
-    return toast('Please confirm the declaration', 'error');
-
-  // Resolve payee name
-  let payeeName = '';
-  if (document.getElementById('payee-dd-group').style.display !== 'none') {
-    const sv2 = document.getElementById('f-payee-name').value;
-    if (!sv2) return toast('Please select a payee', 'error');
-    payeeName = sv2.indexOf('||') >= 0 ? sv2.slice(sv2.indexOf('||') + 2) : sv2;
+    return toast('Please confirm the declaration','error');
+  let payeeName='';
+  if (document.getElementById('payee-dd-group').style.display!=='none') {
+    const sv2=document.getElementById('f-payee-name').value;
+    if (!sv2) return toast('Please select a payee','error');
+    payeeName=sv2.indexOf('||')>=0?sv2.slice(sv2.indexOf('||')+2):sv2;
   } else {
-    payeeName = v('f-payee-name-text');
-    if (!payeeName) return toast('Please enter the payee name', 'error');
+    payeeName=v('f-payee-name-text');
+    if (!payeeName) return toast('Please enter the payee name','error');
   }
-
-  // File
-  let invoiceBase64 = '', invoiceFileName = '';
-  const fi = document.getElementById('f-invoice');
-  if (fi.files && fi.files[0]) {
-    invoiceFileName = fi.files[0].name;
-    invoiceBase64   = await toBase64(fi.files[0]);
-  }
-
-  const btn = document.getElementById('submit-btn');
-  btn.disabled    = true;
-  btn.textContent = '⏳ Submitting...';
-
+  let invoiceBase64='',invoiceFileName='';
+  const fi=document.getElementById('f-invoice');
+  if (fi.files&&fi.files[0]) { invoiceFileName=fi.files[0].name; invoiceBase64=await toBase64(fi.files[0]); }
+  const btn=document.getElementById('submit-btn');
+  btn.disabled=true; btn.textContent='⏳ Submitting...';
   try {
-    const result = await gg('submitRequest', {
-      requestorName,
-      contact: '', email: currentUser.email || '',
-      department: dept, expenseType: expType, category: cat,
-      description: desc, amount, expenseDate: date,
-      payeeName, payeeType, upiId: '', refId: '',
-      advanceReason: v('f-advance-reason'),
-      expectedInvoiceDate: v('f-expected-date'),
-      invoiceBase64, invoiceFileName,
-      location: locations,
+    const result=await gg('submitRequest',{
+      requestorName,contact:'',email:currentEmail||'',sessionToken:sessionToken||'',
+      department:dept,expenseType:expType,category:cat,description:desc,amount,expenseDate:date,
+      payeeName,payeeType,upiId:'',refId:'',
+      advanceReason:v('f-advance-reason'),expectedInvoiceDate:v('f-expected-date'),
+      invoiceBase64,invoiceFileName,location:locations
     });
-
-    if (result.success) {
-      toast('✅ Submitted! ID: ' + result.reqId, 'success');
-      resetForm();
-      await loadRequests();
-    } else {
-      toast('❌ ' + result.error, 'error');
-    }
-  } finally {
-    btn.disabled    = false;
-    btn.textContent = '📤 Submit Request';
-  }
+    if (result.success) { toast('✅ Submitted! ID: '+result.reqId,'success'); resetForm(); await loadRequests(); }
+    else toast('❌ '+result.error,'error');
+  } finally { btn.disabled=false; btn.textContent='📤 Submit Request'; }
 }
 
 function toBase64(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload  = () => res(r.result.split(',')[1]);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
+  return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
 }
 
 function resetForm() {
-  ['f-dept','f-expense-type','f-category','f-desc',
-   'f-amount','f-date','f-payee-type','f-advance-reason','f-expected-date']
-    .forEach(id => { const el = document.getElementById(id); if (el) el.value=''; });
-  cbClear('employee');
+  ['f-dept','f-expense-type','f-category','f-desc','f-amount','f-date','f-payee-type','f-advance-reason','f-expected-date']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   cbClear('payee');
-  document.getElementById('f-payee-name-text').value = '';
-  document.getElementById('f-confirm').checked = false;
-  document.getElementById('advance-section').style.display = 'none';
+  document.getElementById('f-payee-name-text').value='';
+  document.getElementById('f-confirm').checked=false;
+  document.getElementById('advance-section').style.display='none';
   document.getElementById('payee-bank-info').classList.add('hidden');
-  document.getElementById('payee-dd-group').style.display  = '';
-  document.getElementById('payee-txt-group').style.display = 'none';
-  document.querySelectorAll('input[name="location"]').forEach(cb => cb.checked = false);
+  document.getElementById('payee-dd-group').style.display='';
+  document.getElementById('payee-txt-group').style.display='none';
+  document.querySelectorAll('input[name="location"]').forEach(c=>c.checked=false);
   document.getElementById('file-name-display').classList.add('hidden');
+  setLoggedInRequestor();
 }
 
 // ══════════════════════════════════════════
-// ALL REQUESTS LIST
+// FILTERS & RENDER — REQUEST CARDS
 // ══════════════════════════════════════════
 function applyListFilters() {
-  const status  = v('f-status');
-  const type    = v('f-type');
-  const dept    = v('f-dept-filter');
-  const search  = v('f-search').toLowerCase();
-  const filtered = allRequests.filter(r =>
-    (!status  || r.status === status) &&
-    (!type    || r.expenseType === type) &&
-    (!dept    || r.dept === dept) &&
-    (!search  || r.requestor.toLowerCase().includes(search) ||
-                 r.id.toLowerCase().includes(search) ||
-                 (r.description||'').toLowerCase().includes(search) ||
-                 (r.payeeName||'').toLowerCase().includes(search))
-  );
-  renderRequestCards(filtered, 'requests-list', currentUser.role);
+  const status=v('f-status'),type=v('f-type'),dept=v('f-dept-filter'),search=v('f-search').toLowerCase();
+  renderRequestCards(allRequests.filter(r=>
+    (!status||r.status===status)&&(!type||r.expenseType===type)&&
+    (!dept||r.dept===dept)&&
+    (!search||r.requestor.toLowerCase().includes(search)||r.id.toLowerCase().includes(search)||
+     (r.description||'').toLowerCase().includes(search)||(r.payeeName||'').toLowerCase().includes(search))
+  ),'requests-list',currentUser.role);
+}
+
+function renderRequestCards(requests,containerId,role) {
+  const c=document.getElementById(containerId);
+  if (!requests.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">No requests found</div></div>';return;}
+  c.innerHTML=requests.map(r=>buildRequestCard(r,role)).join('');
+}
+
+function buildRequestCard(r,role) {
+  const amt=Number(r.amount||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+  let adminStrip='';
+  if (role==='admin'&&r.status==='Pending') {
+    adminStrip=`<div class="req-admin-actions"><span class="req-admin-label">Action:</span>
+      <button class="btn btn-approve btn-sm" onclick="event.stopPropagation();openApproveModal('${r.id}')">✅ Approve</button>
+      <button class="btn btn-reject btn-sm" onclick="event.stopPropagation();openRejectModal('${r.id}')">❌ Reject</button></div>`;
+  }
+  return `<div class="req-card">
+    <div class="req-card-clickable" onclick="openDetailModal('${r.id}')">
+      <div class="req-top-row">
+        <div><div class="req-id">${esc(r.id)}</div><div class="req-name">${esc(r.requestor)}</div><div class="req-sub">${esc(r.expenseType)} · ${esc(r.category)}</div></div>
+        <div class="req-right"><span class="status-badge st-${r.status}">${r.status}</span><div class="req-amount">₹${amt}</div><div class="req-date">${r.createdAt||r.date}</div></div>
+      </div>
+      <div class="req-meta">
+        <span class="meta-chip">${esc(r.dept)}</span>
+        <span class="meta-chip">${esc(r.payeeType)}: ${esc(r.payeeName)}</span>
+        ${r.invoiceUrl?'<span class="meta-chip" style="color:var(--gold)">📄 Invoice</span>':''}
+      </div>
+    </div>${adminStrip}</div>`;
 }
 
 // ══════════════════════════════════════════
 // ACCOUNTS TAB
 // ══════════════════════════════════════════
 function renderAccTab() {
-  if (currentUser.role !== 'accounts') {
+  if (currentUser.role!=='accounts' && currentUser.role!=='admin') {
     document.getElementById('acc-unauthorized').classList.remove('hidden');
-    document.getElementById('acc-content').classList.add('hidden');
-    return;
+    document.getElementById('acc-content').classList.add('hidden'); return;
   }
+  document.getElementById('acc-unauthorized').classList.add('hidden');
+  document.getElementById('acc-content').classList.remove('hidden');
   applyAccFilters();
 }
-
 function applyAccFilters() {
-  const status = v('acc-filter-status');
-  const search = v('acc-filter-search').toLowerCase();
-  const filtered = allRequests.filter(r =>
-    (!status || r.status === status) &&
-    (!search || r.requestor.toLowerCase().includes(search) ||
-                r.id.toLowerCase().includes(search))
-  );
-  renderSettlementCards(filtered, 'acc-requests-list');
+  const status=v('acc-filter-status'),search=v('acc-filter-search').toLowerCase();
+  renderSettlementCards(allRequests.filter(r=>
+    (!status||r.status===status)&&(!search||r.requestor.toLowerCase().includes(search)||r.id.toLowerCase().includes(search))
+  ),'acc-requests-list');
 }
-
-// ══════════════════════════════════════════
-// RENDER — REQUEST CARDS
-// ══════════════════════════════════════════
-function renderRequestCards(requests, containerId, role) {
-  const c = document.getElementById(containerId);
-  if (!requests.length) {
-    c.innerHTML = '<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">No requests found</div></div>';
-    return;
-  }
-  c.innerHTML = requests.map(r => buildRequestCard(r, role)).join('');
+function renderSettlementCards(requests,containerId) {
+  const c=document.getElementById(containerId);
+  if (!requests.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">No approved requests awaiting payment</div></div>';return;}
+  c.innerHTML=requests.map(r=>buildSettlementCard(r)).join('');
 }
-
-function buildRequestCard(r, role) {
-  const amt = Number(r.amount||0).toLocaleString('en-IN',{minimumFractionDigits:2});
-  const isAdmin = (role === 'admin');
-  let adminStrip = '';
-  if (isAdmin && r.status === 'Pending') {
-    adminStrip = `
-      <div class="req-admin-actions">
-        <span class="req-admin-label">Action:</span>
-        <button class="btn btn-approve btn-sm" onclick="event.stopPropagation();openApproveModal('${r.id}')">✅ Approve</button>
-        <button class="btn btn-reject btn-sm"  onclick="event.stopPropagation();openRejectModal('${r.id}')">❌ Reject</button>
-      </div>`;
-  }
-  return `
-    <div class="req-card">
-      <div class="req-card-clickable" onclick="openDetailModal('${r.id}')">
-        <div class="req-top-row">
-          <div>
-            <div class="req-id">${esc(r.id)}</div>
-            <div class="req-name">${esc(r.requestor)}</div>
-            <div class="req-sub">${esc(r.expenseType)} · ${esc(r.category)}</div>
-          </div>
-          <div class="req-right">
-            <span class="status-badge st-${r.status}">${r.status}</span>
-            <div class="req-amount">₹${amt}</div>
-            <div class="req-date">${r.createdAt || r.date}</div>
-          </div>
-        </div>
-        <div class="req-meta">
-          <span class="meta-chip">${esc(r.dept)}</span>
-          <span class="meta-chip">${esc(r.payeeType)}: ${esc(r.payeeName)}</span>
-          ${r.invoiceUrl ? '<span class="meta-chip" style="color:var(--gold)">📄 Invoice</span>' : ''}
-        </div>
-      </div>
-      ${adminStrip}
-    </div>`;
-}
-
-// ══════════════════════════════════════════
-// RENDER — SETTLEMENT CARDS
-// ══════════════════════════════════════════
-function renderSettlementCards(requests, containerId) {
-  const c = document.getElementById(containerId);
-  if (!requests.length) {
-    c.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">No approved requests awaiting payment</div></div>';
-    return;
-  }
-  c.innerHTML = requests.map(r => buildSettlementCard(r)).join('');
-}
-
 function buildSettlementCard(r) {
-  const amt      = Number(r.amount||0).toLocaleString('en-IN',{minimumFractionDigits:2});
-  const isPaid   = r.status === 'Paid';
-  const isApproved = r.status === 'Approved';
-  let settleForm = '';
+  const amt=Number(r.amount||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+  const isApproved=r.status==='Approved';
+  const isPaid=r.status==='Paid';
+  let settleForm='';
   if (isApproved) {
-    settleForm = `
-      <div class="settlement-body" id="settle-body-${r.id}">
-        <div class="settlement-grid">
-          <div class="settle-field">
-            <div class="settle-label">Settlement Amount (₹) <span style="color:var(--red)">*</span></div>
-            <input type="number" class="settle-input" id="s-amount-${r.id}" placeholder="Enter actual amount paid" min="1" step="0.01" value="${Number(r.amount||0)}">
-          </div>
-          <div class="settle-field">
-            <div class="settle-label">UTR / Reference No. <span style="color:var(--red)">*</span></div>
-            <input type="text" class="settle-input" id="s-utr-${r.id}" placeholder="e.g. UTR123456789 or NEFT ref" style="font-family:monospace">
-          </div>
-          <div class="settle-field">
-            <div class="settle-label">Payment Mode <span style="color:var(--red)">*</span></div>
-            <select class="settle-input" id="s-mode-${r.id}">
-              <option value="">— Select Mode —</option>
-              <option>NEFT</option><option>RTGS</option><option>IMPS</option>
-              <option>UPI</option><option>Cash</option><option>Cheque</option>
-              <option>NEFT + Cash</option>
-            </select>
-          </div>
-          <div class="settle-field">
-            <div class="settle-label">Payment Date <span style="color:var(--red)">*</span></div>
-            <input type="date" class="settle-input" id="s-date-${r.id}" value="${new Date().toISOString().split('T')[0]}">
-          </div>
-          <div class="settle-field" style="grid-column:1/-1">
-            <div class="settle-label">Remarks</div>
-            <input type="text" class="settle-input" id="s-remarks-${r.id}" placeholder="Optional notes">
-          </div>
-        </div>
-        <div class="settle-actions">
-          <button class="btn btn-pay" onclick="doSettle('${r.id}')">💳 Confirm Payment Done</button>
-          <span class="settle-hint">This will mark the request as Paid and send an email confirmation to the requestor.</span>
-        </div>
-      </div>`;
-  }
-  const paidBadge = isPaid
-    ? `<div style="margin-top:.5rem;font-size:.75rem;color:var(--blue)">✓ Payment recorded</div>` : '';
-  return `
-    <div class="settlement-card">
-      <div class="settlement-head" onclick="toggleSettleBody('${r.id}', ${isApproved})">
-        <div>
-          <div class="req-id" style="margin-bottom:.25rem">${esc(r.id)}</div>
-          <div class="req-name">${esc(r.requestor)}</div>
-          <div class="req-sub" style="margin-top:.2rem">${esc(r.expenseType)} · ${esc(r.dept)}</div>
-          <div class="req-meta" style="margin-top:.5rem">
-            <span class="meta-chip">${esc(r.payeeType)}: ${esc(r.payeeName)}</span>
-            <span class="meta-chip">${esc(r.category)}</span>
-          </div>
-          ${paidBadge}
-        </div>
-        <div class="req-right">
-          <span class="status-badge st-${r.status}">${r.status}</span>
-          <div class="req-amount" style="margin-top:.4rem">₹${amt}</div>
-          <div class="req-date">${r.createdAt || r.date}</div>
-          ${isApproved ? '<div style="font-size:.72rem;color:var(--blue);margin-top:.3rem">▼ Enter payment details</div>' : ''}
-        </div>
+    settleForm=`<div class="settlement-body">
+      <div class="settlement-grid">
+        <div class="settle-field"><div class="settle-label">Settlement Amount (₹) <span style="color:var(--red)">*</span></div>
+          <input type="number" class="settle-input" id="s-amount-${r.id}" placeholder="Enter actual amount paid" min="1" step="0.01" value="${Number(r.amount||0)}"></div>
+        <div class="settle-field"><div class="settle-label">UTR / Reference No. <span style="color:var(--red)">*</span></div>
+          <input type="text" class="settle-input" id="s-utr-${r.id}" placeholder="e.g. UTR123456789" style="font-family:monospace"></div>
+        <div class="settle-field"><div class="settle-label">Payment Mode <span style="color:var(--red)">*</span></div>
+          <select class="settle-input" id="s-mode-${r.id}">
+            <option value="">— Select Mode —</option>
+            <option>NEFT</option><option>RTGS</option><option>IMPS</option>
+            <option>UPI</option><option>Cash</option><option>Cheque</option><option>NEFT + Cash</option>
+          </select></div>
+        <div class="settle-field"><div class="settle-label">Payment Date <span style="color:var(--red)">*</span></div>
+          <input type="date" class="settle-input" id="s-date-${r.id}" value="${new Date().toISOString().split('T')[0]}"></div>
+        <div class="settle-field" style="grid-column:1/-1"><div class="settle-label">Remarks</div>
+          <input type="text" class="settle-input" id="s-remarks-${r.id}" placeholder="Optional notes"></div>
       </div>
-      ${settleForm}
-    </div>`;
-}
-
-function toggleSettleBody(reqId, isApproved) {
-  openDetailModal(reqId);
+      <div class="settle-actions">
+        <button class="btn btn-pay" onclick="doSettle('${r.id}')">💳 Confirm Payment Done</button>
+        <span class="settle-hint">This will mark the request as Paid and email the requestor.</span>
+      </div></div>`;
+  }
+  return `<div class="settlement-card">
+    <div class="settlement-head" onclick="openDetailModal('${r.id}')">
+      <div>
+        <div class="req-id" style="margin-bottom:.25rem">${esc(r.id)}</div>
+        <div class="req-name">${esc(r.requestor)}</div>
+        <div class="req-sub" style="margin-top:.2rem">${esc(r.expenseType)} · ${esc(r.dept)}</div>
+        <div class="req-meta" style="margin-top:.5rem">
+          <span class="meta-chip">${esc(r.payeeType)}: ${esc(r.payeeName)}</span>
+          <span class="meta-chip">${esc(r.category)}</span>
+        </div>
+        ${isPaid?'<div style="margin-top:.5rem;font-size:.75rem;color:var(--blue)">✓ Payment recorded</div>':''}
+      </div>
+      <div class="req-right">
+        <span class="status-badge st-${r.status}">${r.status}</span>
+        <div class="req-amount" style="margin-top:.4rem">₹${amt}</div>
+        <div class="req-date">${r.createdAt||r.date}</div>
+        ${isApproved?'<div style="font-size:.72rem;color:var(--blue);margin-top:.3rem">▼ Enter payment details below</div>':''}
+      </div>
+    </div>${settleForm}</div>`;
 }
 
 // ══════════════════════════════════════════
 // ADMIN ACTIONS
 // ══════════════════════════════════════════
 function openApproveModal(reqId) {
-  document.getElementById('modal-title').textContent = 'Approve Request';
-  document.getElementById('modal-body').innerHTML = `
-    <div class="confirm-warning green">Approve request <strong style="color:var(--gold)">${reqId}</strong>? This will move it to Accounts for payment processing.</div>
-    <div class="modal-form-group">
-      <label>Remarks (optional)</label>
-      <textarea class="modal-textarea" id="approve-remarks" placeholder="Add any remarks…"></textarea>
-    </div>
+  document.getElementById('modal-title').textContent='Approve Request';
+  document.getElementById('modal-body').innerHTML=`
+    <div class="confirm-warning green">Approve <strong style="color:var(--gold)">${reqId}</strong>? This moves it to Accounts for payment processing.</div>
+    <div class="modal-form-group"><label>Remarks (optional)</label>
+      <textarea class="modal-textarea" id="approve-remarks" placeholder="Add any remarks…"></textarea></div>
     <div class="modal-btns">
       <button class="btn btn-approve" onclick="doApprove('${reqId}')">✅ Confirm Approve</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>`;
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>`;
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
-
 function openRejectModal(reqId) {
-  document.getElementById('modal-title').textContent = 'Reject Request';
-  document.getElementById('modal-body').innerHTML = `
-    <div class="confirm-warning">Reject request <strong style="color:var(--gold)">${reqId}</strong>? Please provide a reason below.</div>
-    <div class="modal-form-group">
-      <label>Reason for Rejection <span class="req">*</span></label>
-      <textarea class="modal-textarea" id="reject-remarks" placeholder="Required — please explain the reason…"></textarea>
-    </div>
+  document.getElementById('modal-title').textContent='Reject Request';
+  document.getElementById('modal-body').innerHTML=`
+    <div class="confirm-warning">Reject <strong style="color:var(--gold)">${reqId}</strong>? Please provide a reason.</div>
+    <div class="modal-form-group"><label>Reason for Rejection <span class="req">*</span></label>
+      <textarea class="modal-textarea" id="reject-remarks" placeholder="Required — explain the reason…"></textarea></div>
     <div class="modal-btns">
       <button class="btn btn-reject" onclick="doReject('${reqId}')">❌ Confirm Reject</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>`;
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>`;
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
-
 async function doApprove(reqId) {
-  const remarks = (document.getElementById('approve-remarks')||{}).value||'';
-  const r = await gg('approveRequest', reqId, remarks);
-  if (r.success) { toast('✅ Request approved', 'success'); closeModal(); await loadRequests(); }
-  else toast('❌ ' + r.error, 'error');
+  const remarks=(document.getElementById('approve-remarks')||{}).value||'';
+  const r=await gg('approveRequest',reqId,remarks,currentEmail||'',sessionToken||'');
+  if (r.success){toast('✅ Request approved','success');closeModal();await loadRequests();}
+  else toast('❌ '+r.error,'error');
 }
-
 async function doReject(reqId) {
-  const remarks = (document.getElementById('reject-remarks')||{}).value||'';
-  if (!remarks.trim()) return toast('Please provide a rejection reason', 'error');
-  const r = await gg('rejectRequest', reqId, remarks);
-  if (r.success) { toast('Request rejected', 'info'); closeModal(); await loadRequests(); }
-  else toast('❌ ' + r.error, 'error');
+  const remarks=(document.getElementById('reject-remarks')||{}).value||'';
+  if (!remarks.trim()) return toast('Please provide a rejection reason','error');
+  const r=await gg('rejectRequest',reqId,remarks,currentEmail||'',sessionToken||'');
+  if (r.success){toast('Request rejected','info');closeModal();await loadRequests();}
+  else toast('❌ '+r.error,'error');
 }
-
-// ══════════════════════════════════════════
-// ACCOUNTS SETTLEMENT
-// ══════════════════════════════════════════
 async function doSettle(reqId) {
-  const amount  = document.getElementById('s-amount-' + reqId)?.value || '';
-  const utr     = document.getElementById('s-utr-' + reqId)?.value    || '';
-  const mode    = document.getElementById('s-mode-' + reqId)?.value   || '';
-  const date    = document.getElementById('s-date-' + reqId)?.value   || '';
-  const remarks = document.getElementById('s-remarks-' + reqId)?.value|| '';
-
-  if (!amount) return toast('Please enter the settlement amount', 'error');
-  if (!utr.trim()) return toast('Please enter the UTR / Reference number', 'error');
-  if (!mode)   return toast('Please select the payment mode', 'error');
-
-  const btn = event.target;
-  btn.disabled    = true;
-  btn.textContent = '⏳ Processing…';
-
+  const amount=document.getElementById('s-amount-'+reqId)?.value||'';
+  const utr=document.getElementById('s-utr-'+reqId)?.value||'';
+  const mode=document.getElementById('s-mode-'+reqId)?.value||'';
+  const date=document.getElementById('s-date-'+reqId)?.value||'';
+  const remarks=document.getElementById('s-remarks-'+reqId)?.value||'';
+  if (!amount) return toast('Please enter the settlement amount','error');
+  if (!utr.trim()) return toast('Please enter the UTR / Reference number','error');
+  if (!mode) return toast('Please select the payment mode','error');
+  const btn=event.target; btn.disabled=true; btn.textContent='⏳ Processing…';
   try {
-    const r = await gg('settlePayment', reqId, utr, parseFloat(amount), date, mode, remarks);
-    if (r.success) {
-      toast('💳 Payment recorded successfully! Email sent to requestor.', 'success');
-      await loadRequests();
-    } else {
-      toast('❌ ' + r.error, 'error');
-    }
-  } finally {
-    btn.disabled    = false;
-    btn.textContent = '💳 Confirm Payment Done';
-  }
+    const r=await gg('settlePayment',reqId,utr,parseFloat(amount),date,mode,remarks,currentEmail||'',sessionToken||'');
+    if (r.success){toast('💳 Payment recorded! Email sent to requestor.','success');await loadRequests();}
+    else toast('❌ '+r.error,'error');
+  } finally { btn.disabled=false; btn.textContent='💳 Confirm Payment Done'; }
 }
 
 // ══════════════════════════════════════════
 // DETAIL MODAL
 // ══════════════════════════════════════════
 async function openDetailModal(reqId) {
-  const r = allRequests.find(x => x.id === reqId);
+  const r=allRequests.find(x=>x.id===reqId);
   if (!r) return;
-
-  document.getElementById('modal-title').textContent = r.id + ' — ' + r.requestor;
-  document.getElementById('modal-body').innerHTML =
-    '<div class="loading-row"><span class="spin-sm"></span>Loading…</div>';
+  document.getElementById('modal-title').textContent=r.id+' — '+r.requestor;
+  document.getElementById('modal-body').innerHTML='<div class="loading-row"><span class="spin-sm"></span>Loading…</div>';
   document.getElementById('modal-overlay').classList.remove('hidden');
-
-  const [appLogs, payLogs] = await Promise.all([
-    gg('getApprovalLogs', reqId),
-    gg('getPaymentLogs',  reqId)
-  ]);
-
-  let bankHtml = '';
+  const [appLogs,payLogs]=await Promise.all([gg('getApprovalLogs',reqId),gg('getPaymentLogs',reqId)]);
+  let bankHtml='';
   try {
-    const bd = await gg('getPayeeBankDetails', r.payeeName, r.payeeType);
+    const bd=await gg('getPayeeBankDetails',r.payeeName,r.payeeType);
     if (bd) {
-      const brows = [
-        bd.empId    ? ['Employee ID', bd.empId] : null,
-        bd.panGst   ? ['PAN/GST',    bd.panGst] : null,
-        bd.pan      ? ['PAN',        bd.pan]     : null,
-        bd.bank     ? ['Bank',       bd.bank]    : null,
-        bd.beneficiary ? ['Beneficiary', bd.beneficiary] : null,
-        bd.accountNo ? ['Account No.', bd.accountNo] : null,
-        bd.ifsc     ? ['IFSC',       bd.ifsc]    : null,
-        bd.address  ? ['Address',    bd.address] : null,
-      ].filter(Boolean);
-      bankHtml = `
-        <hr class="modal-divider">
+      const brows=[['Employee ID',bd.empId],['PAN/GST',bd.panGst],['PAN',bd.pan],['Bank',bd.bank],
+        ['Beneficiary',bd.beneficiary],['Account No.',bd.accountNo],['IFSC',bd.ifsc],['Address',bd.address]].filter(([,v])=>v);
+      bankHtml=`<hr class="modal-divider">
         <div style="font-size:.72rem;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.7rem">🏦 Payee Bank Details</div>
-        <div class="detail-grid">
-          ${brows.map(([l,v2])=>`<div class="detail-item"><label>${l}</label><div class="val" style="font-family:monospace">${esc(v2)}</div></div>`).join('')}
-        </div>`;
+        <div class="detail-grid">${brows.map(([l,v2])=>`<div class="detail-item"><label>${l}</label><div class="val" style="font-family:monospace">${esc(v2)}</div></div>`).join('')}</div>`;
     }
-  } catch(e) {}
-
-  const amt = Number(r.amount||0).toLocaleString('en-IN',{minimumFractionDigits:2});
-
-  let logsHtml = '';
+  } catch(e){}
+  const amt=Number(r.amount||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+  let logsHtml='';
   if (appLogs.length) {
-    logsHtml += `<hr class="modal-divider">
-      <div class="logs-title" style="color:var(--gold)">📋 Approval History</div>
-      ${appLogs.map(l => {
-        const cls = l.action.toLowerCase().includes('reject') ? 'log-reject'
-                  : l.action.toLowerCase().includes('paid') || l.action.toLowerCase().includes('settle') ? 'log-paid'
-                  : 'log-approve';
-        return `<div class="log-entry ${cls}">
-          <div class="log-action">${esc(l.action)}</div>
-          <div class="log-meta">by ${esc(l.byName)} · ${esc(l.timestamp)}${l.remarks ? '<br>'+esc(l.remarks) : ''}</div>
-        </div>`;
+    logsHtml+=`<hr class="modal-divider"><div class="logs-title" style="color:var(--gold)">📋 Approval History</div>
+      ${appLogs.map(l=>{
+        const cls=l.action.toLowerCase().includes('reject')?'log-reject':l.action.toLowerCase().includes('paid')||l.action.toLowerCase().includes('settle')?'log-paid':'log-approve';
+        return `<div class="log-entry ${cls}"><div class="log-action">${esc(l.action)}</div><div class="log-meta">by ${esc(l.byName)} · ${esc(l.timestamp)}${l.remarks?'<br>'+esc(l.remarks):''}</div></div>`;
       }).join('')}`;
   }
-
   if (payLogs.length) {
-    logsHtml += `<hr class="modal-divider">
-      <div class="logs-title" style="color:var(--blue)">💳 Payment Records</div>
-      ${payLogs.map(l => `<div class="log-entry log-paid">
+    logsHtml+=`<hr class="modal-divider"><div class="logs-title" style="color:var(--blue)">💳 Payment Records</div>
+      ${payLogs.map(l=>`<div class="log-entry log-paid">
         <div class="log-action">UTR: ${esc(l.utr)} | ₹${Number(l.paymentAmount||0).toLocaleString('en-IN')} | ${esc(l.mode||'—')}</div>
-        <div class="log-meta">Paid by ${esc(l.paidByName)} · ${esc(l.paymentDate)} · recorded ${esc(l.timestamp)}${l.remarks ? '<br>'+esc(l.remarks) : ''}</div>
+        <div class="log-meta">Paid by ${esc(l.paidByName)} · ${esc(l.paymentDate)} · recorded ${esc(l.timestamp)}${l.remarks?'<br>'+esc(l.remarks):''}</div>
       </div>`).join('')}`;
   }
-
-  document.getElementById('modal-body').innerHTML = `
+  document.getElementById('modal-body').innerHTML=`
     <div class="detail-grid">
       <div class="detail-item"><label>Status</label><div class="val"><span class="status-badge st-${r.status}">${r.status}</span></div></div>
       <div class="detail-item"><label>Amount Requested</label><div class="val" style="color:var(--gold);font-family:'Playfair Display',serif;font-size:1.15rem">₹${amt}</div></div>
@@ -1381,41 +1525,30 @@ async function openDetailModal(reqId) {
       <div class="detail-item full"><label>Description</label><div class="val">${esc(r.description)}</div></div>
       <div class="detail-item"><label>Expense Date</label><div class="val">${esc(r.date)}</div></div>
       <div class="detail-item"><label>Payee</label><div class="val">${esc(r.payeeType)}: ${esc(r.payeeName)}</div></div>
-      ${r.advanceReason ? `<div class="detail-item full"><label>Advance Reason</label><div class="val">${esc(r.advanceReason)}</div></div>` : ''}
-      ${r.expectedInvoiceDate ? `<div class="detail-item"><label>Expected Invoice Date</label><div class="val">${esc(r.expectedInvoiceDate)}</div></div>` : ''}
-      ${r.invoiceUrl ? `<div class="detail-item full"><label>Invoice</label><div class="val"><a href="${r.invoiceUrl}" target="_blank" style="color:var(--gold)">📄 View Invoice ↗</a></div></div>` : ''}
+      ${r.advanceReason?`<div class="detail-item full"><label>Advance Reason</label><div class="val">${esc(r.advanceReason)}</div></div>`:''}
+      ${r.expectedInvoiceDate?`<div class="detail-item"><label>Expected Invoice Date</label><div class="val">${esc(r.expectedInvoiceDate)}</div></div>`:''}
+      ${r.invoiceUrl?`<div class="detail-item full"><label>Invoice</label><div class="val"><a href="${r.invoiceUrl}" target="_blank" style="color:var(--gold)">📄 View Invoice ↗</a></div></div>`:''}
       <div class="detail-item"><label>Submitted</label><div class="val">${esc(r.createdAt)}</div></div>
-    </div>
-    ${bankHtml}
-    ${logsHtml}`;
+    </div>${bankHtml}${logsHtml}`;
 }
 
 function closeModal(e) {
-  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  if (e && e.target!==document.getElementById('modal-overlay')) return;
   document.getElementById('modal-overlay').classList.add('hidden');
 }
 
 // ══════════════════════════════════════════
 // HELPERS
 // ══════════════════════════════════════════
-function v(id) { return (document.getElementById(id)||{}).value||''; }
-function fmtAmt(n) {
-  const x = Number(n)||0;
-  if (x >= 100000) return '₹' + (x/100000).toFixed(1) + 'L';
-  if (x >= 1000)   return '₹' + (x/1000).toFixed(1)   + 'K';
-  return '₹' + x.toLocaleString('en-IN');
-}
-function esc(s) {
-  if (!s) return '—';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function toast(msg, type='info') {
-  const c = document.getElementById('toast-container');
-  const t = document.createElement('div');
-  t.className   = 'toast ' + type;
-  t.textContent = msg;
-  c.appendChild(t);
-  setTimeout(() => t.remove(), 4200);
+function v(id){return(document.getElementById(id)||{}).value||'';}
+function fmtAmt(n){const x=Number(n)||0;if(x>=100000)return'₹'+(x/100000).toFixed(1)+'L';if(x>=1000)return'₹'+(x/1000).toFixed(1)+'K';return'₹'+x.toLocaleString('en-IN');}
+function esc(s){if(!s)return'—';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg,type='info'){
+  const c=document.getElementById('toast-container');
+  const t=document.createElement('div');
+  t.className='toast '+type; t.textContent=msg; c.appendChild(t);
+  setTimeout(()=>t.style.opacity='0',3500);
+  setTimeout(()=>t.remove(),3900);
 }
 </script>
 </body>

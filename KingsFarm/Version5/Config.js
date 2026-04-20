@@ -46,6 +46,8 @@ const CONFIG = {
   // https://drive.google.com/file/d/1CpWYOphlAJzJSHtuS9au35tWdg743rAW/view
   ADDITIONAL_PDF_DRIVE_LINK: 'https://drive.google.com/file/d/1Wnh-GR2G7DE7SO_It1OtsaOq77YDfMxK/view?usp=sharing',
   MYRIDES:'https://script.google.com/macros/s/AKfycbyzCGHcVGHQQFP-VTepIZ4ipsMjaoXAYSvowU-qahWrd45ckslE2kO1XafDNskxma0BFw/exec?app=portal',
+  BACKUP_FOLDER_ID: '',   // optional: set a private Drive folder ID, else auto-create one
+  BACKUP_KEEP_DAYS: 60,
 
   // ── Sheet names ─────────────────────────────────────────
   SHEETS: {
@@ -645,6 +647,9 @@ function onOpen() {
     .addItem('Resend Welcome Email',    'resendWelcomeEmail')
     .addItem('Send Payment Receipt',    'sendPaymentReceiptMenu')
     .addSeparator()
+    .addItem('Create Backup Now',       'backupSpreadsheetNow')
+    .addItem('Backup / Restore Help',   'showBackupRestoreHelp')
+    .addSeparator()
     .addItem('Send Daily Summary Now',  'testSendDailySummaryNow')
     .addItem('Dry-Run Daily Summary',   'testDailySummaryDryRun')
     .addSeparator()
@@ -661,5 +666,6 @@ function setupTriggers() {
   ScriptApp.newTrigger('onBookingFormSubmit').forSpreadsheet(ss).onFormSubmit().create();
   ScriptApp.newTrigger('onPaymentFormSubmit').forSpreadsheet(ss).onFormSubmit().create();
   ScriptApp.newTrigger('sendDailyAdminSummary').timeBased().everyDays(1).atHour(20).create();
-  SpreadsheetApp.getUi().alert('Triggers set!\n\n- Booking form: welcome email + KE No\n- Payment form: receipt email\n- Nightly 9 PM: admin summary email');
+  ScriptApp.newTrigger('createDailyDriveBackup').timeBased().everyDays(1).atHour(23).create();
+  SpreadsheetApp.getUi().alert('Triggers set!\n\n- Booking form: welcome email + KE No\n- Payment form: receipt email\n- Daily summary: evening admin report\n- Daily backup: Drive copy at 11 PM');
 }

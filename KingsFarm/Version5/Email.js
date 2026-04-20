@@ -49,16 +49,8 @@ function sendWelcomeEmail(d) {
     if (consentPDF) attachments.push(consentPDF);
   } catch (e) { Logger.log('Consent PDF error: ' + e); }
 
-  // Service-specific PDFs from Pricing sheet
-  try {
-    const pricing = getPricingData();
-    Object.keys(pricing).forEach(svc => {
-      if (String(d.services).toLowerCase().includes(svc.toLowerCase())) {
-        const pdf = getServicePDF(pricing[svc].docId, svc);
-        if (pdf) attachments.push(pdf);
-      }
-    });
-  } catch (e) { Logger.log('Service PDF error: ' + e); }
+  // Service-specific docs from the Pricing sheet have been removed.
+  // Only the terms and consent form remain attached.
 
   // FIX #7/#9: Use the direct Drive link — no PDF download needed
   const servicesBrochureLink = CONFIG.ADDITIONAL_PDF_DRIVE_LINK || '';
@@ -140,7 +132,7 @@ const htmlBody = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="v
   + '      <hr style="border:none;border-top:1px solid #c8e6c9;margin:10px 0">'
 
   + '      <p style="font-size:12px;color:#555;margin:10px 0;background:#fffde7;border-left:3px solid #f9a825;padding:10px 14px;text-align:left;border-radius:4px">'
-  + '         Please refer to the <strong>Kings Equestrian brochure</strong> attached to this email for comprehensive services and detailed pricing.'
+  + '         Please use the <strong>services guide link below</strong> for the latest services and pricing details.'
   + '      </p>'
   + '      <hr style="border:none;border-top:1px solid #c8e6c9;margin:10px 0">'
 

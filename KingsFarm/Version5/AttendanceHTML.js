@@ -79,14 +79,6 @@ function getAttendanceAppHtml() {
     '.btn-present.active{background:#28a745;border-color:#28a745;color:#fff}',
     '.btn-noshow{background:var(--red-light);border-color:#f0b8b3;color:var(--red)}',
     '.btn-noshow.active{background:var(--red);border-color:var(--red);color:#fff}',
-    '.btn-note-toggle{flex:0 0 auto;min-width:40px;padding:9px 12px;background:var(--surface);border:1.5px solid var(--border-strong);border-radius:10px;color:var(--text-secondary);font-size:14px;cursor:pointer;font-family:Outfit,sans-serif}',
-
-    // Note area
-    '.note-area{display:none;margin-bottom:10px}',
-    '.note-area.open{display:block}',
-    '.note-textarea{width:100%;border:1.5px solid var(--border-strong);border-radius:10px;padding:9px 12px;font-size:12px;font-family:Outfit,sans-serif;resize:vertical;min-height:52px;outline:none;color:var(--text-primary)}',
-    '.note-textarea:focus{border-color:var(--green-base)}',
-    '.save-note-btn{margin-top:5px;padding:6px 14px;background:var(--green-base);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;font-family:Outfit,sans-serif}',
 
     // Transaction panel
     '.txn-toggle-btn{width:100%;background:var(--green-tint);border:1px solid var(--border);border-radius:10px;padding:9px 13px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:Outfit,sans-serif;transition:background .15s}',
@@ -247,12 +239,6 @@ function getAttendanceAppHtml() {
     +   'var initN=isNoShow?" active":"";'
     +   'var btnP="<button class=\\"att-btn btn-present"+initP+"\\""+dis+" data-idx=\\""+idx+"\\" data-status=\\"Present\\" onclick=\\"markAtt(this)\\">&#10003; Present</button>";'
     +   'var btnN="<button class=\\"att-btn btn-noshow"+initN+"\\""+dis+" data-idx=\\""+idx+"\\" data-status=\\"No-Show\\" onclick=\\"markAtt(this)\\">&#10007; No-Show</button>";'
-    +   'var btnNote="<button class=\\"btn-note-toggle\\" data-idx=\\""+idx+"\\" onclick=\\"toggleNote(this)\\">&#128221;</button>";'
-    +   'var noteArea="<div class=\\"note-area"+(s.staffNotes?" open":"")+"\\""'
-    +     '+" id=\\"note-area-"+idx+"\\">"'
-    +     '+"<textarea class=\\"note-textarea\\" id=\\"note-"+idx+"\\" placeholder=\\"Add staff note&hellip;\\">"+esc(s.staffNotes||"")+"</textarea>"'
-    +     '+"<button class=\\"save-note-btn\\" data-idx=\\""+idx+"\\" onclick=\\"saveNote(this)\\">&#128190; Save Note</button>"'
-    +     '+"</div>";'
     +   'var txnPanel="<button class=\\"txn-toggle-btn\\" data-idx=\\""+idx+"\\" onclick=\\"toggleTxn(this)\\">"'
     +     '+"<div class=\\"txn-toggle-left\\">"'
     +     '+"<div class=\\"txn-icon-wrap\\">&#128179;</div>"'
@@ -281,8 +267,8 @@ function getAttendanceAppHtml() {
     +     '+"</div>"'
     +     '+"<div class=\\"sc-service\\">"+esc(s.service)+"</div>"'
     +     '+"<div class=\\"attended-row\\"><div class=\\"att-dot\\"></div>"+s.classesAttended+" class"+(s.classesAttended!==1?"es":"")+" attended</div>"'
-    +     '+"<div class=\\"att-buttons\\">"+btnP+btnN+btnNote+"</div>"'
-    +     '+noteArea+txnPanel'
+    +     '+"<div class=\\"att-buttons\\">"+btnP+btnN+"</div>"'
+    +     '+txnPanel'
     +     '+"</div></div>";'
     + '}\n'
 
@@ -298,7 +284,6 @@ function getAttendanceAppHtml() {
     +   'if(card)card.className="session-card "+(status==="Present"?"present":"no-show");'
     +   'var badge=card?card.querySelector(".sc-badge"):null;'
     +   'if(badge){badge.className="sc-badge "+(status==="Present"?"badge-present":"badge-noshow");badge.innerHTML=status==="Present"?"&#10003; Present":"&#10007; No-Show";}'
-    +   'var na=document.getElementById("note-area-"+idx);if(na)na.classList.add("open");'
     +   'updateStatCounts();'
     +   'showToast(status==="Present"?"&#10003; Marked Present":"&#10007; Marked No-Show");'
     +   'google.script.run'
@@ -318,21 +303,6 @@ function getAttendanceAppHtml() {
     +   'document.getElementById("sPresent").textContent=p;'
     +   'document.getElementById("sNoShow").textContent=n;'
     +   'document.getElementById("sUnmarked").textContent=u;'
-    + '}\n'
-
-    + 'function saveNote(el){'
-    +   'var idx=parseInt(el.getAttribute("data-idx"),10);'
-    +   'var note=document.getElementById("note-"+idx).value;'
-    +   'sessions[idx].staffNotes=note;'
-    +   'google.script.run'
-    +     '.withSuccessHandler(function(){showToast("&#128190; Note saved");})'
-    +     '.withFailureHandler(function(e){showToast("Error: "+e.message);})'
-    +     '.saveAttendance(sessions[idx].rowIndex,sessions[idx].attendance,note);'
-    + '}\n'
-
-    + 'function toggleNote(el){'
-    +   'var idx=parseInt(el.getAttribute("data-idx"),10);'
-    +   'document.getElementById("note-area-"+idx).classList.toggle("open");'
     + '}\n'
 
     + 'function toggleTxn(el){'
@@ -413,15 +383,25 @@ function getAttendanceAppHtml() {
     + 'function renderTransactions(riders){'
     +   'var el=document.getElementById("txnPageContent");'
     +   'if(!el)return;'
+    +   'var todayIso=(function(){var d=new Date();var off=d.getTimezoneOffset();return new Date(d.getTime()-off*60000).toISOString().slice(0,10);})();'
+    +   'var existingInput=document.getElementById("txnDateFilter");'
+    +   'var selectedDate=(existingInput&&existingInput.value)?existingInput.value:todayIso;'
     +   'var allPay=[];'
-    +   '(riders||[]).forEach(function(r){(r.payments||[]).forEach(function(p){allPay.push({name:r.name,keNo:r.keNo,amount:p.amount,payDate:p.payDate,txnRef:p.txnRef,receiptNo:p.receiptNo,paidOn:p.paidOn});});});'
-    +   'if(!allPay.length){el.innerHTML="<div class=\\"empty\\"><div class=\\"empty-icon\\">&#128179;</div><p>No transactions found</p></div>";return;}'
+    +   '(riders||[]).forEach(function(r){(r.payments||[]).forEach(function(p){var filterDate=String(p.filterDate||"").trim();if(!filterDate){var raw=p.payDate||p.paidOn||"";var dt=new Date(raw);if(!isNaN(dt.getTime())){var off=dt.getTimezoneOffset();filterDate=new Date(dt.getTime()-off*60000).toISOString().slice(0,10);}}allPay.push({name:r.name,keNo:r.keNo,amount:p.amount,payDate:p.payDate,txnRef:p.txnRef,receiptNo:p.receiptNo,paidOn:p.paidOn,filterDate:filterDate});});});'
+    +   'var filtered=allPay.filter(function(t){return !selectedDate||t.filterDate===selectedDate;});'
+    +   'filtered.sort(function(a,b){return String(b.filterDate||"").localeCompare(String(a.filterDate||""))||String(b.paidOn||"").localeCompare(String(a.paidOn||""));});'
+    +   'var prettyDate=selectedDate?new Date(selectedDate+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}):"All dates";'
     +   'var h="<div style=\\"background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm)\\">";'
-    +   'h+="<div style=\\"background:var(--green-dark);padding:12px 16px;display:flex;align-items:center;justify-content:space-between\\">"'
-    +     '+"<div style=\\"font-size:12px;font-weight:700;color:var(--green-pale);text-transform:uppercase;letter-spacing:.08em\\">All Payments</div>"'
-    +     '+"<div style=\\"font-size:11px;color:var(--green-pale)\\">"+allPay.length+" records</div>"'
-    +     '+"</div>";'
-    +   'allPay.forEach(function(t){'
+    +   'h+="<div style=\\"background:var(--green-dark);padding:12px 16px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap\\">"'
+    +     '+"<div><div style=\\"font-size:12px;font-weight:700;color:var(--green-pale);text-transform:uppercase;letter-spacing:.08em\\">Transactions</div>"'
+    +     '+"<div style=\\"font-size:11px;color:var(--green-pale);margin-top:2px\\">Showing "+esc(prettyDate)+"</div></div>"'
+    +     '+"<div style=\\"display:flex;flex-direction:column;gap:4px;align-items:flex-end\\">"'
+    +     '+"<label for=\\"txnDateFilter\\" style=\\"font-size:10px;color:var(--green-pale);text-transform:uppercase;letter-spacing:.06em\\">Payment Date</label>"'
+    +     '+"<input type=\\"date\\" id=\\"txnDateFilter\\" value=\\""+selectedDate+"\\" onchange=\\"renderTransactions(allRiders)\\" style=\\"border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:7px 10px;font-size:12px;background:#fff;color:var(--text-primary);min-width:150px\\">"'
+    +     '+"</div></div>";'
+    +   'h+="<div style=\\"padding:10px 16px;font-size:11px;color:var(--text-secondary);background:var(--green-tint);border-bottom:1px solid var(--border)\\">"+filtered.length+" record"+(filtered.length!==1?"s":"")+" found</div>";'
+    +   'if(!filtered.length){h+="<div class=\\"empty\\"><div class=\\"empty-icon\\">&#128179;</div><p>No transactions found for the selected payment date</p></div></div>";el.innerHTML=h;return;}'
+    +   'filtered.forEach(function(t){'
     +     'h+="<div style=\\"display:flex;align-items:center;padding:11px 14px;border-bottom:1px solid var(--border);gap:10px\\">"'
     +       '+"<div style=\\"flex:1\\">"'
     +       '+"<div style=\\"font-size:13px;font-weight:600;color:var(--text-primary)\\">"+esc(t.name)+"</div>"'
@@ -430,7 +410,7 @@ function getAttendanceAppHtml() {
     +       '+"</div>"'
     +       '+"<div style=\\"text-align:right\\">"'
     +       '+"<div style=\\"font-size:14px;font-weight:700;color:var(--green-base);font-family:Space Mono,monospace\\">&#8377;"+Number(t.amount).toLocaleString("en-IN")+"</div>"'
-    +       '+"<div style=\\"font-size:10px;color:var(--text-muted);margin-top:1px\\">"+esc(t.payDate||"")+"</div>"'
+    +       '+"<div style=\\"font-size:10px;color:var(--text-muted);margin-top:1px\\">"+esc(t.payDate||t.paidOn||"")+"</div>"'
     +       '+"</div>"'
     +       '+"<div style=\\"width:7px;height:7px;border-radius:50%;background:#28a745;flex-shrink:0\\"></div>"'
     +       '+"</div>";'

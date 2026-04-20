@@ -227,12 +227,14 @@ function _getPaymentsForRider(ss, keNo) {
     const out  = [];
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][CONFIG.LEDGER_COLS.KE_NO] || '').trim() !== keNo) continue;
+      const paymentDateValue = data[i][CONFIG.LEDGER_COLS.PAY_DATE] || data[i][CONFIG.LEDGER_COLS.SENT_AT];
       out.push({
-        amount    : Number(data[i][CONFIG.LEDGER_COLS.AMOUNT]) || 0,
-        payDate   : fmtDate(data[i][CONFIG.LEDGER_COLS.PAY_DATE]),
-        txnRef    : String(data[i][CONFIG.LEDGER_COLS.TXN_REF]    || ''),
-        receiptNo : String(data[i][CONFIG.LEDGER_COLS.RECEIPT_NO] || ''),
-        paidOn    : fmtDateTime(data[i][CONFIG.LEDGER_COLS.TIMESTAMP])
+        amount     : Number(data[i][CONFIG.LEDGER_COLS.AMOUNT]) || 0,
+        payDate    : fmtDate(paymentDateValue),
+        txnRef     : String(data[i][CONFIG.LEDGER_COLS.TXN_REF]    || ''),
+        receiptNo  : String(data[i][CONFIG.LEDGER_COLS.RECEIPT_NO] || ''),
+        paidOn     : fmtDateTime(data[i][CONFIG.LEDGER_COLS.SENT_AT] || paymentDateValue),
+        filterDate : ymd(paymentDateValue)
       });
     }
     out.reverse(); // newest first
@@ -682,12 +684,14 @@ function _buildPaymentMap_Fast(payData) {
     const keNo = String(payData[i][CONFIG.LEDGER_COLS.KE_NO] || '').trim();
     if (!keNo) continue;
     if (!map[keNo]) map[keNo] = [];
+    const paymentDateValue = payData[i][CONFIG.LEDGER_COLS.PAY_DATE] || payData[i][CONFIG.LEDGER_COLS.SENT_AT];
     map[keNo].push({
-      amount    : Number(payData[i][CONFIG.LEDGER_COLS.AMOUNT]) || 0,
-      payDate   : fmtDate(payData[i][CONFIG.LEDGER_COLS.PAY_DATE]),
-      txnRef    : String(payData[i][CONFIG.LEDGER_COLS.TXN_REF]    || ''),
-      receiptNo : String(payData[i][CONFIG.LEDGER_COLS.RECEIPT_NO] || ''),
-      paidOn    : fmtDateTime(payData[i][CONFIG.LEDGER_COLS.TIMESTAMP])
+      amount     : Number(payData[i][CONFIG.LEDGER_COLS.AMOUNT]) || 0,
+      payDate    : fmtDate(paymentDateValue),
+      txnRef     : String(payData[i][CONFIG.LEDGER_COLS.TXN_REF]    || ''),
+      receiptNo  : String(payData[i][CONFIG.LEDGER_COLS.RECEIPT_NO] || ''),
+      paidOn     : fmtDateTime(payData[i][CONFIG.LEDGER_COLS.SENT_AT] || paymentDateValue),
+      filterDate : ymd(paymentDateValue)
     });
   }
   Object.keys(map).forEach(k => map[k].reverse()); // newest first — matches original
