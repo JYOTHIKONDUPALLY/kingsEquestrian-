@@ -9,7 +9,6 @@
 // ============================================================
 
 function getRiderPortalHtml() {
-  var paymentLink  = CONFIG.PAYMENT_FORM_LINK || '#';
   var servicesList = [];
   try { servicesList = getServicesList(); } catch(e) { Logger.log('getServicesList: ' + e); }
 
@@ -23,11 +22,22 @@ function getRiderPortalHtml() {
     };
   });
   var servicesJson = JSON.stringify(safeServices);
+  var portalCfg = JSON.stringify({
+    upiId         : CONFIG.UPI_ID || '',
+    businessName  : CONFIG.BUSINESS_NAME || 'KingsEquestrian',
+    advanceAmount : Number(CONFIG.ADVANCE_BOOKING_AMOUNT) || 1000
+  });
+  var appUiVersion = String((CONFIG && CONFIG.APP_UI_VERSION) || '');
+  var buildStamp = String(Date.now());
+  var buildLabel = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
 
-  return _portalHTML(paymentLink, servicesJson);
+  return _portalHTML(servicesJson, portalCfg, appUiVersion, buildStamp, buildLabel);
 }
 
-function _portalHTML(payLink, servicesJson) {
+function _portalHTML(servicesJson, portalCfg, appUiVersion, buildStamp, buildLabel) {
+  appUiVersion = String(appUiVersion || '');
+  buildStamp = String(buildStamp || Date.now());
+  buildLabel = String(buildLabel || '');
 
   var css = ''
     + '*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}'
@@ -37,8 +47,8 @@ function _portalHTML(payLink, servicesJson) {
     + '--parchment:#f5f8f5;--white:#ffffff;'
     + '--gold:#b8860b;--gold-pale:#fdf6e3;--gold-border:#e8d48a;'
     + '--red:#b91c1c;--red-pale:#fef2f2;'
-    + '--border:rgba(42,120,80,0.13);--border-md:rgba(42,120,80,0.22);'
-    + '--shadow-xs:0 1px 3px rgba(10,31,22,.07);--shadow-sm:0 2px 8px rgba(10,31,22,.1);'
+    + '--border:rgba(42,120,80,0.13);--border-md:rgba(42,120,80,0.22);--muted:#7a9a7e;'
+    + '--shadow-xs:0 1px 3px rgba(10,31,22,.07);--shadow-sm:0 2px 8px rgba(10,31,22,.1);--shadow-md:0 12px 40px rgba(10,31,22,.22);'
     + '--r:14px;--r-sm:10px}'
     + 'html,body{min-height:100%;-webkit-font-smoothing:antialiased}'
     + 'body{font-family:"DM Sans",sans-serif;background:var(--parchment);color:var(--ink)}'
@@ -60,6 +70,10 @@ function _portalHTML(payLink, servicesJson) {
     + '.btn-p:disabled{opacity:.5;cursor:default}'
     + '.login-err{font-size:12px;color:var(--red);text-align:center;margin-top:10px;padding:9px 12px;background:var(--red-pale);border-radius:8px;border:1px solid #fecaca;display:none}'
     + '.login-note{font-size:11px;color:#9aaa9e;text-align:center;margin-top:10px;line-height:1.7}'
+    + '.build-lbl{font-size:10px;color:#9aaa9e;text-align:center;margin-top:8px;letter-spacing:.04em}'
+    + '.stale-banner{display:none;background:#92400e;color:#fffbeb;padding:10px 14px;font-size:12px;font-weight:600;text-align:center;border-bottom:1px solid #f59e0b}'
+    + '.stale-banner.on{display:block}'
+    + '.stale-banner button{margin-left:8px;padding:6px 12px;border:0;border-radius:8px;background:#fffbeb;color:#92400e;font:inherit;font-weight:700;cursor:pointer}'
     // Change 6: profile picker
     + '#profile-picker{display:none;min-height:100vh;background:var(--forest);align-items:center;justify-content:center;padding:2rem 1.25rem;flex-direction:column}'
     + '.picker-card{width:100%;max-width:400px;background:var(--white);border-radius:20px;padding:1.75rem;box-shadow:0 6px 20px rgba(10,31,22,.14)}'
@@ -151,7 +165,29 @@ function _portalHTML(payLink, servicesJson) {
     + '.pay-meta{font-size:11px;color:#7a9a7e;margin-top:5px}'
     + '.pay-txn{font-size:10px;color:#b0c8b8;margin-top:3px}'
     + '.pay-cta{display:flex;justify-content:center;margin-top:16px}'
-    + '.btn-pay{display:inline-flex;align-items:center;gap:8px;background:var(--forest);color:var(--mist);padding:12px 24px;text-decoration:none;border-radius:var(--r-sm);font-size:13px;font-weight:600;font-family:"DM Sans",sans-serif}'
+    + '.btn-pay{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--forest);color:var(--mist);padding:12px 24px;text-decoration:none;border:none;border-radius:var(--r-sm);font-size:13px;font-weight:600;font-family:"DM Sans",sans-serif;cursor:pointer}'
+    + '.btn-pay:disabled{opacity:.55;cursor:not-allowed}'
+    + '.pay-overlay{position:fixed;inset:0;z-index:200;background:rgba(20,40,15,.55);display:none;align-items:flex-end;justify-content:center;padding:0}'
+    + '.pay-overlay.on{display:flex}'
+    + '.pay-modal{background:#fff;width:100%;max-width:520px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px 28px;box-shadow:var(--shadow-md);position:relative;z-index:1}'
+    + '@media(min-width:640px){.pay-overlay{align-items:center;padding:18px}.pay-modal{border-radius:16px;max-height:90vh}}'
+    + '.pay-modal h3{font-family:"Playfair Display",serif;font-size:20px;color:var(--ink);margin:0 0 4px}'
+    + '.pay-modal .pay-sub{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.45}'
+    + '.pay-grid{display:grid;gap:10px}'
+    + '.pay-grid .fl{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}'
+    + '.pay-grid .fi,.pay-grid select.fi,.pay-grid textarea.fi{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px;font:inherit;background:#fff;color:var(--ink)}'
+    + '.pay-grid .fi[readonly]{background:#f3f6f2;color:#4b5563}'
+    + '.pay-req{color:var(--red);font-weight:700}'
+    + '.pay-shot{border:1px dashed var(--border-md);border-radius:12px;padding:12px;background:#f8faf6}'
+    + '.pay-shot-preview{display:none;width:100%;max-height:180px;object-fit:contain;border-radius:8px;margin-top:8px;background:#fff}'
+    + '.pay-qr-box{text-align:center;padding:12px;border:1px solid var(--border);border-radius:12px;background:#f8faf6;margin-bottom:4px}'
+    + '.pay-qr-box img{width:180px;max-width:70%;display:block;margin:8px auto}'
+    + '.pay-actions{display:flex;gap:8px;margin-top:14px}'
+    + '.pay-actions .btn-pay{flex:1}'
+    + '.pay-actions .btn-ghost{flex:0 0 auto;padding:12px 14px;border-radius:var(--r-sm);border:1px solid var(--border);background:#fff;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}'
+    + '.btn-ghost{padding:10px 12px;border-radius:var(--r-sm);border:1px solid var(--border);background:#fff;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}'
+    + '.pay-msg{font-size:12px;margin-top:10px;line-height:1.4}'
+    + '.pay-msg.err{color:#991b1b}.pay-msg.ok{color:#166534}'
     // toast / misc
     + '#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--forest);color:var(--mist);font-size:12px;font-weight:600;padding:10px 20px;border-radius:100px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:9999;border:1px solid rgba(143,212,176,.25)}'
     + '#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}'
@@ -168,9 +204,39 @@ function _portalHTML(payLink, servicesJson) {
     'var recurSelDays = [];',
     'var recurPattern = "";',
     'var SERVICES = ' + servicesJson + ';',
-    'var PAYMENT_LINK = ' + JSON.stringify(payLink) + ';',
+    'var PORTAL_CFG = ' + portalCfg + ';',
     'var DAYS = ["Su","Mo","Tu","We","Th","Fr","Sa"];',
     'var pendingPhone = "";',  // Change 6: remember phone for profile picker
+    'var PAY_FORM = { files: [] };',
+    'var PAY_QR_TIMER = null;',
+    'var APP_UI_VERSION = ' + JSON.stringify(appUiVersion) + ';',
+    'window.__APP_UI_VERSION__ = APP_UI_VERSION;',
+    'window.__APP_BUILD__ = ' + JSON.stringify(buildStamp) + ';',
+    'window.__APP_BUILD_LABEL__ = ' + JSON.stringify(buildLabel) + ';',
+    '',
+    'function forceFreshAppReload() {',
+    '  try {',
+    '    var live = window.__LIVE_APP_UI_VERSION__ || APP_UI_VERSION || String(Date.now());',
+    '    sessionStorage.setItem("ke_reload_" + live, "1");',
+    '    var u = new URL(location.href);',
+    '    u.searchParams.set("_v", live);',
+    '    u.searchParams.set("_cb", String(Date.now()));',
+    '    location.replace(u.toString());',
+    '  } catch (e) { location.reload(); }',
+    '}',
+    'function checkStaleAppUi() {',
+    '  if (typeof google === "undefined" || !google.script || !google.script.run) return;',
+    '  google.script.run.withSuccessHandler(function(res) {',
+    '    var live = String((res && res.version) || "").trim();',
+    '    var page = String(APP_UI_VERSION || "").trim();',
+    '    window.__LIVE_APP_UI_VERSION__ = live;',
+    '    if (!live || !page || live === page) return;',
+    '    var tried = ""; try { tried = sessionStorage.getItem("ke_reload_" + live) || ""; } catch (e) {}',
+    '    if (!tried) { try { sessionStorage.setItem("ke_reload_" + live, "1"); } catch (e2) {} forceFreshAppReload(); return; }',
+    '    var ban = document.getElementById("stale-banner"); if (ban) ban.classList.add("on");',
+    '  }).withFailureHandler(function(){}).getAppUiVersion();',
+    '}',
+    'checkStaleAppUi();',
 
     'function esc(v) {',
     '  return String(v || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");',
@@ -261,7 +327,8 @@ function _portalHTML(payLink, servicesJson) {
     '}',
 
     'function doLogout() {',
-    '  RD = null; slotCount = 1; bookMode = "single";',
+    '  RD = null; slotCount = 1; bookMode = "single"; PAY_FORM.files = [];',
+    '  try { closePortalPaymentForm(); } catch(e) {}',
     '  try { localStorage.removeItem("KE_ID"); } catch(e) {}',
     '  document.getElementById("dashboard").style.display = "none";',
     '  document.getElementById("profile-picker").style.display = "none";',
@@ -661,8 +728,148 @@ function _portalHTML(payLink, servicesJson) {
     '      return r;',
     '    }).join("");',
     '  }',
-    '  h += "<div class=\\"pay-cta\\"><a class=\\"btn-pay\\" href=\\"" + PAYMENT_LINK + "\\" target=\\"_blank\\">+ Make a Payment</a></div>";',
+    '  h += "<div class=\\"pay-cta\\"><button type=\\"button\\" class=\\"btn-pay\\" id=\\"btn-make-payment\\">+ Make a Payment</button></div>";',
     '  document.getElementById("tc-payments").innerHTML = h;',
+    '  var makePay = document.getElementById("btn-make-payment");',
+    '  if (makePay) makePay.addEventListener("click", openPortalPaymentForm);',
+    '}',
+
+    'function payUpiLink(amount) {',
+    '  var amt = Number(amount);',
+    '  var link = "upi://pay?pa=" + encodeURIComponent(PORTAL_CFG.upiId || "")',
+    '    + "&pn=" + encodeURIComponent(PORTAL_CFG.businessName || "KingsEquestrian")',
+    '    + "&cu=INR"',
+    '    + "&tn=" + encodeURIComponent((RD && RD.keNo) || "KE");',
+    '  if (amt > 0) link += "&am=" + amt;',
+    '  return link;',
+    '}',
+
+    'function openPortalPaymentForm() {',
+    '  if (!RD) { toast("Please sign in first"); return; }',
+    '  PAY_FORM.files = [];',
+    '  document.getElementById("pay-ke").value = RD.keNo || "";',
+    '  document.getElementById("pay-phone").value = RD.phone || "";',
+    '  document.getElementById("pay-amount").value = "";'
+    '  document.getElementById("pay-txn").value = "";',
+    '  document.getElementById("pay-pan").value = "";',
+    '  var today = new Date();',
+    '  var ymd = today.getFullYear() + "-" + String(today.getMonth()+1).padStart(2,"0") + "-" + String(today.getDate()).padStart(2,"0");',
+    '  document.getElementById("pay-date").value = ymd;',
+    '  document.getElementById("pay-shot").value = "";',
+    '  document.getElementById("pay-shot-name").textContent = "No file chosen";',
+    '  var prev = document.getElementById("pay-shot-preview"); if (prev) { prev.style.display="none"; prev.removeAttribute("src"); }',
+    '  var msg = document.getElementById("pay-msg"); msg.className = "pay-msg"; msg.textContent = "";',
+    '  document.getElementById("pay-sub").textContent = "Please fill the payment details for verification for " + (RD.name || RD.keNo) + ".";',
+    '  document.getElementById("pay-overlay").classList.add("on");',
+    '  google.script.run.withSuccessHandler(function(res){',
+    '    if (!res || !res.success) return;',
+    '    if (res.phone && !document.getElementById("pay-phone").value) document.getElementById("pay-phone").value = res.phone;',
+    '    if (res.pan) document.getElementById("pay-pan").value = res.pan;',
+    '  }).withFailureHandler(function(){}).getPortalPaymentPrefill(RD.keNo);',
+    '  refreshPortalPaymentQr();',
+    '}',
+
+    'function closePortalPaymentForm() {',
+    '  document.getElementById("pay-overlay").classList.remove("on");',
+    '}',
+
+    'function refreshPortalPaymentQr() {',
+    '  if (PAY_QR_TIMER) clearTimeout(PAY_QR_TIMER);',
+    '  PAY_QR_TIMER = setTimeout(function(){',
+    '    var wrap = document.getElementById("pay-qr-wrap");',
+    '    var amt = Number(document.getElementById("pay-amount").value || 0);',
+    '    if (!(amt > 0)) { wrap.style.display = "none"; return; }',
+    '    wrap.style.display = "block";',
+    '    document.getElementById("pay-upi").textContent = PORTAL_CFG.upiId || "";',
+    '    var img = document.getElementById("pay-qr");',
+    '    if (img) img.src = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(payUpiLink(amt));',
+    '  }, 350);',
+    '}',
+
+    'function onPayScreenshotChosen(input) {',
+    '  var files = Array.prototype.slice.call((input && input.files) || [], 0, 5);',
+    '  PAY_FORM.files = [];',
+    '  var nameEl = document.getElementById("pay-shot-name");',
+    '  var prev = document.getElementById("pay-shot-preview");',
+    '  if (!files.length) { if (nameEl) nameEl.textContent = "No file chosen"; if (prev) prev.style.display="none"; return; }',
+    '  if (nameEl) nameEl.textContent = files.map(function(f){ return f.name; }).join(", ");',
+    '  var i = 0;',
+    '  function next() {',
+    '    if (i >= files.length) {',
+    '      var firstImg = PAY_FORM.files.filter(function(f){ return String(f.mimeType||"").indexOf("image/")===0; })[0];',
+    '      if (prev) {',
+    '        if (firstImg) { prev.src = "data:" + firstImg.mimeType + ";base64," + firstImg.data; prev.style.display = "block"; }',
+    '        else { prev.style.display = "none"; }',
+    '      }',
+    '      return;',
+    '    }',
+    '    var file = files[i++];',
+    '    var isImg = file.type && file.type.indexOf("image/") === 0;',
+    '    var isPdf = (file.type === "application/pdf") || /\\.pdf$/i.test(file.name);',
+    '    if (!isImg && !isPdf) { toast("Please choose an image or PDF"); input.value=""; PAY_FORM.files=[]; if (nameEl) nameEl.textContent="No file chosen"; return; }',
+    '    var reader = new FileReader();',
+    '    reader.onload = function() {',
+    '      if (isPdf) {',
+    '        var dataUrl = String(reader.result || "");',
+    '        var comma = dataUrl.indexOf(",");',
+    '        PAY_FORM.files.push({ name: file.name, mimeType: "application/pdf", data: comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl });',
+    '        next();',
+    '        return;',
+    '      }',
+    '      var img = new Image();',
+    '      img.onload = function() {',
+    '        var max = 1280, w = img.width, h = img.height;',
+    '        if (w > max || h > max) { var s = Math.min(max/w, max/h); w = Math.round(w*s); h = Math.round(h*s); }',
+    '        var canvas = document.createElement("canvas"); canvas.width = w; canvas.height = h;',
+    '        canvas.getContext("2d").drawImage(img, 0, 0, w, h);',
+    '        var dataUrl = canvas.toDataURL("image/jpeg", 0.82);',
+    '        PAY_FORM.files.push({ name: file.name, mimeType: "image/jpeg", data: dataUrl.split(",")[1] });',
+    '        next();',
+    '      };',
+    '      img.onerror = function(){ toast("Could not read image"); };',
+    '      img.src = reader.result;',
+    '    };',
+    '    reader.onerror = function(){ toast("Could not read file"); };',
+    '    reader.readAsDataURL(file);',
+    '  }',
+    '  next();',
+    '}',
+
+    'function submitPortalPaymentForm() {',
+    '  if (!RD) return;',
+    '  var msg = document.getElementById("pay-msg");',
+    '  var btn = document.getElementById("pay-submit");',
+    '  var keNo = document.getElementById("pay-ke").value.trim();',
+    '  var phone = document.getElementById("pay-phone").value.trim();',
+    '  var amount = Number(document.getElementById("pay-amount").value || 0);',
+    '  var payDate = document.getElementById("pay-date").value || "";',
+    '  var txnRef = document.getElementById("pay-txn").value.trim();',
+    '  var pan = document.getElementById("pay-pan").value.trim();',
+    '  if (!keNo) { msg.className="pay-msg err"; msg.textContent="Please enter your Registration Number provided in your email."; return; }',
+    '  if (!phone) { msg.className="pay-msg err"; msg.textContent="Please enter your registered phone number."; return; }',
+    '  if (!(amount > 0)) { msg.className="pay-msg err"; msg.textContent="Please enter the exact amount paid."; return; }',
+    '  if (!PAY_FORM.files.length) { msg.className="pay-msg err"; msg.textContent="Please upload a clear screenshot or receipt of the completed payment."; return; }',
+    '  if (!pan) { msg.className="pay-msg err"; msg.textContent="PAN / Aadhaar number is required for issuing official receipts."; return; }',
+    '  if (btn) { btn.disabled = true; btn.textContent = "Submitting..."; }',
+    '  msg.className = "pay-msg"; msg.textContent = "Uploading payment details...";',
+    '  google.script.run',
+    '    .withSuccessHandler(function(res) {',
+    '      if (btn) { btn.disabled = false; btn.textContent = "Submit payment"; }',
+    '      if (!res || !res.success) { msg.className="pay-msg err"; msg.textContent = (res && (res.error || res.message)) || "Payment failed."; return; }',
+    '      msg.className = "pay-msg ok"; msg.textContent = res.message || "Payment submitted.";',
+    '      toast("Payment submitted");',
+    '      google.script.run.withSuccessHandler(function(d){',
+    '        if (d && d.found && !d.multiProfile) { RD = d; }',
+    '        closePortalPaymentForm();',
+    '        renderPayments();',
+    '        if (RD) document.getElementById("d-payments").textContent = (RD.payments || []).length;',
+    '      }).getRiderData(RD.keNo);',
+    '    })',
+    '    .withFailureHandler(function(e) {',
+    '      if (btn) { btn.disabled = false; btn.textContent = "Submit payment"; }',
+    '      msg.className = "pay-msg err"; msg.textContent = "Error: " + (e && e.message ? e.message : "Please try again.");',
+    '    })',
+    '    .submitPaymentFromPortal({ keNo: keNo, phone: phone, amount: amount, payDate: payDate, txnRef: txnRef, pan: pan, files: PAY_FORM.files });',
     '}',
 
     // ── time options — Change 1: 30-min slots ───────────────
@@ -691,6 +898,10 @@ function _portalHTML(payLink, servicesJson) {
     + '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">'
     + '<meta name="apple-mobile-web-app-capable" content="yes">'
     + '<meta name="theme-color" content="#0a1f16">'
+    + '<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">'
+    + '<meta http-equiv="Pragma" content="no-cache">'
+    + '<meta http-equiv="Expires" content="0">'
+    + '<script>window.__APP_BUILD__=' + JSON.stringify(buildStamp) + ';window.__APP_BUILD_LABEL__=' + JSON.stringify(buildLabel) + ';window.__APP_UI_VERSION__=' + JSON.stringify(appUiVersion) + ';</script>'
     + '<link rel="preconnect" href="https://fonts.googleapis.com">'
     + '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">'
     + '<title>My Rides &middot; Kings Equestrian</title>'
@@ -714,6 +925,7 @@ function _portalHTML(payLink, servicesJson) {
     +     '<button class="btn-p" id="btn-login">View My Rides</button>'
     +     '<div class="login-err" id="login-err"></div>'
     +     '<p class="login-note">Enter your registered phone or KE Number.<br>No password needed.</p>'
+    +     '<div class="build-lbl">build ' + buildLabel + (appUiVersion ? ' · v' + appUiVersion : '') + '</div>'
     +   '</div>'
     + '</div>'
 
@@ -738,6 +950,7 @@ function _portalHTML(payLink, servicesJson) {
     +     '</div>'
     +     '<button class="btn-lo" id="btn-logout">Sign out</button>'
     +   '</div>'
+    +   '<div id="stale-banner" class="stale-banner">A newer version of My Rides is available. <button type="button" id="stale-reload-btn">Load update</button></div>'
     +   '<div class="info-banner">'
     +     '<div class="info-ke" id="d-keno"></div>'
     +     '<div class="info-svc" id="d-svc"></div>'
@@ -757,10 +970,43 @@ function _portalHTML(payLink, servicesJson) {
     +   '<div id="tc-sessions" class="tc on"></div>'
     +   '<div id="tc-book" class="tc"></div>'
     +   '<div id="tc-payments" class="tc"></div>'
-    +   '<div class="pfooter">Kings Equestrian Foundation &middot; Karnataka &middot; +91-9980895533</div>'
+    +   '<div class="pfooter">Kings Equestrian Foundation &middot; Karnataka &middot; +91-9980895533<br>build ' + buildLabel + (appUiVersion ? ' · v' + appUiVersion : '') + '</div>'
     + '</div>'
 
     + '<div id="toast"></div>'
+
+    + '<div id="pay-overlay" class="pay-overlay" onclick="if(event.target===this)closePortalPaymentForm()">'
+    +   '<div class="pay-modal" role="dialog" aria-modal="true">'
+    +     '<h3>Make a payment</h3>'
+    +     '<div class="pay-sub" id="pay-sub">Please fill the payment details for verification. Receipt will be emailed after verification.</div>'
+    +     '<div id="pay-qr-wrap" class="pay-qr-box" style="display:none">'
+    +       '<div style="font-size:12px;color:#476d59">Scan UPI QR (optional)</div>'
+    +       '<img id="pay-qr" alt="UPI QR">'
+    +       '<div style="font-size:12px;font-weight:600;color:var(--pine)">UPI: <span id="pay-upi"></span></div>'
+    +     '</div>'
+    +     '<div class="pay-grid">'
+    +       '<div><label class="fl" for="pay-ke">Registration No</label><input class="fi" id="pay-ke" readonly><div class="hint">Please Enter your Registration Number provided in your email</div></div>'
+    +       '<div><label class="fl" for="pay-phone">Phone number <span class="pay-req">*</span></label><input class="fi" id="pay-phone" inputmode="tel"><div class="hint">Please enter your registered Phone Number</div></div>'
+    +       '<div><label class="fl" for="pay-amount">Amount Paid (₹) <span class="pay-req">*</span></label><input class="fi" id="pay-amount" type="number" min="1" step="1" inputmode="decimal"><div class="hint">Please Enter the exact Amount Paid</div></div>'
+    +       '<div class="pay-shot">'
+    +         '<label class="fl" for="pay-shot">Screenshot <span class="pay-req">*</span></label>'
+    +         '<input type="file" id="pay-shot" accept="image/*,.pdf,application/pdf" multiple style="display:none">'
+    +         '<button type="button" class="btn-ghost" id="pay-shot-btn" style="width:100%">Choose screenshot</button>'
+    +         '<div class="hint" id="pay-shot-name">No file chosen</div>'
+    +         '<img class="pay-shot-preview" id="pay-shot-preview" alt="Screenshot preview">'
+    +         '<div class="hint">Upload a clear screenshot or receipt of the completed payment. Upload up to 5 supported files.</div>'
+    +       '</div>'
+    +       '<div><label class="fl" for="pay-date">Payment Date</label><input class="fi" id="pay-date" type="date"><div class="hint">Select the date when the payment was made</div></div>'
+    +       '<div><label class="fl" for="pay-txn">Transaction Reference Number</label><input class="fi" id="pay-txn" maxlength="80" placeholder="UPI / bank reference"><div class="hint">If payment was made via UPI (PhonePe, Google Pay, Paytm, etc.), please enter the transaction ID / reference number.</div></div>'
+    +       '<div><label class="fl" for="pay-pan">PAN / Aadhaar Number <span class="pay-req">*</span></label><input class="fi" id="pay-pan" maxlength="20" placeholder="PAN or Aadhaar"><div class="hint">Details are required for issuing official payment receipts and for compliance with income tax regulations. This information will be kept confidential and will not be shared with any third party.</div></div>'
+    +     '</div>'
+    +     '<div id="pay-msg" class="pay-msg"></div>'
+    +     '<div class="pay-actions">'
+    +       '<button type="button" class="btn-ghost" id="pay-cancel">Back</button>'
+    +       '<button type="button" class="btn-pay" id="pay-submit">Submit payment</button>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>'
 
     + '<script>' + js + '</script>'
 
@@ -772,6 +1018,12 @@ function _portalHTML(payLink, servicesJson) {
     + 'document.querySelectorAll(".tb").forEach(function(btn) {'
     +   'btn.addEventListener("click", function() { kTab(btn.getAttribute("data-tab")); });'
     + '});'
+    + 'document.getElementById("pay-cancel").addEventListener("click", closePortalPaymentForm);'
+    + 'document.getElementById("pay-submit").addEventListener("click", submitPortalPaymentForm);'
+    + 'document.getElementById("pay-amount").addEventListener("input", refreshPortalPaymentQr);'
+    + 'document.getElementById("pay-shot-btn").addEventListener("click", function(){ document.getElementById("pay-shot").click(); });'
+    + 'document.getElementById("pay-shot").addEventListener("change", function(){ onPayScreenshotChosen(this); });'
+    + 'var staleBtn=document.getElementById("stale-reload-btn"); if(staleBtn) staleBtn.addEventListener("click", forceFreshAppReload);'
     + '</script>'
 
     + '</body></html>';

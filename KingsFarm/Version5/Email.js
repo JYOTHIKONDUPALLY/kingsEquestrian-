@@ -142,20 +142,20 @@ const htmlBody = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="v
   + '    ' + servicesBrochureBlock
   + '    <div style="background:#e8f5e9;border:2px solid #4caf50;padding:20px;border-radius:8px;margin:20px 0">'
   + '      <h3 style="color:#2e7d32;margin:0 0 12px">Pay Advance - Rs.' + Number(d.amount).toLocaleString('en-IN') + '</h3>'
-  + '      <p style="font-size:13px;color:#555;margin:0 0 16px">Scan the QR code below and then submit the payment confirmation form.</p>'
+  + '      <p style="font-size:13px;color:#555;margin:0 0 16px">Scan the QR code below to pay, then open <strong>My Rides</strong> and submit your payment details for verification.</p>'
   + '      <div style="text-align:center;margin:16px 0">'
   + '        <img src="' + d.qrCode + '" style="width:160px;height:160px;border:2px solid #e0e0e0;border-radius:6px">'
   + '      </div>'
   + '      <div style="text-align:center;margin-top:14px">'
-  + '        <a href="' + CONFIG.PAYMENT_FORM_LINK + '" style="background:#1f4e3d;color:#fff;padding:12px 26px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;display:inline-block">Submit Payment</a>'
+  + '        <a href="' + Myrides + '" style="background:#1f4e3d;color:#fff;padding:12px 26px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;display:inline-block">Pay through My Rides</a>'
   + '      </div>'
-  + '      <p style="font-size:11px;color:#777;margin:12px 0 0;text-align:center">After paying, click the button to upload your screenshot and select date/time</p>'
+  + '      <p style="font-size:11px;color:#777;margin:12px 0 0;text-align:center">After paying, sign in to My Rides with your phone or KE Number, open the Payments tab, and submit your screenshot and details.</p>'
   + '    </div>'
   + '    <div style="background:#f9f9f9;padding:16px;border-radius:8px">'
   + '      <h4 style="color:#1f4e3d;margin:0 0 10px">What\'s Next</h4>'
   + '      <ol style="margin:0;padding-left:20px;font-size:13px;color:#555;line-height:1.9">'
   + '        <li>Pay Rs.' + Number(d.amount).toLocaleString('en-IN') + ' advance via the QR code above</li>'
-  + '        <li>Submit payment via the form and choose your date and time</li>'
+  + '        <li>Open My Rides, go to Payments, and submit your payment for verification</li>'
   + '        <li>Review the attached Terms and Conditions and Consent Form</li>'
   + '        <li>Await your payment receipt and confirmation email</li>'
   + '        <li>Arrive 15 min before your slot — wear comfortable shoes!</li>'
@@ -271,7 +271,7 @@ function sendBookingConfirmationEmail(d) {
     + '      <strong>Reminder:</strong> Please ensure your advance payment is up to date. Arrive 15 minutes before your slot.'
     + '    </div>'
     + '    <div style="text-align:center;margin-top:20px">'
-    + '      <a href="' + CONFIG.PAYMENT_FORM_LINK + '" style="background:#1f4e3d;color:#fff;padding:12px 26px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:13px;display:inline-block">Submit Payment</a>'
+    + '      <a href="' + CONFIG.MYRIDES + '" style="background:#1f4e3d;color:#fff;padding:12px 26px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:13px;display:inline-block">Pay through My Rides</a>'
     + '    </div>'
     + (d.errors && d.errors.length ? '<p style="font-size:11px;color:#c62828;margin-top:12px">Note: Some requests could not be processed — ' + d.errors.join(', ') + '</p>' : '')
     + '  </div>'
@@ -398,12 +398,17 @@ try{
 //  80G RECEIPT PDF GENERATOR
 // ────────────────────────────────────────────────────────────
 
-function generate80GReceipt(riderName, pan, amount, txnRef, receiptNo) {
+function generate80GReceipt(riderName, pan, amount, txnRef, receiptNo, paymentDate) {
   const logoB64  = imgBase64FromUrl('https://drive.google.com/uc?export=view&id=1EAkJ8_EeOVmpX3L1RGLi8b9amX5wuLhb');
   const stampB64 = imgBase64FromDrive('1fQVqA1ABWCaTJs4uJVxiNqIGhl5iWugJ');
   const signB64  = imgBase64FromDrive('1CI6H0JgysxanA0RimUwu7QwSSRospSwc');
-  const dateStr  = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
+  // Prefer Payment Date from the form; fall back to Timestamp / today
+  let receiptDate = paymentDate ? new Date(paymentDate) : new Date();
+  if (isNaN(receiptDate.getTime()) || receiptDate.getFullYear() < 2000) receiptDate = new Date();
+  const dateStr  = Utilities.formatDate(receiptDate, Session.getScriptTimeZone(), 'dd/MM/yyyy');
   const words    = numberToWords(amount);
+  const locCode  = (typeof CONFIG !== 'undefined' && CONFIG.LOCATION_CODE) ? CONFIG.LOCATION_CODE : 'FARM';
+  const locCity  = (typeof CONFIG !== 'undefined' && CONFIG.LOCATION_CITY) ? CONFIG.LOCATION_CITY : 'Farm';
 
   const html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
     + '<style>'
@@ -449,6 +454,7 @@ function generate80GReceipt(riderName, pan, amount, txnRef, receiptNo) {
     + '    <div class="hdr-c">'
     + '      <div class="org">Kings Equestrian Foundation</div>'
     + '      <div class="reg">Registered u/s 80G | Reg No: AAJCK7191GE20231 | PAN: AAJCK7191G</div>'
+    + '      <div class="sub"><strong>Location: ' + locCode + '</strong> · ' + locCity + '</div>'
     + '      <div class="sub">K202, Tower-6, Jacaranda Block, Devarabisanahalli, Bellandur S.O, Bengaluru - 560103 Karnataka, India</div>'
     + '      <div class="sub">kingsequestrianfoundation@gmail.com | kingsequestrianfoundation.com</div>'
     + '      <div class="tagline">We gratefully acknowledge your generous contribution in support of our programmes.</div>'
@@ -458,7 +464,7 @@ function generate80GReceipt(riderName, pan, amount, txnRef, receiptNo) {
     + '    <div class="rtitle">Receipt</div>'
     + '    <div class="rsub">Issued in compliance with Rule 18AB and Form 10BD requirements</div>'
     + '  </div>'
-    + '  <div class="date-r"><strong>Date:</strong> ' + dateStr + '</div>'
+    + '  <div class="date-r"><strong>Payment Date:</strong> ' + dateStr + '</div>'
     + '  <div class="mcols">'
     + '    <div class="col">'
     + '      <div style="font-weight:bold;margin-bottom:8px">Donor Category (tick Applicable)</div>'

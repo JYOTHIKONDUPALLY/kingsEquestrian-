@@ -1,0 +1,111 @@
+<style>
+  .app-loader-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .app-loader-overlay.is-visible {
+    display: flex;
+  }
+  .app-loader-panel {
+    text-align: center;
+    padding: 22px 28px;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #16213E, #0F3460);
+    border: 1px solid rgba(201, 168, 76, 0.35);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    min-width: 200px;
+    max-width: 90vw;
+  }
+  .app-loader-spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 14px;
+    border: 3px solid rgba(201, 168, 76, 0.2);
+    border-top-color: #C9A84C;
+    border-radius: 50%;
+    animation: appLoaderSpin 0.75s linear infinite;
+  }
+  .app-loader-message {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #F0EAD6;
+    letter-spacing: 0.3px;
+  }
+  @keyframes appLoaderSpin {
+    to { transform: rotate(360deg); }
+  }
+  body.app-is-loading {
+    overflow: hidden;
+  }
+  body.app-is-loading .app-main.is-loading-data {
+    pointer-events: none;
+    opacity: 0.55;
+  }
+</style>
+
+<div id="appLoaderOverlay" class="app-loader-overlay" aria-hidden="true" role="status">
+  <div class="app-loader-panel">
+    <div class="app-loader-spinner" aria-hidden="true"></div>
+    <p class="app-loader-message" id="appLoaderMessage">Loading…</p>
+  </div>
+</div>
+
+<script>
+(function() {
+  var overlay = null;
+  var messageEl = null;
+  var pending = 0;
+
+  function getOverlay() {
+    if (!overlay) {
+      overlay = document.getElementById("appLoaderOverlay");
+      messageEl = document.getElementById("appLoaderMessage");
+    }
+    return overlay;
+  }
+
+  function setMessage(text) {
+    if (messageEl && text) {
+      messageEl.textContent = text;
+    }
+  }
+
+  window.AppLoader = {
+    show: function(message) {
+      var el = getOverlay();
+      if (!el) return;
+      pending++;
+      setMessage(message || "Loading…");
+      el.classList.add("is-visible");
+      el.setAttribute("aria-hidden", "false");
+      document.body.classList.add("app-is-loading");
+      var main = document.getElementById("appMain");
+      if (main) main.classList.add("is-loading-data");
+    },
+    hide: function() {
+      var el = getOverlay();
+      if (!el) return;
+      pending = Math.max(0, pending - 1);
+      if (pending > 0) return;
+      el.classList.remove("is-visible");
+      el.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("app-is-loading");
+      var main = document.getElementById("appMain");
+      if (main) main.classList.remove("is-loading-data");
+    },
+    forceHide: function() {
+      pending = 0;
+      this.hide();
+    },
+    setMessage: setMessage
+  };
+})();
+</script>

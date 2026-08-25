@@ -1,0 +1,2558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>Kings Equestrian Inventory</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+
+    :root {
+      --gold: #C9A84C;
+      --gold-light: #F5E6B8;
+      --gold-dim: rgba(201,168,76,0.18);
+      --dark: #0d1117;
+      --dark2: #161b27;
+      --card: #1a2235;
+      --card2: #1f2a3f;
+      --border: rgba(255,255,255,0.07);
+      --border-gold: rgba(201,168,76,0.3);
+      --text: #e8e0d0;
+      --muted: #8a9ab8;
+      --muted2: #5a6a82;
+      --green: #3dba7e;
+      --green-dim: rgba(61,186,126,0.15);
+      --red: #e05c5c;
+      --red-dim: rgba(224,92,92,0.15);
+      --orange: #e8944a;
+      --orange-dim: rgba(232,148,74,0.15);
+      --blue: #5b8dee;
+      --blue-dim: rgba(91,141,238,0.15);
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.35);
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--dark);
+      color: var(--text);
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+    html.app-mobile {
+      font-size: 18px !important;
+      -webkit-text-size-adjust: 100% !important;
+      text-size-adjust: 100% !important;
+    }
+    html.app-mobile body { font-size: 16px; line-height: 1.55; min-height: auto; }
+    html.app-scaled body { min-height: auto; }
+
+    /* ── HEADER ── */
+    .header {
+      background: linear-gradient(135deg, var(--dark2) 0%, #1a2235 100%);
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border-gold);
+      position: sticky; top: 0; z-index: 100;
+      height: 56px;
+      display: flex; align-items: center;
+    }
+    .header-row { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 100%; gap: 12px; }
+    .logo { font-family: 'Cormorant Garamond', serif; color: var(--gold); font-size: 20px; font-weight: 700; line-height: 1; white-space: nowrap; }
+    .logo small { display: block; font-family: 'Outfit', sans-serif; font-size: 9px; color: var(--muted); letter-spacing: 2.5px; text-transform: uppercase; margin-top: 2px; font-weight: 400; }
+    .header-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-shrink: 0; flex-wrap: nowrap; max-width: 100%; }
+    .toolbar-label { font-size: 10px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap; }
+    .role-pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border-gold); color: var(--gold); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; background: var(--gold-dim); white-space: nowrap; }
+    .loc-control { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; }
+    .loc-badge { font-size: 11px; color: var(--gold); border: 1px solid var(--border-gold); border-radius: 20px; padding: 4px 10px; white-space: nowrap; background: var(--gold-dim); }
+    .header-loc-select { font-size: 12px; padding: 5px 10px; border-radius: 8px; border: 1px solid #ccc; background: #fff; color: #111; min-width: 110px; max-width: 150px; cursor: pointer; font-family: inherit; font-weight: 500; }
+    .header-loc-select option { background: #fff; color: #111; }
+    .logout-btn { background: transparent; border: 1px solid rgba(224,92,92,0.4); color: #ff9a9a; border-radius: 20px; padding: 4px 12px; font-size: 10px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .logout-btn:hover { background: rgba(224,92,92,0.12); }
+    .user-chip { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+
+    /* ── NAV ── */
+    .nav { display: flex; gap: 2px; overflow-x: auto; padding: 0 12px; background: var(--dark2); border-bottom: 1px solid var(--border); scrollbar-width: none; }
+    .nav::-webkit-scrollbar { display: none; }
+    .nav button { background: transparent; border: none; color: var(--muted); padding: 10px 12px; font-size: 11px; font-weight: 500; cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; font-family: inherit; transition: color 0.2s; letter-spacing: 0.3px; }
+    .nav button:hover { color: var(--text); }
+    .nav button.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+    /* ── LAYOUT ── */
+    .gate-content { padding: 12px 14px 24px; }
+    #app { display: flex; flex-direction: column; min-height: calc(100dvh - 88px); height: auto; }
+    .app-main { flex: 1; overflow-y: visible; padding: 12px 12px 10px; -webkit-overflow-scrolling: touch; }
+    #app .tab-panel { display: none !important; visibility: hidden; min-height: 0; }
+    #app .tab-panel.is-active { display: block !important; visibility: visible !important; min-height: 120px; }
+
+    /* ── CARDS ── */
+    .card { background: var(--card); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; border: 1px solid var(--border); }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 8px; }
+    .card-title { font-size: 10px; color: var(--gold); font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; }
+    .card-badge { font-size: 10px; color: var(--muted); background: rgba(255,255,255,0.05); border-radius: 20px; padding: 2px 8px; }
+
+    /* ── SUMMARY STATS ── */
+    .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+    .kpi { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; position: relative; overflow: hidden; cursor: default; transition: border-color 0.2s, transform 0.15s; }
+    .kpi:hover { border-color: var(--border-gold); transform: translateY(-1px); }
+    .kpi::before { content: ''; position: absolute; inset: 0; opacity: 0; border-radius: var(--radius); transition: opacity 0.2s; }
+    .kpi.gold::before { background: radial-gradient(ellipse at top left, var(--gold-dim) 0%, transparent 70%); }
+    .kpi.green::before { background: radial-gradient(ellipse at top left, var(--green-dim) 0%, transparent 70%); }
+    .kpi.red::before { background: radial-gradient(ellipse at top left, var(--red-dim) 0%, transparent 70%); }
+    .kpi.blue::before { background: radial-gradient(ellipse at top left, var(--blue-dim) 0%, transparent 70%); }
+    .kpi.orange::before { background: radial-gradient(ellipse at top left, var(--orange-dim) 0%, transparent 70%); }
+    .kpi:hover::before { opacity: 1; }
+    .kpi-icon { font-size: 18px; margin-bottom: 6px; display: block; }
+    .kpi-value { font-size: 26px; font-weight: 600; line-height: 1; color: var(--text); font-family: 'Outfit', sans-serif; }
+    .kpi.gold .kpi-value { color: var(--gold); }
+    .kpi.green .kpi-value { color: var(--green); }
+    .kpi.red .kpi-value { color: var(--red); }
+    .kpi.blue .kpi-value { color: var(--blue); }
+    .kpi.orange .kpi-value { color: var(--orange); }
+    .kpi-label { font-size: 10px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 500; }
+
+    /* ── PIPELINE FLOW ── */
+    .pipeline { display: flex; align-items: stretch; gap: 0; margin-bottom: 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .pipe-step { flex: 1; padding: 10px 8px; text-align: center; border-right: 1px solid var(--border); position: relative; min-width: 0; }
+    .pipe-step:last-child { border-right: none; }
+    .pipe-step.active { background: var(--gold-dim); }
+    .pipe-step.alert { background: var(--red-dim); }
+    .pipe-num { font-size: 18px; font-weight: 600; color: var(--text); display: block; line-height: 1; }
+    .pipe-step.active .pipe-num { color: var(--gold); }
+    .pipe-step.alert .pipe-num { color: var(--red); }
+    .pipe-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; margin-top: 4px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── RULES CARD ── */
+    /* ── LOW STOCK ── */
+    .low-stock-list { list-style: none; }
+    .low-stock-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .low-stock-item:last-child { border-bottom: none; }
+    .low-badge { font-size: 9px; background: var(--red-dim); color: var(--red); border-radius: 4px; padding: 2px 6px; border: 1px solid rgba(224,92,92,0.3); font-weight: 600; white-space: nowrap; }
+
+    /* ── SKU TABLE ── */
+    .sku-table-wrap { overflow-x: auto; }
+    .sku-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+    .sku-table th { padding: 7px 10px; text-align: left; color: var(--gold); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border-gold); white-space: nowrap; }
+    .sku-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+    .sku-table tr:last-child td { border-bottom: none; }
+    .sku-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .qty-pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .qty-ok { background: var(--green-dim); color: var(--green); }
+    .qty-low { background: var(--red-dim); color: var(--red); }
+    .qty-zero { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+    /* ── HEATMAP ── (colour-coded inventory grid) */
+    .heat-cell {
+      display: inline-block; min-width: 32px; padding: 3px 10px;
+      border-radius: 8px; font-size: 12px; font-weight: 600;
+      text-align: center; color: var(--text);
+    }
+    .heat-0  { background: rgba(255,255,255,0.05);  color: var(--muted2); }
+    .heat-1  { background: rgba(229,89,89,0.30);    color: #f9d3d3; }  /* low */
+    .heat-2  { background: rgba(229,158,79,0.32);   color: #ffe1bf; }
+    .heat-3  { background: rgba(229,200,79,0.32);   color: #ffeebf; }
+    .heat-4  { background: rgba(108,194,138,0.30);  color: #d5f1e0; }
+    .heat-5  { background: rgba(61,186,126,0.45);   color: #ffffff; }  /* healthy / high */
+
+    /* ── FORMS ── */
+    .form-group { margin-bottom: 10px; }
+    label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
+    input, select, textarea {
+      width: 100%; padding: 9px 11px; border-radius: var(--radius-sm);
+      border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.25);
+      color: var(--text); font-family: inherit; font-size: 13px; transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--border-gold); }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    /* ── BUTTONS ── */
+    .btn { margin-top: 12px; width: 100%; padding: 10px; border: none; border-radius: var(--radius-sm); background: var(--gold); color: #111; font-weight: 600; cursor: pointer; font-size: 12px; font-family: inherit; letter-spacing: 0.3px; transition: opacity 0.2s; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn:hover:not(:disabled) { opacity: 0.88; }
+    .btn.secondary { background: transparent; color: var(--gold); border: 1px solid var(--border-gold); }
+    .btn.secondary:hover:not(:disabled) { background: var(--gold-dim); }
+    .btn-sm { margin-top: 0; width: auto; padding: 6px 14px; font-size: 11px; }
+
+    /* ── FLASH ── */
+    .msg { padding: 10px 12px; border-radius: var(--radius-sm); margin-bottom: 10px; font-size: 12px; display: none; border-left: 3px solid; }
+    .msg.show { display: block; }
+    .msg.ok { background: var(--green-dim); color: #a8e6c4; border-color: var(--green); }
+    .msg.err { background: var(--red-dim); color: #ffb4b4; border-color: var(--red); }
+
+    /* ── REGISTER TABLES ── */
+    .reg-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .reg-head .card-title { flex: 1; min-width: 100px; }
+    .reg-filters { display: flex; align-items: center; gap: 6px; flex-shrink: 0; flex-wrap: wrap; max-width: 100%; }
+    .reg-date-input { width: auto; min-width: 118px; padding: 5px 8px; font-size: 11px; background: #fff; color: #111; border: 1px solid #ccc; border-radius: 6px; }
+    .reg-status-input { width: auto; min-width: 120px; padding: 5px 8px; font-size: 11px; background: #fff; color: #111; border: 1px solid #ccc; border-radius: 6px; }
+    .reg-filter-btn, .reg-clear-btn { padding: 5px 10px; font-size: 10px; border-radius: 6px; border: 1px solid var(--border-gold); background: transparent; color: var(--gold); cursor: pointer; white-space: nowrap; font-family: inherit; transition: background 0.2s; }
+    .reg-filter-btn:hover, .reg-clear-btn:hover { background: var(--gold-dim); }
+    .reg-count { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+    .data-table-wrap { overflow-x: auto; margin-bottom: 12px; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+    .data-table th { padding: 8px 10px; text-align: left; color: var(--gold); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border-gold); white-space: nowrap; background: rgba(0,0,0,0.15); }
+    .data-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+    .data-table tr:hover td { background: rgba(255,255,255,0.025); }
+    .data-table tr:last-child td { border-bottom: none; }
+    .status-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+    .s-pending   { background: var(--orange-dim); color: var(--orange); }
+    .s-approved  { background: var(--blue-dim);   color: var(--blue); }
+    .s-received  { background: var(--green-dim);  color: var(--green); }
+    .s-issued    { background: var(--green-dim);  color: var(--green); }
+    .s-completed { background: var(--green-dim);  color: var(--green); }
+    .s-cancelled { background: rgba(255,255,255,0.06); color: var(--muted); }
+    .s-placed    { background: var(--blue-dim);   color: var(--blue); }
+    .s-recorded  { background: var(--orange-dim); color: var(--orange); }
+    .s-verified  { background: var(--green-dim);  color: var(--green); }
+    .s-ordered   { background: var(--blue-dim);   color: var(--blue); }
+    .s-paid      { background: var(--green-dim);  color: var(--green); }
+    .empty-reg { font-size: 12px; color: var(--muted); padding: 24px 0; text-align: center; line-height: 1.6; }
+    .loading { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+
+    /* ── PAGER ── */
+    .reg-pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .reg-pager-info { font-size: 11px; color: var(--muted); }
+    .reg-pager-btns { display: flex; gap: 6px; }
+    .reg-page-btn { padding: 5px 12px; font-size: 11px; border-radius: 6px; border: 1px solid var(--border-gold); background: rgba(0,0,0,0.2); color: var(--text); cursor: pointer; font-family: inherit; transition: background 0.2s; }
+    .reg-page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .reg-page-btn:hover:not(:disabled) { background: var(--gold-dim); color: var(--gold); }
+    .reg-page-btn.active { background: var(--gold); color: #111; border-color: var(--gold); }
+
+    /* ── LOGIN GATE ── */
+    .login-card label { display: block; font-size: 10px; color: var(--muted); margin: 8px 0 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .login-card input { width: 100%; padding: 9px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.25); color: var(--text); }
+
+    /* ── REFRESH BUTTON ── */
+    #btnRefresh { width: auto; display: flex; align-items: center; gap: 6px; padding: 8px 16px; margin: 8px 0 0 0; }
+
+    /* ── SECTION DIVIDER ── */
+    .section-label { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted2); font-weight: 600; margin: 16px 0 8px; }
+
+    /* ── ACTIVITY FEED ── */
+    .activity-feed { list-style: none; }
+    .activity-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+    .activity-dot.green  { background: var(--green); }
+    .activity-dot.orange { background: var(--orange); }
+    .activity-dot.blue   { background: var(--blue); }
+    .activity-dot.red    { background: var(--red); }
+    .activity-dot.gold   { background: var(--gold); }
+    .activity-text { font-size: 12px; color: var(--text); line-height: 1.4; }
+    .activity-time { font-size: 10px; color: var(--muted2); margin-top: 2px; }
+
+    /* ── WARN BOX ── */
+    .warn-box { background: var(--red-dim); border: 1px solid rgba(224,92,92,0.4); padding: 12px; border-radius: var(--radius-sm); color: #ffb4b4; font-size: 12px; }
+
+    /* ── RESPONSIVE ── */
+    @media (min-width: 480px) {
+      html:not(.app-mobile) .kpi-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (min-width: 640px) {
+      .app-main { padding: 14px 16px 10px; }
+      .header { padding: 0 20px; }
+      .nav { padding: 0 16px; }
+    }
+    @media (min-width: 900px) {
+      .summary-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .summary-layout .full-width { grid-column: 1 / -1; }
+    }
+
+    /* Mobile iframe overrides */
+    html.app-mobile #app {
+      min-height: calc(100dvh - 88px) !important;
+      height: auto !important;
+    }
+    html.app-mobile .app-main {
+      min-height: auto !important;
+      overflow-y: visible !important;
+      padding: 12px 10px 10px !important;
+    }
+    html.app-mobile .kpi-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 10px;
+    }
+    html.app-mobile .kpi {
+      padding: 12px 10px;
+    }
+    html.app-mobile .kpi-value {
+      font-size: 24px;
+    }
+    html.app-mobile .kpi-label {
+      font-size: 10px;
+    }
+    html.app-mobile .header {
+      height: auto !important;
+      min-height: 52px !important;
+      padding: 8px 10px 7px !important;
+    }
+    html.app-mobile .header-row {
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      gap: 7px !important;
+      align-items: stretch !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+    html.app-mobile .logo {
+      font-size: 17px !important;
+      line-height: 1.05 !important;
+      white-space: normal !important;
+      min-width: 0 !important;
+    }
+    html.app-mobile .logo small {
+      font-size: 8px !important;
+      letter-spacing: 1.5px !important;
+    }
+    html.app-mobile .header-toolbar {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) auto auto !important;
+      gap: 6px !important;
+      align-items: center !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+    html.app-mobile .toolbar-label,
+    html.app-mobile .user-chip {
+      display: none !important;
+    }
+    html.app-mobile .loc-control {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+    html.app-mobile .header-loc-select {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      font-size: 11px !important;
+      padding: 4px 8px !important;
+    }
+    html.app-mobile .role-pill {
+      font-size: 9px !important;
+      padding: 3px 8px !important;
+      justify-self: start !important;
+      max-width: 100% !important;
+    }
+    html.app-mobile .logout-btn {
+      font-size: 9px !important;
+      padding: 4px 10px !important;
+      justify-self: end !important;
+    }
+    html.app-mobile .nav button {
+      font-size: 12px !important;
+      padding: 10px 10px !important;
+    }
+
+    /* Hard mobile rules even if app-mobile class fails */
+    @media (max-width: 900px) {
+      html, body { overflow-x: hidden !important; }
+      body { font-size: 16px; line-height: 1.6; }
+      .header { height: auto; min-height: 52px; padding: 8px 10px 7px; }
+      .header-row { display: grid; grid-template-columns: 1fr; gap: 7px; align-items: stretch; }
+      .logo { font-size: 17px; white-space: normal; min-width: 0; line-height: 1.05; }
+      .logo small { font-size: 8px; letter-spacing: 1.5px; }
+      .header-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 6px;
+        align-items: center;
+        justify-content: stretch;
+        width: 100%;
+      }
+      .user-chip { display: none; }
+      .toolbar-label { display: none; }
+      .loc-control { width: 100%; min-width: 0; }
+      .role-pill { font-size: 9px; padding: 3px 8px; justify-self: start; }
+      .logout-btn { font-size: 9px; padding: 4px 10px; justify-self: end; }
+      .header-loc-select { width: 100%; min-width: 0; max-width: 100%; font-size: 11px; padding: 4px 8px; }
+      .nav button { font-size: 12px; padding: 10px 10px; }
+      .app-main { padding: 10px 8px 10px !important; min-height: 0 !important; overflow-y: visible !important; }
+      #app .tab-panel.is-active { min-height: 0 !important; }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px; }
+      .kpi { padding: 11px 10px; }
+      .kpi-value { font-size: 28px; }
+      .kpi-label { font-size: 11px; }
+      .card { padding: 12px 10px; margin-bottom: 10px; }
+      .card-title { font-size: 11px; }
+      .row2 { grid-template-columns: 1fr; gap: 6px; }
+      .form-group { margin-bottom: 8px; }
+      label { font-size: 11px; }
+      input, select, textarea { font-size: 16px; padding: 10px; }
+      .btn { font-size: 14px; padding: 11px; }
+      .reg-head { align-items: flex-start; }
+      .reg-head .card-title { width: 100%; flex: 0 0 100%; }
+      .reg-filters { gap: 6px; width: 100%; justify-content: flex-start; }
+      .reg-date-input, .reg-status-input { min-width: 120px; font-size: 12px; padding: 6px 8px; }
+      .reg-filter-btn, .reg-clear-btn { font-size: 11px; padding: 6px 10px; }
+      .data-table { font-size: 12px; }
+      .data-table th { font-size: 10px; padding: 7px 8px; }
+      .data-table td { padding: 7px 8px; }
+      .sku-table { font-size: 12px; }
+      .sku-table th { font-size: 10px; padding: 7px 8px; }
+      .sku-table td { padding: 7px 8px; }
+      .pipeline { overflow-x: auto; }
+      .pipe-step { min-width: 96px; }
+    }
+  </style>
+</head>
+<body>
+  <?!= include('AppViewport'); ?>
+  <?!= include('AppLoader'); ?>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-row">
+      <div class="logo">Kings Equestrian<small>Inventory Control</small></div>
+      <div class="header-toolbar" id="authActions" style="display:none">
+        <span class="toolbar-label">View</span>
+        <div class="loc-control" id="locControl"></div>
+        <span class="role-pill" id="rolePill" style="display:none"></span>
+        <span class="user-chip" id="userMeta"></span>
+        <button type="button" class="logout-btn" id="btnLogout">Sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GATE (loading / login fallback) -->
+  <div id="gate" class="gate-content">
+    <div class="loading" id="gateLoading">Checking session…</div>
+    <div class="card login-card" id="loginCard" style="display:none; max-width:360px; margin: 20px auto;">
+      <div class="card-header"><span class="card-title">Sign in</span></div>
+      <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Use USER_MASTER credentials (not Google).</p>
+      <label>Username / Email</label>
+      <input id="loginId" type="text" placeholder="KE Admin">
+      <label style="margin-top:10px">Password</label>
+      <input id="loginPw" type="password">
+      <button type="button" class="btn" id="btnLoginInline">Login</button>
+      <div class="msg err" id="loginErr" style="margin-top:10px"></div>
+      <p style="color:var(--muted);font-size:11px;margin-top:10px">Demo: <strong>KE Admin</strong> / <strong>admin@123</strong></p>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app" style="display:none">
+    <div class="nav" id="nav"></div>
+    <div class="app-main" id="appMain">
+      <div id="flash" class="msg"></div>
+
+      <!-- ═══════════ SUMMARY ═══════════ -->
+      <div class="tab-panel is-active" data-panel="summary">
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="statGrid"></div>
+
+        <!-- Pipeline flow -->
+        <p class="section-label">Fulfilment pipeline</p>
+        <div class="pipeline" id="pipelineRow"></div>
+
+        <div class="summary-layout">
+          <!-- SKU Table -->
+          <div class="card full-width">
+            <div class="card-header">
+              <span class="card-title">Inventory — SKUs &amp; Stock</span>
+              <span class="card-badge" id="skuBadge">—</span>
+            </div>
+            <div class="sku-table-wrap" id="skuList"></div>
+          </div>
+
+          <!-- Low stock -->
+          <div class="card" id="lowStockCard">
+            <div class="card-header">
+              <span class="card-title">⚠ Low stock alerts</span>
+              <span class="card-badge" id="lowBadge">0</span>
+            </div>
+            <ul class="low-stock-list" id="lowStockList"></ul>
+          </div>
+
+        </div><!-- /summary-layout -->
+
+        <button type="button" class="btn secondary btn-sm" id="btnRefresh" style="width:auto;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;margin-top:4px;">↻ Refresh data</button>
+      </div>
+
+      <!-- ═══════════ VENDOR ═══════════ -->
+      <div class="tab-panel" data-panel="vendor">
+        <div class="card"><div class="card-header"><span class="card-title">Add vendor</span></div>
+          <div id="formVendor">
+            <div class="form-group"><label>Vendor name</label><input name="vendorName" required></div>
+            <div class="form-group"><label>Code (3–5 letters)</label><input name="code" required maxlength="5"></div>
+            <div class="row2">
+              <div class="form-group"><label>Phone</label><input name="phone"></div>
+              <div class="form-group"><label>Email</label><input name="email" type="email"></div>
+            </div>
+            <div class="form-group"><label>Location</label><select name="location" class="loc-select" required></select></div>
+            <button type="button" class="btn btn-save">Save vendor</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ ITEM ═══════════ -->
+      <div class="tab-panel" data-panel="item">
+        <div class="card"><div class="card-header"><span class="card-title">Add item</span></div>
+          <div id="formItem">
+            <div class="form-group"><label>Item name</label><input name="itemName" required></div>
+            <div class="row2">
+              <div class="form-group"><label>Category</label><input name="category" required placeholder="HEL"></div>
+              <div class="form-group"><label>Model</label><input name="model" required placeholder="PRO1"></div>
+            </div>
+            <div class="form-group"><label>Vendor</label><select name="vendor" class="vendor-select" required></select></div>
+            <div class="form-group"><label>Location</label><select name="location" class="loc-select" required></select></div>
+            <div class="row2">
+              <div class="form-group"><label>Qty</label><input name="qty" type="number" min="0" value="0"></div>
+              <div class="form-group"><label>Min level</label><input name="minLevel" type="number" min="0" value="0"></div>
+            </div>
+            <div class="row2">
+              <div class="form-group"><label>Inventory type</label><select name="inventoryType" class="inv-type-select"></select></div>
+              <div class="form-group"><label>Allocated to (optional)</label><input name="allocatedTo" placeholder="Location / team"></div>
+            </div>
+            <div class="row2">
+              <div class="form-group"><label>Storage location</label><select name="storageLocation" class="storage-select"></select></div>
+              <div class="form-group admin-only" data-admin-only="1"><label>Cost price (admin only)</label><input name="costPrice" type="number" min="0" step="0.01" placeholder="0"></div>
+            </div>
+            <div class="form-group">
+              <label>Image link (Google Drive or URL)</label>
+              <input name="imageUrl" placeholder="https://drive.google.com/... or direct image URL">
+            </div>
+            <div class="row2">
+              <div class="form-group">
+                <label>Upload from camera</label>
+                <input name="imageFileCamera" type="file" accept="image/*" capture="environment">
+              </div>
+              <div class="form-group">
+                <label>Upload from gallery/files</label>
+                <input name="imageFileGallery" type="file" accept="image/*">
+              </div>
+              <div class="form-group">
+                <label>Preview</label>
+                <div id="itemImagePreview" style="height:56px;border:1px dashed rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted2);font-size:11px;">No image</div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-save">Save item</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ REQUEST ═══════════ -->
+      <div class="tab-panel" data-panel="request">
+        <div class="card" data-reg-card="requests">
+          <div class="reg-head">
+            <span class="card-title">Procurement requests</span>
+            <div class="reg-filters">
+              <input type="date" class="reg-date-input reg-date-from" title="From">
+              <input type="date" class="reg-date-input reg-date-to" title="To">
+              <select class="reg-status-input reg-status"></select>
+              <button type="button" class="reg-filter-btn">Apply</button>
+              <button type="button" class="reg-clear-btn">Clear</button>
+            </div>
+          </div>
+          <div class="reg-count" id="reqCount"></div>
+          <div class="data-table-wrap" id="reqTable"></div>
+          <div class="reg-pager" id="reqPager"></div>
+        </div>
+        <div class="card"><div class="card-header"><span class="card-title">Create procurement request</span></div>
+          <div id="formRequest">
+            <div class="form-group"><label>Vendor</label><select name="vendorName" class="vendor-select" required></select></div>
+            <div class="form-group"><label>Item</label><select name="item" class="item-select" required></select></div>
+            <div class="row2">
+              <div class="form-group"><label>Qty</label><input name="qty" type="number" min="1" required placeholder="e.g. 20"></div>
+              <div class="form-group"><label>Location</label><select name="location" class="loc-select" required></select></div>
+            </div>
+            <button type="button" class="btn btn-save">Create request</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ PAYMENT ═══════════ -->
+      <div class="tab-panel" data-panel="payment">
+        <div class="card" data-reg-card="payments">
+          <div class="reg-head">
+            <span class="card-title">Vendor payments</span>
+            <div class="reg-filters">
+              <input type="date" class="reg-date-input reg-date-from">
+              <input type="date" class="reg-date-input reg-date-to">
+              <select class="reg-status-input reg-status"></select>
+              <button type="button" class="reg-filter-btn">Apply</button>
+              <button type="button" class="reg-clear-btn">Clear</button>
+            </div>
+          </div>
+          <div class="reg-count" id="payCount"></div>
+          <div class="data-table-wrap" id="payTable"><p class="empty-reg">Loading…</p></div>
+          <div class="reg-pager" id="payPager"></div>
+        </div>
+        <div class="card"><div class="card-header"><span class="card-title">Pay vendor</span></div>
+          <div id="formPayment">
+            <div class="form-group"><label>Request ID</label><select name="requestId" class="req-select req-autofill" required></select></div>
+            <div class="form-group"><label>Vendor</label><select name="vendor" class="vendor-select" required></select></div>
+            <div class="row2">
+              <div class="form-group"><label>Amount</label><input name="amount" type="number" min="0.01" step="0.01" required></div>
+              <div class="form-group"><label>Mode</label><select name="mode"><option>Bank</option><option>UPI</option><option>Card</option><option>Cash</option></select></div>
+            </div>
+            <button type="button" class="btn btn-save">Record vendor payment &amp; approve</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ ORDER ═══════════ -->
+      <div class="tab-panel" data-panel="order">
+        <div class="card" data-reg-card="orders">
+          <div class="reg-head">
+            <span class="card-title">Vendor orders</span>
+            <div class="reg-filters">
+              <input type="date" class="reg-date-input reg-date-from">
+              <input type="date" class="reg-date-input reg-date-to">
+              <select class="reg-status-input reg-status"></select>
+              <button type="button" class="reg-filter-btn">Apply</button>
+              <button type="button" class="reg-clear-btn">Clear</button>
+            </div>
+          </div>
+          <div class="reg-count" id="ordCount"></div>
+          <div class="data-table-wrap" id="ordTable"><p class="empty-reg">Loading…</p></div>
+          <div class="reg-pager" id="ordPager"></div>
+        </div>
+        <div class="card"><div class="card-header"><span class="card-title">Place vendor order</span></div>
+          <div id="formOrder">
+            <div class="form-group"><label>Request ID</label><select name="requestId" class="req-select req-autofill" required></select></div>
+            <div class="form-group"><label>Vendor</label><select name="vendor" class="vendor-select" required></select></div>
+            <div class="form-group"><label>Item</label><select name="item" class="item-select" required></select></div>
+            <div class="row2">
+              <div class="form-group"><label>Qty</label><input name="qty" type="number" min="1"></div>
+              <div class="form-group"><label>Location</label><select name="location" class="loc-select"></select></div>
+            </div>
+            <button type="button" class="btn btn-save">Place order</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ RECEIVE ═══════════ -->
+      <div class="tab-panel" data-panel="receive">
+        <div class="card" data-reg-card="received">
+          <div class="reg-head">
+            <span class="card-title">Goods received</span>
+            <div class="reg-filters">
+              <input type="date" class="reg-date-input reg-date-from">
+              <input type="date" class="reg-date-input reg-date-to">
+              <select class="reg-status-input reg-status"></select>
+              <button type="button" class="reg-filter-btn">Apply</button>
+              <button type="button" class="reg-clear-btn">Clear</button>
+            </div>
+          </div>
+          <div class="reg-count" id="grnCount"></div>
+          <div class="data-table-wrap" id="grnTable"><p class="empty-reg">Loading…</p></div>
+          <div class="reg-pager" id="grnPager"></div>
+        </div>
+        <div class="card"><div class="card-header"><span class="card-title">Receive goods</span></div>
+          <div id="formReceive">
+            <div class="form-group"><label>Order ID</label><select name="orderId" class="order-select" required></select></div>
+            <div class="row2">
+              <div class="form-group"><label>Qty received</label><input name="qty" type="number" min="1" required></div>
+              <div class="form-group"><label>Location</label><select name="location" class="loc-select" required></select></div>
+            </div>
+            <div class="form-group"><label>Storage location</label><select name="storageLocation" class="storage-select"></select></div>
+            <button type="button" class="btn btn-save">Receive &amp; update stock</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ ISSUE ═══════════ -->
+      <div class="tab-panel" data-panel="issue">
+        <div class="card" data-reg-card="issues">
+          <div class="reg-head">
+            <span class="card-title">Issues</span>
+            <div class="reg-filters">
+              <input type="date" class="reg-date-input reg-date-from">
+              <input type="date" class="reg-date-input reg-date-to">
+              <select class="reg-status-input reg-status"></select>
+              <button type="button" class="reg-filter-btn">Apply</button>
+              <button type="button" class="reg-clear-btn">Clear</button>
+            </div>
+          </div>
+          <div class="reg-count" id="issCount"></div>
+          <div class="data-table-wrap" id="issTable"><p class="empty-reg">Loading…</p></div>
+          <div class="reg-pager" id="issPager"></div>
+        </div>
+        <div class="card"><div class="card-header"><span class="card-title">Issue item</span></div>
+          <div id="formIssue">
+            <div class="form-group"><label>Request ID</label><select name="requestId" class="req-select" required></select></div>
+            <div class="form-group">
+              <label>Issued to</label>
+              <input name="issuedTo" required placeholder="Select or type name" list="issuedToList" autocomplete="off">
+              <datalist id="issuedToList"></datalist>
+            </div>
+            <div class="row2">
+              <div class="form-group"><label>Qty</label><input name="qty" type="number" min="1" required></div>
+              <div class="form-group"><label>Location</label><select name="location" class="loc-select" required></select></div>
+            </div>
+            <button type="button" class="btn btn-save">Issue item</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ INVENTORY CONTROL CENTER ═══════════ -->
+      <div class="tab-panel" data-panel="inventory">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📦 Inventory Control Center</span>
+            <span class="card-badge" id="iccBadge">—</span>
+          </div>
+          <div id="iccTotals" class="kpi-grid" style="margin-bottom:10px"></div>
+          <div class="sku-table-wrap" id="iccTable"><p class="empty-reg">Loading inventory…</p></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">📍 Location analytics</span></div>
+          <div class="data-table-wrap" id="iccLocations"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">🧭 Inventory ownership</span></div>
+          <div class="data-table-wrap" id="iccByType"></div>
+        </div>
+
+        <div class="summary-layout">
+          <div class="card">
+            <div class="card-header"><span class="card-title">🔥 Fast moving</span></div>
+            <div class="data-table-wrap" id="iccFast"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">💀 Dead stock (no movement &gt; 90d)</span></div>
+            <div class="data-table-wrap" id="iccDead"></div>
+          </div>
+        </div>
+
+        <!-- ─── Add storage location ─── -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">🗄️ ➕ Add storage location</span></div>
+          <div id="formStorageLocation">
+            <div class="row2">
+              <div class="form-group"><label>Storage name</label><input name="storageName" required placeholder="Farm Store A"></div>
+              <div class="form-group"><label>Location</label><select name="location" class="loc-select" required></select></div>
+            </div>
+            <div class="form-group"><label>Description (optional)</label><input name="description" placeholder="Where exactly is this shelf/room?"></div>
+            <button type="button" class="btn btn-save">Add storage location</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ STOCK TRANSFER ═══════════ -->
+      <div class="tab-panel" data-panel="transfer">
+        <div class="card"><div class="card-header"><span class="card-title">🔄 Move stock between locations</span></div>
+          <div id="formTransfer">
+            <div class="form-group"><label>Item</label><select name="item" class="item-select" required></select></div>
+            <div class="row2">
+              <div class="form-group"><label>From location</label><select name="fromLocation" class="loc-select" required></select></div>
+              <div class="form-group"><label>To location</label><select name="toLocation" class="loc-select" required></select></div>
+            </div>
+            <div class="row2">
+              <div class="form-group"><label>Qty</label><input name="qty" type="number" min="1" required></div>
+              <div class="form-group"><label>Notes</label><input name="notes" placeholder="Reason / reference"></div>
+            </div>
+            <button type="button" class="btn btn-save">Move stock now</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Transfer log</span></div>
+          <div class="reg-head" style="margin-top:4px">
+            <div class="reg-filters" id="transferFilters">
+              <input type="date" id="trfDateFrom" class="reg-date-input" placeholder="From">
+              <input type="date" id="trfDateTo"   class="reg-date-input" placeholder="To">
+              <select id="trfStatus" class="reg-status-input">
+                <option value="">All status</option>
+                <option>Requested</option><option>Approved</option>
+                <option>Completed</option><option>Cancelled</option>
+              </select>
+              <input id="trfItem"   class="reg-date-input" placeholder="Item name/code" style="min-width:120px">
+              <select id="trfFrom" class="reg-status-input"></select>
+              <select id="trfTo"   class="reg-status-input"></select>
+              <button type="button" class="reg-filter-btn" onclick="applyTransferFilters()">Apply</button>
+              <button type="button" class="reg-clear-btn"  onclick="clearTransferFilters()">Clear</button>
+            </div>
+          </div>
+          <div class="reg-count" id="transferLogCount"></div>
+          <div class="data-table-wrap" id="transferLog"><p class="empty-reg">No transfers yet.</p></div>
+        </div>
+      </div>
+
+      <!-- ═══════════ SAMPLE / DEMO MOVEMENT ═══════════ -->
+      <div class="tab-panel" data-panel="sample">
+        <div class="card">
+          <div class="card-header"><span class="card-title">🟡 Issue sample / demo</span></div>
+          <div id="formSampleIssue">
+            <div class="form-group"><label>Item</label><select name="item" class="item-select" required></select></div>
+            <div class="row2">
+              <div class="form-group"><label>From location</label><select name="location" class="loc-select" required></select></div>
+              <div class="form-group"><label>Qty</label><input name="qty" type="number" min="1" value="1" required></div>
+            </div>
+            <div class="form-group">
+              <label>Issued to</label>
+              <input name="issuedTo" required placeholder="Staff / location / event" autocomplete="off">
+            </div>
+            <div class="row2">
+              <div class="form-group"><label>Purpose</label><input name="purpose" placeholder="Demo, trial, event…"></div>
+              <div class="form-group"><label>Expected return</label><input name="expectedReturn" type="date"></div>
+            </div>
+            <div class="form-group"><label>Notes</label><input name="notes" placeholder="Optional"></div>
+            <button type="button" class="btn btn-save">Issue sample &amp; reduce stock</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Sample register</span></div>
+          <div class="reg-head" style="margin-top:4px">
+            <div class="reg-filters" id="sampleFilters">
+              <input type="date" id="smpDateFrom" class="reg-date-input" placeholder="From">
+              <input type="date" id="smpDateTo"   class="reg-date-input" placeholder="To">
+              <select id="smpStatus" class="reg-status-input">
+                <option value="">All status</option>
+                <option>Out</option><option>Returned</option><option>Lost</option>
+              </select>
+              <input id="smpSearch" class="reg-date-input" placeholder="Item / issued to" style="min-width:140px">
+              <button type="button" class="reg-filter-btn" onclick="applySampleFilters()">Apply</button>
+              <button type="button" class="reg-clear-btn"  onclick="clearSampleFilters()">Clear</button>
+            </div>
+          </div>
+          <div class="reg-count" id="sampleListCount"></div>
+          <div class="data-table-wrap" id="sampleList"><p class="empty-reg">Loading…</p></div>
+        </div>
+      </div>
+
+      <!-- ═══════════ PRICING (ADMIN ONLY) ═══════════ -->
+      <div class="tab-panel" data-panel="pricing">
+        <div class="card"><div class="card-header"><span class="card-title">💰 Item pricing (admin only)</span></div>
+          <div id="formPricing">
+            <div class="form-group">
+              <label>Item (name + code)</label>
+              <select name="pricingItemKey" class="pricing-item-select"></select>
+            </div>
+            <div class="row2">
+              <div class="form-group"><label>Item code</label><input name="itemCode" placeholder="KE-…"></div>
+              <div class="form-group"><label>Item name</label><input name="itemName"></div>
+            </div>
+            <div class="row2">
+              <div class="form-group"><label>Cost price</label><input name="costPrice" type="number" min="0" step="0.01"></div>
+              <div class="form-group"><label>Selling price</label><input name="sellingPrice" type="number" min="0" step="0.01"></div>
+            </div>
+            <div class="row2">
+              <div class="form-group"><label>MRP</label><input name="mrp" type="number" min="0" step="0.01"></div>
+              <div class="form-group"><label>Preferred vendor</label><select name="preferredVendor" class="vendor-select"></select></div>
+            </div>
+            <button type="button" class="btn btn-save">Save pricing</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Pricing master</span></div>
+          <div class="reg-head" style="margin-top:4px">
+            <div class="reg-filters" id="pricingFilters">
+              <input id="prcItem"   class="reg-date-input" placeholder="Item name or code" style="min-width:130px">
+              <input id="prcVendor" class="reg-date-input" placeholder="Vendor" style="min-width:100px">
+              <input id="prcMarginMin" class="reg-date-input" type="number" placeholder="Margin ≥ %" style="min-width:90px;max-width:110px">
+              <input id="prcMarginMax" class="reg-date-input" type="number" placeholder="Margin ≤ %" style="min-width:90px;max-width:110px">
+              <button type="button" class="reg-filter-btn" onclick="applyPricingFilters()">Apply</button>
+              <button type="button" class="reg-clear-btn"  onclick="clearPricingFilters()">Clear</button>
+            </div>
+          </div>
+          <div class="reg-count" id="pricingTableCount"></div>
+          <div class="data-table-wrap" id="pricingTable"><p class="empty-reg">Loading…</p></div>
+        </div>
+      </div>
+
+      <!-- ═══════════ FINANCE (ADMIN ONLY) ═══════════ -->
+      <div class="tab-panel" data-panel="finance">
+        <div class="card">
+          <div class="card-header"><span class="card-title">💎 Financial KPIs (admin only)</span></div>
+          <div id="financeKpis" class="kpi-grid"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🏭 Vendor profitability</span>
+            <span class="card-badge" id="vendorProfitBadge">—</span>
+          </div>
+          <div class="data-table-wrap" id="vendorProfitTable"><p class="empty-reg">Loading…</p></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">📧 Weekly report</span></div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:10px">
+            A weekly email summary is sent to all admin users (Mondays 08:00 if the trigger is installed).
+            You can also send the report on-demand from here.
+          </p>
+          <button type="button" class="btn secondary" onclick="sendWeeklyReportNow(this)">Send report to admins now</button>
+          <p style="font-size:11px;color:var(--muted2);margin-top:8px">
+            Install the recurring trigger by running <code>installWeeklyReportTrigger()</code> once from the Apps Script editor.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Notes</span></div>
+          <p style="font-size:12px;color:var(--muted)">
+            Pricing, margins, vendor cost, profitability and inventory valuation are restricted to administrators.
+            Operations staff never see these numbers in any tab or report.
+          </p>
+        </div>
+      </div>
+
+    </div><!-- /app-main -->
+  </div><!-- /app -->
+
+  <script>
+  /* ─────────────────────────────────────────────────────
+     STATE & CONSTANTS
+  ───────────────────────────────────────────────────── */
+  var state = { bootstrap: null, token: "" };
+  var URL_TOKEN = '<?= urlToken ?>';
+  var VIEW_STORAGE_KEY = "keInvViewLocation";
+
+  var NAV_ITEMS = [
+    { id: "summary",   label: "📊 Summary",      perm: null },
+    { id: "inventory", label: "📦 Inventory",    perm: null },
+    { id: "vendor",    label: "🏭 Vendor ➕ ",    perm: "master" },
+    { id: "item",      label: "📦 ➕ New Item",  perm: "master" },
+    { id: "request",   label: "📋 Request",      perm: "request" },
+    { id: "payment",   label: "💳 Pay vendor",   perm: "payment" },
+    { id: "order",     label: "🛒 Order",        perm: "order" },
+    { id: "receive",   label: "📥 Receive",      perm: "receive" },
+    { id: "issue",     label: "🚀 Issue",        perm: "issue" },
+    { id: "transfer",  label: "🔄 Transfer",     perm: "transfer" },
+    { id: "sample",    label: "🟡 Sample",       perm: "sample" },
+    { id: "pricing",   label: "💰 Pricing",      perm: "pricing" },
+    { id: "finance",   label: "💎 Finance",      perm: "finance" }
+  ];
+
+  var REGISTER_COLS = {
+    payments: ["Payment ID","Request ID","Vendor","Amount","Mode","Status","Date"],
+    orders:   ["Order ID","Request ID","Vendor","Item","Qty","Location","Order Date","Status"],
+    received: ["GRN ID","Order ID","Item","Qty","Location","Received By","Date"],
+    issues:   ["Issue ID","Request ID","Item","Qty","Issued To","Location","Date"],
+    requests: ["Request ID","Date","Vendor","Item","Qty","Location","Status","Payment Status"]
+  };
+
+  var REGISTER_UI = {
+    payments: { tableId:"payTable", countId:"payCount", pagerId:"payPager" },
+    orders:   { tableId:"ordTable", countId:"ordCount", pagerId:"ordPager" },
+    received: { tableId:"grnTable", countId:"grnCount", pagerId:"grnPager" },
+    issues:   { tableId:"issTable", countId:"issCount", pagerId:"issPager" },
+    requests: { tableId:"reqTable", countId:"reqCount", pagerId:"reqPager" }
+  };
+
+  var registerState = {
+    payments: { page:1, dateFrom:"", dateTo:"", status:"" },
+    orders:   { page:1, dateFrom:"", dateTo:"", status:"" },
+    received: { page:1, dateFrom:"", dateTo:"", status:"" },
+    issues:   { page:1, dateFrom:"", dateTo:"", status:"" },
+    requests: { page:1, dateFrom:"", dateTo:"", status:"" }
+  };
+  var registerLoaded = {
+    payments: false,
+    orders: false,
+    received: false,
+    issues: false,
+    requests: false
+  };
+
+  var REGISTER_STATUS_OPTIONS = {
+    requests: ["Pending","Payment Received","Approved","Ordered","Received","Issued","Completed","Cancelled","Unpaid","Paid"],
+    payments: ["Recorded","Verified","Pending","Completed","Cancelled"],
+    orders:   ["Placed","Partially Received","Received","Cancelled","Ordered"],
+    received: ["Received","Pending","Completed"],
+    issues:   ["Issued","Completed","Pending","Cancelled"]
+  };
+
+  /* ─────────────────────────────────────────────────────
+     UTILITIES
+  ───────────────────────────────────────────────────── */
+  function $(sel, root) { return (root||document).querySelector(sel); }
+  function $$(sel, root) { return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
+
+  function showFlash(text, ok) {
+    var el = $("#flash");
+    el.textContent = text;
+    el.className = "msg show " + (ok ? "ok" : "err");
+    setTimeout(function(){ el.classList.remove("show"); }, 5000);
+  }
+
+  function formToObject(block) {
+    var o = {};
+    if (!block) return o;
+    block.querySelectorAll("input, select, textarea").forEach(function(el) {
+      if (!el.name) return;
+      o[el.name] = el.value;
+    });
+    return o;
+  }
+
+  function getStoredViewLocation() {
+    try {
+      var s = localStorage.getItem(VIEW_STORAGE_KEY);
+      if (s === "__ALL__") return "";
+      if (s) return s;
+    } catch(e){}
+    return null;
+  }
+
+  function getViewLocationForRequest() {
+    var loc = state.bootstrap && state.bootstrap.location;
+    if (loc) {
+      if (loc.isAdmin) {
+        var stored = getStoredViewLocation();
+        if (stored !== null) return stored;
+        return loc.defaultAdminLocation || "Farm";
+      }
+      return loc.viewLocation || loc.userLocation || "";
+    }
+    var stored2 = getStoredViewLocation();
+    if (stored2 !== null) return stored2;
+    return "Farm";
+  }
+
+  function showLoader(msg) { if (window.AppLoader) window.AppLoader.show(msg||"Loading…"); }
+  function hideLoader()    { if (window.AppLoader) window.AppLoader.forceHide(); }
+
+  /* ─────────────────────────────────────────────────────
+     STATUS PILL HELPER
+  ───────────────────────────────────────────────────── */
+  function statusPill(val) {
+    if (!val || val === "—") return '<span style="color:var(--muted2)">—</span>';
+    var cls = "s-" + val.toLowerCase().replace(/\s+/g,"-").replace(/[^a-z-]/g,"");
+    var known = {
+      "pending":"s-pending","payment received":"s-paid","approved":"s-approved",
+      "ordered":"s-ordered","received":"s-received","issued":"s-issued","completed":"s-completed",
+      "cancelled":"s-cancelled","placed":"s-placed","partially received":"s-received",
+      "recorded":"s-recorded","verified":"s-verified"
+    };
+    cls = known[val.toLowerCase()] || "";
+    return '<span class="status-pill ' + cls + '">' + val + '</span>';
+  }
+
+  /* ─────────────────────────────────────────────────────
+     LOCATION CONTROL
+  ───────────────────────────────────────────────────── */
+  function renderLocationControl(loc) {
+    var el = document.getElementById("locControl");
+    if (!el || !loc) return;
+    if (loc.isAdmin) {
+      var sel = document.createElement("select");
+      sel.className = "header-loc-select";
+      sel.id = "adminLocSelect";
+      sel.setAttribute("aria-label","View location");
+      (loc.locationOptions||[]).forEach(function(opt) {
+        var o = document.createElement("option");
+        o.value = opt.value; o.textContent = opt.label;
+        sel.appendChild(o);
+      });
+      var current = getViewLocationForRequest();
+      sel.value = (current === "") ? "" : current;
+      sel.addEventListener("change", function() {
+        var v = sel.value;
+        try { localStorage.setItem(VIEW_STORAGE_KEY, v===""?"__ALL__":v); } catch(e){}
+        loadBootstrap("Loading location…");
+      });
+      el.innerHTML = ""; el.appendChild(sel);
+    } else {
+      el.innerHTML = '<span class="loc-badge">📍 ' + (loc.viewLabel||loc.userLocation||"—") + '</span>';
+    }
+  }
+
+  function applyFormLocationLocks(loc) {
+    var root = document.getElementById("app");
+    if (!root||!loc) return;
+    var fixedLoc = loc.locationLocked
+      ? (loc.viewLocation||loc.userLocation||"")
+      : (getViewLocationForRequest()||"");
+    root.querySelectorAll(".loc-select").forEach(function(sel) {
+      if (loc.locationLocked && fixedLoc) {
+        sel.innerHTML = '<option value="'+fixedLoc+'">'+fixedLoc+'</option>';
+        sel.value = fixedLoc; sel.disabled = true;
+      } else {
+        sel.disabled = false;
+        if (fixedLoc) sel.value = fixedLoc;
+      }
+    });
+  }
+
+  function fillSelects(lists, locations, locCtx) {
+    var root = document.getElementById("app") || document;
+    locations = locations||[]; lists = lists||{};
+    locCtx = locCtx||(state.bootstrap&&state.bootstrap.location)||{};
+    root.querySelectorAll(".loc-select").forEach(function(sel) {
+      sel.innerHTML = locations.map(function(l){ return '<option value="'+l+'">'+l+'</option>'; }).join("");
+    });
+    root.querySelectorAll(".vendor-select").forEach(function(sel) {
+      sel.innerHTML = (lists.vendors||[]).map(function(v){ return "<option>"+v+"</option>"; }).join("");
+    });
+    root.querySelectorAll(".req-select").forEach(function(sel) {
+      sel.innerHTML = (lists.requests||[]).map(function(r){
+        var detail = [r.vendor, r.item, r.qty ? "×"+r.qty : "", r.location].filter(Boolean).join(" · ");
+        return '<option value="'+r.id+'" data-vendor="'+(r.vendor||"")+'" data-item="'+(r.item||"")+'" data-qty="'+(r.qty||"")+'" data-location="'+(r.location||"")+'">'+r.id+' ('+r.status+')'+(detail ? " — "+detail : "")+'</option>';
+      }).join("") || '<option value="">No open requests</option>';
+    });
+    root.querySelectorAll(".item-select").forEach(function(sel) {
+      sel.innerHTML = (lists.items||[]).map(function(i){ return "<option>"+i+"</option>"; }).join("");
+    });
+    root.querySelectorAll(".order-select").forEach(function(sel) {
+      var orders = lists.orders||[];
+      sel.innerHTML = orders.map(function(o) {
+        var id = typeof o==="string"?o:o.id;
+        var st = typeof o==="object"&&o.status?" ("+o.status+")":"";
+        return '<option value="'+id+'">'+id+st+'</option>';
+      }).join("") || '<option value="">No orders yet</option>';
+    });
+    root.querySelectorAll(".pricing-item-select").forEach(function(sel) {
+      var itemOptions = lists.itemOptions || [];
+      var opts = '<option value="">Select item...</option>' + itemOptions.map(function(it) {
+        var val = (it.code || "") + "||" + (it.name || "");
+        return '<option value="'+val+'">'+(it.label || (it.name || it.code || "—"))+'</option>';
+      }).join("");
+      sel.innerHTML = opts;
+      sel.onchange = function() {
+        var v = sel.value || "";
+        var parts = v.split("||");
+        var code = parts[0] || "";
+        var name = parts[1] || "";
+        var pricingForm = document.getElementById("formPricing");
+        if (!pricingForm) return;
+        var codeEl = pricingForm.querySelector('input[name="itemCode"]');
+        var nameEl = pricingForm.querySelector('input[name="itemName"]');
+        if (codeEl && code && !codeEl.value) codeEl.value = code;
+        if (nameEl && name && !nameEl.value) nameEl.value = name;
+      };
+    });
+    var invTypes = (state.bootstrap&&state.bootstrap.inventoryTypes)||[];
+    root.querySelectorAll(".inv-type-select").forEach(function(sel) {
+      sel.innerHTML = invTypes.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join("");
+    });
+    var storageLocs = lists.storageLocations || [];
+    root.querySelectorAll(".storage-select").forEach(function(sel) {
+      sel.innerHTML = '<option value="">— select storage —</option>'
+        + storageLocs.map(function(s){
+            return '<option value="'+s.name+'">'+s.label+'</option>';
+          }).join("");
+    });
+    applyFormLocationLocks(locCtx);
+    applyAdminOnlyVisibility();
+    setupRequestAutofill();
+  }
+
+  function setupRequestAutofill() {
+    document.querySelectorAll(".req-autofill").forEach(function(sel) {
+      if (sel._keAutofillBound) return;
+      sel._keAutofillBound = true;
+      sel.addEventListener("change", function() {
+        var opt = sel.options[sel.selectedIndex];
+        if (!opt) return;
+        var form = sel.closest("form, .card, div");
+        if (!form) form = sel.closest("#formPayment, #formOrder") || document;
+        var parent = sel.closest("#formPayment, #formOrder");
+        if (!parent) return;
+        var vendor = opt.getAttribute("data-vendor") || "";
+        var item = opt.getAttribute("data-item") || "";
+        var qty = opt.getAttribute("data-qty") || "";
+        var location = opt.getAttribute("data-location") || "";
+        var vendorSel = parent.querySelector('select[name="vendor"], select[name="vendorName"]');
+        var itemSel = parent.querySelector('select[name="item"]');
+        var qtyIn = parent.querySelector('input[name="qty"]');
+        var locSel = parent.querySelector('select[name="location"]');
+        if (vendorSel && vendor) vendorSel.value = vendor;
+        if (itemSel && item) itemSel.value = item;
+        if (qtyIn && qty) qtyIn.value = qty;
+        if (locSel && location) locSel.value = location;
+      });
+    });
+  }
+
+  function applyAdminOnlyVisibility() {
+    var isAdmin = !!(state.bootstrap && state.bootstrap.permissions && state.bootstrap.permissions.admin);
+    var nodes = document.querySelectorAll("[data-admin-only]");
+    nodes.forEach(function(el){
+      el.style.display = isAdmin ? "" : "none";
+    });
+  }
+
+  /* ─────────────────────────────────────────────────────
+     REGISTER TABLES
+  ───────────────────────────────────────────────────── */
+  var STATUS_COLS = { "Status":1, "Payment Status":1 };
+
+  function getRegisterKeyFromCard(card) { return card ? card.getAttribute("data-reg-card") : ""; }
+
+  function syncRegisterFiltersFromDom(key) {
+    var card = document.querySelector('[data-reg-card="'+key+'"]');
+    if (!card||!registerState[key]) return;
+    var f = card.querySelector(".reg-date-from"),
+        t = card.querySelector(".reg-date-to"),
+        s = card.querySelector(".reg-status");
+    registerState[key].dateFrom = f ? f.value : "";
+    registerState[key].dateTo   = t ? t.value : "";
+    registerState[key].status   = s ? s.value : "";
+  }
+
+  function syncRegisterFiltersToDom(key, reg) {
+    var card = document.querySelector('[data-reg-card="'+key+'"]');
+    if (!card) return;
+    var f = card.querySelector(".reg-date-from"),
+        t = card.querySelector(".reg-date-to"),
+        s = card.querySelector(".reg-status");
+    if (f&&reg) f.value = reg.dateFrom||registerState[key].dateFrom||"";
+    if (t&&reg) t.value = reg.dateTo||registerState[key].dateTo||"";
+    if (s&&reg) s.value = reg.status||registerState[key].status||"";
+  }
+
+  function renderRegisterStatusOptions() {
+    Object.keys(REGISTER_STATUS_OPTIONS).forEach(function (key) {
+      var card = document.querySelector('[data-reg-card="'+key+'"]');
+      if (!card) return;
+      var sel = card.querySelector(".reg-status");
+      if (!sel) return;
+      var opts = REGISTER_STATUS_OPTIONS[key] || [];
+      var html = '<option value="">All status</option>';
+      opts.forEach(function (st) {
+        html += '<option value="'+st+'">'+st+'</option>';
+      });
+      sel.innerHTML = html;
+      if (registerState[key] && registerState[key].status) {
+        sel.value = registerState[key].status;
+      }
+    });
+  }
+
+  function renderRegisterTable(containerId, countId, reg, colKeys) {
+    var el = document.getElementById(containerId);
+    var countEl = document.getElementById(countId);
+    if (!el) return;
+    if (reg&&reg.error) {
+      el.innerHTML = '<p class="empty-reg">Could not read <strong>'+reg.sheetName+'</strong>: '+reg.error+'<br>Run setupInventorySheets().</p>';
+      if (countEl) countEl.textContent = "";
+      return;
+    }
+    var rows = (reg&&reg.rows)||[], count = (reg&&reg.count)||0;
+    if (countEl) {
+      var locNote = state.bootstrap&&state.bootstrap.location
+        ? " · "+(state.bootstrap.location.viewLabel||"All Locations") : "";
+      var page = reg.page||1, totalPages = reg.totalPages||1;
+      countEl.textContent = count
+        ? "Showing "+rows.length+" of "+count+" (page "+page+" / "+totalPages+", newest first)"+locNote
+        : "No records for this location"+locNote;
+    }
+    if (!rows.length) {
+      el.innerHTML = '<p class="empty-reg">No records yet. Run <strong>seedSampleData()</strong> in Apps Script.<br>Sheet must be named <strong>'+(reg&&reg.sheetName||"")+'</strong>.</p>';
+      return;
+    }
+    var cols = colKeys||(reg.headers||[]);
+    var html = '<table class="data-table"><thead><tr>';
+    cols.forEach(function(c){ html += "<th>"+c+"</th>"; });
+    html += "</tr></thead><tbody>";
+    var ITEM_COLS = { "Item": 1, "Item Name": 1 };
+    rows.forEach(function(row) {
+      html += "<tr>";
+      cols.forEach(function(c) {
+        var v = row[c];
+        if (v===undefined||v===null||v==="") v = "—";
+        var cell = String(v);
+        if (STATUS_COLS[c] && v !== "—") {
+          cell = statusPill(v);
+        } else if (c === "Amount" && v !== "—") {
+          cell = '<span style="color:var(--green);font-weight:600">₹' + cell + '</span>';
+        } else if (ITEM_COLS[c] && v !== "—") {
+          var thumb = itemThumb(row[c], row["Item Code"]);
+          if (thumb) cell = thumb + '<span>' + cell + '</span>';
+        }
+        html += "<td>"+cell+"</td>";
+      });
+      html += "</tr>";
+    });
+    html += "</tbody></table>";
+    el.innerHTML = html;
+  }
+
+  function renderRegisterPager(key, reg) {
+    var ui = REGISTER_UI[key];
+    if (!ui) return;
+    var el = document.getElementById(ui.pagerId);
+    if (!el) return;
+    var count = (reg&&reg.count)||0, page = (reg&&reg.page)||1,
+        totalPages = (reg&&reg.totalPages)||1, pageSize = (reg&&reg.pageSize)||5;
+    if (count<=pageSize && totalPages<=1) {
+      el.innerHTML = count ? '<span class="reg-pager-info">'+count+' record(s) · newest first</span>' : "";
+      return;
+    }
+    var start = (page-1)*pageSize+1, end = Math.min(page*pageSize,count);
+    el.innerHTML =
+      '<span class="reg-pager-info">Rows '+start+'–'+end+' of '+count+' (page '+page+' / '+totalPages+')</span>'+
+      '<div class="reg-pager-btns">'+
+      '<button type="button" class="reg-page-btn" data-reg-action="prev" data-reg="'+key+'"'+(page<=1?" disabled":"")+'>← Prev</button>'+
+      '<button type="button" class="reg-page-btn" data-reg-action="next" data-reg="'+key+'"'+(page>=totalPages?" disabled":"")+'>Next →</button>'+
+      '</div>';
+  }
+
+  function renderRegisterKey(key, reg) {
+    var ui = REGISTER_UI[key]; if (!ui||!reg) return;
+    if (reg.dateFrom!==undefined) registerState[key].dateFrom = reg.dateFrom||"";
+    if (reg.dateTo!==undefined)   registerState[key].dateTo   = reg.dateTo||"";
+    if (reg.status!==undefined)   registerState[key].status   = reg.status||"";
+    if (reg.page) registerState[key].page = reg.page;
+    syncRegisterFiltersToDom(key, reg);
+    renderRegisterTable(ui.tableId, ui.countId, reg, REGISTER_COLS[key]);
+    renderRegisterPager(key, reg);
+    registerLoaded[key] = true;
+  }
+
+  function renderRegisters(registers) {
+    registers = registers||{};
+    Object.keys(registers).forEach(function(key) {
+      if (!REGISTER_UI[key]) return;
+      renderRegisterKey(key, registers[key]||{rows:[],count:0,page:1,totalPages:1});
+    });
+  }
+
+  function getRegisterKeyForPanel(panelId) {
+    var map = {
+      payment: "payments",
+      order: "orders",
+      receive: "received",
+      issue: "issues",
+      request: "requests"
+    };
+    return map[panelId] || "";
+  }
+
+  function loadRegisterPage(key, resetPage) {
+    if (!REGISTER_UI[key]) return;
+    if (resetPage) registerState[key].page = 1;
+    syncRegisterFiltersFromDom(key);
+    var ui = REGISTER_UI[key];
+    var tableEl = ui ? document.getElementById(ui.tableId) : null;
+    if (tableEl) tableEl.innerHTML = '<p class="empty-reg">Loading records…</p>';
+    var token = getToken();
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res&&res.success&&res.register) {
+          renderRegisterKey(key, res.register);
+        }
+        else showFlash((res&&res.message)||"Could not load records", false);
+      })
+      .withFailureHandler(function(err) { showFlash(err.message||"Failed", false); })
+      .apiCall("getRegisterPage", {
+        token: token, registerKey: key,
+        page: registerState[key].page,
+        dateFrom: registerState[key].dateFrom,
+        dateTo: registerState[key].dateTo,
+        status: registerState[key].status,
+        viewLocation: getViewLocationForRequest()
+      }, token);
+  }
+
+  function resetAllRegisterPages() {
+    Object.keys(registerState).forEach(function(k){ registerState[k].page = 1; });
+  }
+
+  function resetRegisterLoadedFlags() {
+    Object.keys(registerLoaded).forEach(function(k){ registerLoaded[k] = false; });
+  }
+
+  /* ─────────────────────────────────────────────────────
+     SUMMARY RENDER
+  ───────────────────────────────────────────────────── */
+  function renderSummary(summary) {
+    summary = summary||{};
+
+    // KPI cards
+    var kpis = [
+      { key:"totalSkus", icon:"📦", n: summary.totalSkus||0,        l:"Total SKUs",      cls:"gold"   },
+      { key:"lowStock",  icon:"⚠️", n: summary.lowStockCount||0,    l:"Low stock",       cls: (summary.lowStockCount>0?"red":"green") },
+      { key:"pending",   icon:"📋", n: summary.pendingRequests||0,  l:"Pending requests",cls: (summary.pendingRequests>0?"orange":"green") },
+      { key:"active",    icon:"✅", n: summary.activeRequests||0,   l:"Active requests", cls:"blue"   },
+      { key:"payments",  icon:"💳", n: summary.paymentCount||0,     l:"Vendor payments", cls:"green"  },
+      { key:"orders",    icon:"🛒", n: summary.orderCount||0,       l:"Orders",          cls:"gold"   },
+      { key:"received",  icon:"📥", n: summary.receivedCount||0,    l:"Received",        cls:"blue"   },
+      { key:"issues",    icon:"🚀", n: summary.issueCount||0,       l:"Issues",          cls:"orange" }
+    ];
+    $("#statGrid").innerHTML = kpis.map(function(k) {
+      return '<button type="button" class="kpi '+k.cls+'" data-kpi-key="'+k.key+'" title="Open related data">'
+        +'<span class="kpi-icon">'+k.icon+'</span>'
+        +'<div class="kpi-value">'+k.n+'</div>'
+        +'<div class="kpi-label">'+k.l+'</div>'
+        +'</button>';
+    }).join("");
+
+    // Pipeline flow
+    var steps = [
+      { lbl:"Pending",   n: summary.pendingRequests||0,  alert: (summary.pendingRequests||0)>0 },
+      { lbl:"Approved",  n: summary.activeRequests||0,   alert: false },
+      { lbl:"Ordered",   n: summary.orderCount||0,       alert: false },
+      { lbl:"Received",  n: summary.receivedCount||0,    alert: false },
+      { lbl:"Issued",    n: summary.issueCount||0,       alert: false }
+    ];
+    $("#pipelineRow").innerHTML = steps.map(function(s,i) {
+      var cls = s.alert ? "pipe-step alert" : (s.n>0 ? "pipe-step active" : "pipe-step");
+      return '<div class="'+cls+'">'
+        +'<span class="pipe-num">'+s.n+'</span>'
+        +'<span class="pipe-lbl">'+s.lbl+(i<steps.length-1?' →':'')+'</span>'
+        +'</div>';
+    }).join("");
+
+    // Low stock
+    var low = summary.lowStockItems||[];
+    var lowBadge = document.getElementById("lowBadge");
+    if (lowBadge) lowBadge.textContent = low.length;
+    $("#lowStockList").innerHTML = low.length
+      ? low.map(function(x){
+          var name = (x && typeof x === "object") ? (x.itemName || "") : String(x||"");
+          var img  = (x && typeof x === "object" && x.imageUrl) ? x.imageUrl : findItemImage(name);
+          var thumb = img
+            ? '<img src="'+img+'" loading="lazy" alt="" style="width:24px;height:24px;border-radius:6px;object-fit:cover;border:1px solid rgba(255,255,255,0.15);margin-right:6px;vertical-align:middle">'
+            : "";
+          return '<li class="low-stock-item">'
+            +'<span style="display:flex;align-items:center">'+thumb+'<span>'+name+'</span></span>'
+            +'<span class="low-badge">LOW</span>'
+            +'</li>';
+        }).join("")
+      : '<li style="padding:12px 0;color:var(--muted);font-size:12px;text-align:center">✅ All items above minimum</li>';
+
+    // SKU table
+    var sku = summary.skuItems||[];
+    var skuBadge = document.getElementById("skuBadge");
+    if (skuBadge) skuBadge.textContent = (summary.totalSkus||0)+" items";
+    if (!sku.length) {
+      $("#skuList").innerHTML = '<p class="empty-reg">No items found for this location.</p>';
+    } else {
+      var html = '<table class="sku-table"><thead><tr>'
+        +'<th>Code</th><th>Item</th><th>Location</th><th>Qty</th><th>Min</th>'
+        +'</tr></thead><tbody>';
+      sku.forEach(function(it) {
+        var qty = it.qty!=null ? it.qty : 0;
+        var min = it.minLevel||0;
+        var qtyClass = qty===0 ? "qty-zero" : (min>0&&qty<=min ? "qty-low" : "qty-ok");
+        var thumb = it.imageUrl
+          ? '<img src="'+it.imageUrl+'" loading="lazy" alt="" style="width:24px;height:24px;border-radius:6px;object-fit:cover;border:1px solid rgba(255,255,255,0.15);margin-right:6px;vertical-align:middle">'
+          : itemThumb(it.itemName, it.itemCode);
+        html += '<tr>'
+          +'<td style="color:var(--muted);font-family:monospace;font-size:11px">'+(it.itemCode||"—")+'</td>'
+          +'<td style="font-weight:500">'+thumb+'<span>'+(it.itemName||"—")+'</span></td>'
+          +'<td style="color:var(--muted)">'+(it.location||"—")+'</td>'
+          +'<td><span class="qty-pill '+qtyClass+'">'+qty+'</span></td>'
+          +'<td style="color:var(--muted2)">'+min+'</td>'
+          +'</tr>';
+      });
+      html += '</tbody></table>';
+      $("#skuList").innerHTML = html;
+    }
+  }
+
+  function handleKpiClick(kpiKey) {
+    if (!kpiKey) return;
+    var appMain = document.getElementById("appMain");
+    var scrollToEl = function(el) {
+      if (!el || !appMain) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    switch (kpiKey) {
+      case "lowStock":
+        showPanel("summary");
+        setTimeout(function(){ scrollToEl(document.getElementById("lowStockCard")); }, 20);
+        break;
+      case "totalSkus":
+        showPanel("summary");
+        setTimeout(function(){ scrollToEl(document.getElementById("skuList")); }, 20);
+        break;
+      case "issues":
+        showPanel("issue");
+        break;
+      case "orders":
+        showPanel("order");
+        break;
+      case "payments":
+        showPanel("payment");
+        break;
+      case "received":
+        showPanel("receive");
+        break;
+      case "pending":
+        showPanel("request");
+        registerState.requests.status = "Pending";
+        registerState.requests.page = 1;
+        loadRegisterPage("requests", true);
+        break;
+      case "active":
+        showPanel("request");
+        registerState.requests.status = "Approved";
+        registerState.requests.page = 1;
+        loadRegisterPage("requests", true);
+        break;
+      default:
+        break;
+    }
+  }
+
+  /* ─────────────────────────────────────────────────────
+     INVENTORY CONTROL CENTER + TRANSFER + PRICING + FINANCE
+  ───────────────────────────────────────────────────── */
+  var advancedState = {
+    iccLoaded: false,
+    pricingLoaded: false,
+    financeLoaded: false,
+    transferLoaded: false,
+    sampleLoaded: false,
+    vendorProfitLoaded: false,
+    lastTransfers: [],
+    lastSamples: [],
+    allPricingRows: []
+  };
+
+  function fmtMoney(v) {
+    if (v == null || v === "") return "—";
+    var n = Number(v) || 0;
+    return "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+  }
+
+  function statusBadge(status) {
+    var s = String(status||"").toLowerCase();
+    var cls = "s-pending";
+    if (s.indexOf("low") >= 0 || s.indexOf("out") >= 0) cls = "s-cancelled";
+    else if (s.indexOf("near") >= 0) cls = "s-recorded";
+    else if (s.indexOf("healthy") >= 0) cls = "s-received";
+    return '<span class="status-pill '+cls+'">'+(status||"—")+'</span>';
+  }
+
+  /* ── Item image helpers ──────────────────────────────────────── */
+  state.itemImageMap = {};
+
+  function rebuildItemImageMap() {
+    var map = {};
+    var opts = (state.bootstrap && state.bootstrap.lists && state.bootstrap.lists.itemOptions) || [];
+    opts.forEach(function(o) {
+      if (!o || !o.imageUrl) return;
+      if (o.name) map[String(o.name).toLowerCase()] = o.imageUrl;
+      if (o.code) map[String(o.code).toLowerCase()] = o.imageUrl;
+    });
+    // Also seed from summary.skuItems (covers items not in itemOptions for any reason).
+    var sku = (state.bootstrap && state.bootstrap.summary && state.bootstrap.summary.skuItems) || [];
+    sku.forEach(function(it) {
+      if (!it || !it.imageUrl) return;
+      if (it.itemName) map[String(it.itemName).toLowerCase()] = it.imageUrl;
+      if (it.itemCode) map[String(it.itemCode).toLowerCase()] = it.imageUrl;
+    });
+    state.itemImageMap = map;
+  }
+
+  function findItemImage() {
+    var map = state.itemImageMap || {};
+    for (var i = 0; i < arguments.length; i++) {
+      var key = arguments[i];
+      if (!key) continue;
+      var url = map[String(key).toLowerCase()];
+      if (url) return url;
+    }
+    return "";
+  }
+
+  /**
+   * Returns small inline thumbnail HTML, or empty string when none available.
+   * size: pixel side (default 24).
+   */
+  function itemThumb(nameOrCode1, nameOrCode2, size) {
+    var url = findItemImage(nameOrCode1, nameOrCode2);
+    if (!url) return "";
+    var s = size || 24;
+    return '<img src="'+url+'" loading="lazy" alt="" '
+      +'style="width:'+s+'px;height:'+s+'px;border-radius:6px;object-fit:cover;'
+      +'border:1px solid rgba(255,255,255,0.15);vertical-align:middle;margin-right:6px;flex-shrink:0">';
+  }
+
+  /**
+   * Map a single qty cell to one of 6 heat classes.
+   * 0      → heat-0 (empty)
+   * <= min → heat-1 (red / low)
+   * < 1.5*min → heat-2 (orange / near min)
+   * < global max * 0.33 → heat-3 (yellow / fair)
+   * < global max * 0.66 → heat-4 (green / good)
+   * otherwise → heat-5 (deep green / strong)
+   */
+  function computeHeatClass(qty, min, max) {
+    var q = Number(qty) || 0;
+    var m = Number(min) || 0;
+    var mx = Math.max(1, Number(max) || 1);
+    if (q <= 0) return "heat-0";
+    if (m > 0 && q <= m) return "heat-1";
+    if (m > 0 && q <= m * 1.5) return "heat-2";
+    var ratio = q / mx;
+    if (ratio < 0.33) return "heat-3";
+    if (ratio < 0.66) return "heat-4";
+    return "heat-5";
+  }
+
+  function loadInventoryControlCenter(force) {
+    if (advancedState.iccLoaded && !force) return;
+    var t = getToken();
+    var holder = document.getElementById("iccTable");
+    if (holder) holder.innerHTML = '<p class="empty-reg">Loading inventory…</p>';
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.success && res.analytics) {
+          renderInventoryControlCenter(res.analytics);
+          advancedState.iccLoaded = true;
+        } else {
+          if (holder) holder.innerHTML = '<p class="empty-reg">'+((res&&res.message)||"Failed to load")+'</p>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        if (holder) holder.innerHTML = '<p class="empty-reg">'+(err.message||"Failed to load")+'</p>';
+      })
+      .apiCall("getInventoryControlCenter", { viewLocation: getViewLocationForRequest() }, t);
+  }
+
+  function renderInventoryControlCenter(a) {
+    a = a || {};
+    var items = a.items || [];
+    var totals = a.totals || {};
+    var byLocation = a.byLocation || [];
+    var byType = a.byType || [];
+    var movement = a.movement || {};
+    var isFin = totals.includeFinancials;
+
+    document.getElementById("iccBadge").textContent = items.length + " SKUs";
+
+    var kpis = [
+      { icon: "📦", n: totals.totalUnits||0, l: "Total units", cls: "gold" },
+      { icon: "✅", n: totals.availableForSale||0, l: "Available for sale", cls: "green" },
+      { icon: "⚠️", n: totals.lowStockCount||0, l: "Low / out", cls: "red" },
+      { icon: "💀", n: totals.deadStockCount||0, l: "Dead stock (>90d)", cls: "orange" }
+    ];
+    if (isFin && totals.totalValue != null) {
+      kpis.push({ icon: "💎", n: fmtMoney(totals.totalValue), l: "Inventory value", cls: "blue", isText: true });
+    }
+    document.getElementById("iccTotals").innerHTML = kpis.map(function(k) {
+      return '<div class="kpi '+k.cls+'">'
+        + '<span class="kpi-icon">'+k.icon+'</span>'
+        + '<div class="kpi-value">'+(k.isText?k.n:k.n)+'</div>'
+        + '<div class="kpi-label">'+k.l+'</div></div>';
+    }).join("");
+
+    var locs = (state.bootstrap&&state.bootstrap.locations)||["Bangalore","Hyderabad","Pune","Farm"];
+    // Compute a global "high" reference (max single-cell qty) so heat scales sensibly.
+    var maxCell = 1;
+    items.forEach(function(it) {
+      locs.forEach(function(loc) {
+        var v = (it.locations && it.locations[loc]) || 0;
+        if (v > maxCell) maxCell = v;
+      });
+    });
+    var html = '<table class="data-table"><thead><tr>'
+      + '<th>Code</th><th>Item</th><th>Category</th>'
+      + locs.map(function(l){ return '<th>'+l+'</th>'; }).join("")
+      + '<th>Total</th><th>Min</th><th>Type</th><th>Status</th>'
+      + (isFin ? '<th>Value</th>' : '')
+      + '</tr></thead><tbody>';
+    items.forEach(function(it) {
+      var locCells = locs.map(function(loc) {
+        var v = (it.locations && it.locations[loc]) || 0;
+        var heatCls = computeHeatClass(v, it.minLevel||0, maxCell);
+        return '<td><span class="heat-cell '+heatCls+'" title="'+loc+': '+v+' units (min '+(it.minLevel||0)+')">'+v+'</span></td>';
+      }).join("");
+      html += '<tr>'
+        + '<td style="color:var(--muted);font-family:monospace;font-size:11px">'+(it.itemCode||"—")+'</td>'
+        + '<td style="font-weight:500;display:flex;align-items:center;gap:8px">'
+          + (it.imageUrl ? '<img src="'+it.imageUrl+'" loading="lazy" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover;border:1px solid rgba(255,255,255,0.15)">' : '')
+          + '<span>'+(it.itemName||"—")+'</span>'
+        + '</td>'
+        + '<td style="color:var(--muted)">'+(it.category||"—")+'</td>'
+        + locCells
+        + '<td><strong>'+(it.totalQty||0)+'</strong></td>'
+        + '<td style="color:var(--muted2)">'+(it.minLevel||0)+'</td>'
+        + '<td style="color:var(--muted)">'+(it.inventoryType||"—")+'</td>'
+        + '<td>'+statusBadge(it.status)+'</td>'
+        + (isFin ? '<td>'+fmtMoney(it.inventoryValue)+'</td>' : '')
+        + '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById("iccTable").innerHTML = items.length ? html : '<p class="empty-reg">No inventory yet.</p>';
+
+    // Location analytics
+    var locHtml = '<table class="data-table"><thead><tr>'
+      + '<th>Location</th><th>Units</th>'+(isFin?'<th>Value</th>':'')+'</tr></thead><tbody>';
+    byLocation.forEach(function(row) {
+      locHtml += '<tr><td>'+row.location+'</td><td>'+row.units+'</td>'+(isFin?'<td>'+fmtMoney(row.value)+'</td>':'')+'</tr>';
+    });
+    locHtml += '</tbody></table>';
+    document.getElementById("iccLocations").innerHTML = locHtml;
+
+    // By type
+    var typeHtml = '<table class="data-table"><thead><tr>'
+      + '<th>Inventory type</th><th>Qty</th>'+(isFin?'<th>Value</th>':'')+'</tr></thead><tbody>';
+    byType.forEach(function(row) {
+      typeHtml += '<tr><td>'+row.type+'</td><td>'+row.qty+'</td>'+(isFin?'<td>'+fmtMoney(row.value)+'</td>':'')+'</tr>';
+    });
+    typeHtml += '</tbody></table>';
+    document.getElementById("iccByType").innerHTML = typeHtml;
+
+    // Fast moving
+    var fastHtml = (movement.fastMoving||[]).map(function(f) {
+      var thumb = itemThumb(f.item);
+      return '<div class="low-stock-item"><span style="display:flex;align-items:center">'+thumb+'<span>'+f.item+'</span></span>'
+        +'<span class="low-badge" style="background:var(--green-dim);color:var(--green);border-color:rgba(61,186,126,0.3)">'+f.count+'</span></div>';
+    }).join("");
+    document.getElementById("iccFast").innerHTML = fastHtml || '<p class="empty-reg">No issue data yet.</p>';
+
+    // Dead stock
+    var deadHtml = (movement.deadStock||[]).map(function(d) {
+      var name = d.itemName||d.itemCode||"—";
+      var thumb = itemThumb(d.itemName, d.itemCode);
+      return '<div class="low-stock-item"><span style="display:flex;align-items:center">'+thumb+'<span>'+name+'</span></span><span class="low-badge">DEAD</span></div>';
+    }).join("");
+    document.getElementById("iccDead").innerHTML = deadHtml || '<p class="empty-reg">Nothing dead. ✅</p>';
+  }
+
+  /* ── Transfer log ── */
+  function loadTransferLog(force) {
+    if (advancedState.transferLoaded && !force) return;
+    var t = getToken();
+    var el = document.getElementById("transferLog");
+    if (el) el.innerHTML = '<p class="empty-reg">Loading…</p>';
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.success) {
+          advancedState.lastTransfers = res.transfers || [];
+          advancedState.transferLoaded = true;
+          renderTransferLog(advancedState.lastTransfers);
+        } else {
+          if (el) el.innerHTML = '<p class="empty-reg">'+((res&&res.message)||"No data")+'</p>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        if (el) el.innerHTML = '<p class="empty-reg">'+(err.message||"Failed to load")+'</p>';
+      })
+      .apiCall("getTransferLog", { viewLocation: getViewLocationForRequest() }, t);
+  }
+
+  function getTransferFilterState() {
+    return {
+      dateFrom: (document.getElementById("trfDateFrom")||{}).value || "",
+      dateTo:   (document.getElementById("trfDateTo")||{}).value   || "",
+      status:   (document.getElementById("trfStatus")||{}).value   || "",
+      item:     ((document.getElementById("trfItem")||{}).value||"").toLowerCase(),
+      from:     (document.getElementById("trfFrom")||{}).value     || "",
+      to:       (document.getElementById("trfTo")||{}).value       || ""
+    };
+  }
+
+  function applyTransferFilters() {
+    renderTransferLog(advancedState.lastTransfers);
+  }
+  function clearTransferFilters() {
+    ["trfDateFrom","trfDateTo","trfItem"].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.value = "";
+    });
+    ["trfStatus","trfFrom","trfTo"].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.selectedIndex = 0;
+    });
+    renderTransferLog(advancedState.lastTransfers);
+  }
+
+  function renderTransferLog(rows) {
+    var f = getTransferFilterState();
+    var filtered = (rows || []).filter(function(r) {
+      var d = r["Date"] ? String(r["Date"]).substring(0,10) : "";
+      if (f.dateFrom && d && d < f.dateFrom) return false;
+      if (f.dateTo   && d && d > f.dateTo)   return false;
+      if (f.status && r["Status"] !== f.status) return false;
+      if (f.from && r["From Location"] !== f.from) return false;
+      if (f.to   && r["To Location"]   !== f.to)   return false;
+      if (f.item) {
+        var name = (r["Item Name"]||"").toLowerCase();
+        var code = (r["Item Code"]||"").toLowerCase();
+        if (name.indexOf(f.item) < 0 && code.indexOf(f.item) < 0) return false;
+      }
+      return true;
+    });
+    var countEl = document.getElementById("transferLogCount");
+    if (countEl) countEl.textContent = filtered.length + " record" + (filtered.length === 1 ? "" : "s");
+    var el = document.getElementById("transferLog");
+    if (!el) return;
+    if (!filtered.length) {
+      el.innerHTML = '<p class="empty-reg">No transfers match the filters.</p>'; return;
+    }
+    var html = '<table class="data-table"><thead><tr>'
+      + '<th>ID</th><th>Item</th><th>From</th><th>To</th><th>Qty</th>'
+      + '<th>Status</th><th>Date</th><th>Notes</th>'
+      + '</tr></thead><tbody>';
+    filtered.forEach(function(r) {
+      var nm = r["Item Name"]||r["Item Code"]||"—";
+      var thumb = itemThumb(r["Item Name"], r["Item Code"]);
+      html += '<tr>'
+        + '<td style="font-family:monospace;font-size:11px">'+(r["Transfer ID"]||"—")+'</td>'
+        + '<td>'+thumb+'<span>'+nm+'</span></td>'
+        + '<td>'+(r["From Location"]||"—")+'</td>'
+        + '<td>'+(r["To Location"]||"—")+'</td>'
+        + '<td><strong>'+(r["Qty"]||0)+'</strong></td>'
+        + '<td>'+statusBadge(r["Status"])+'</td>'
+        + '<td style="color:var(--muted)">'+(r["Date"]?String(r["Date"]).substring(0,10):"—")+'</td>'
+        + '<td style="color:var(--muted2);font-size:12px">'+(r["Notes"]||"")+'</td>'
+        + '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  function populateTransferLocationFilters() {
+    var locs = (state.bootstrap && state.bootstrap.locations) || ["Bangalore","Hyderabad","Pune","Farm"];
+    ["trfFrom","trfTo"].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var label = id === "trfFrom" ? "All from" : "All to";
+      el.innerHTML = '<option value="">'+label+'</option>'
+        + locs.map(function(l){ return '<option value="'+l+'">'+l+'</option>'; }).join("");
+    });
+  }
+
+  /* ── Pricing ── */
+  function loadPricing(force) {
+    if (advancedState.pricingLoaded && !force) return;
+    var t = getToken();
+    var el = document.getElementById("pricingTable");
+    if (el) el.innerHTML = '<p class="empty-reg">Loading…</p>';
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.success && res.pricing) {
+          advancedState.allPricingRows = res.pricing;
+          renderPricingTable(res.pricing);
+          advancedState.pricingLoaded = true;
+        } else {
+          if (el) el.innerHTML = '<p class="empty-reg">'+((res&&res.message)||"Could not load")+'</p>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        if (el) el.innerHTML = '<p class="empty-reg">'+(err.message||"Could not load")+'</p>';
+      })
+      .apiCall("getPricingList", {}, t);
+  }
+
+  function getPricingFilterState() {
+    return {
+      item:       ((document.getElementById("prcItem")||{}).value||"").toLowerCase().trim(),
+      vendor:     ((document.getElementById("prcVendor")||{}).value||"").toLowerCase().trim(),
+      marginMin:  parseFloat((document.getElementById("prcMarginMin")||{}).value) || null,
+      marginMax:  parseFloat((document.getElementById("prcMarginMax")||{}).value) || null
+    };
+  }
+
+  function applyPricingFilters() {
+    renderPricingTable(advancedState.allPricingRows);
+  }
+  function clearPricingFilters() {
+    ["prcItem","prcVendor","prcMarginMin","prcMarginMax"].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.value = "";
+    });
+    renderPricingTable(advancedState.allPricingRows);
+  }
+
+  function renderPricingTable(rows) {
+    var f = getPricingFilterState();
+    var filtered = (rows || []).filter(function(r) {
+      if (f.item) {
+        var n = (r["Item Name"]||"").toLowerCase();
+        var c = (r["Item Code"]||"").toLowerCase();
+        if (n.indexOf(f.item) < 0 && c.indexOf(f.item) < 0) return false;
+      }
+      if (f.vendor) {
+        var v = (r["Preferred Vendor"]||"").toLowerCase();
+        if (v.indexOf(f.vendor) < 0) return false;
+      }
+      var margin = parseFloat(r["Profit Margin %"]) || 0;
+      if (f.marginMin !== null && margin < f.marginMin) return false;
+      if (f.marginMax !== null && margin > f.marginMax) return false;
+      return true;
+    });
+    var countEl = document.getElementById("pricingTableCount");
+    if (countEl) countEl.textContent = filtered.length + " record" + (filtered.length === 1 ? "" : "s");
+    var el = document.getElementById("pricingTable");
+    if (!el) return;
+    if (!filtered.length) {
+      el.innerHTML = '<p class="empty-reg">No pricing entries match.</p>'; return;
+    }
+    var html = '<table class="data-table"><thead><tr>'
+      + '<th>Item Code</th><th>Item</th><th>Cost</th><th>Sell</th><th>MRP</th><th>Margin %</th><th>Vendor</th>'
+      + '</tr></thead><tbody>';
+    filtered.forEach(function(r) {
+      var margin = parseFloat(r["Profit Margin %"]) || 0;
+      var mCls = margin >= 20 ? "s-received" : margin >= 10 ? "s-recorded" : "s-pending";
+      var pThumb = itemThumb(r["Item Name"], r["Item Code"]);
+      var pName = r["Item Name"]||"—";
+      html += '<tr>'
+        + '<td style="font-family:monospace;font-size:11px">'+(r["Item Code"]||"—")+'</td>'
+        + '<td>'+pThumb+'<span>'+pName+'</span></td>'
+        + '<td>'+fmtMoney(r["Cost Price"])+'</td>'
+        + '<td>'+fmtMoney(r["Selling Price"])+'</td>'
+        + '<td>'+fmtMoney(r["MRP"])+'</td>'
+        + '<td><span class="status-pill '+mCls+'">'+margin+'%</span></td>'
+        + '<td style="color:var(--muted)">'+(r["Preferred Vendor"]||"—")+'</td>'
+        + '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  function loadFinance() {
+    if (advancedState.financeLoaded) return;
+    var t = getToken();
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.success && res.finance) {
+          renderFinanceKpis(res.finance);
+          advancedState.financeLoaded = true;
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById("financeKpis").innerHTML = '<p class="empty-reg" style="grid-column:1/-1">'+(err.message||"Could not load")+'</p>';
+      })
+      .apiCall("getFinancialKpis", { viewLocation: getViewLocationForRequest() }, t);
+  }
+
+  function renderFinanceKpis(f) {
+    f = f || {};
+    var kpis = [
+      { icon:"🪙", n: fmtMoney(f.revenue),                  l:"Revenue (payments)",        cls:"green" },
+      { icon:"💎", n: fmtMoney(f.inventoryValue),           l:"Inventory value",           cls:"gold"  },
+      { icon:"🏭", n: fmtMoney(f.businessInventoryValue),   l:"Business stock value",      cls:"blue"  },
+      { icon:"🟨", n: fmtMoney(f.sampleInventoryValue),     l:"Sample stock value",        cls:"orange"},
+      { icon:"🟧", n: fmtMoney(f.operationalInventoryValue),l:"Operational stock value",   cls:"red"   },
+      { icon:"📦", n: f.vendorOrderUnits||0,                l:"Vendor ordered units",      cls:"gold"  },
+      { icon:"⏳", n: f.vendorPendingUnits||0,              l:"Pending order units",       cls:"orange"},
+      { icon:"🏷", n: f.pricingCoverage||0,                 l:"Items with pricing",        cls:"blue"  }
+    ];
+    document.getElementById("financeKpis").innerHTML = kpis.map(function(k) {
+      return '<div class="kpi '+k.cls+'">'
+        + '<span class="kpi-icon">'+k.icon+'</span>'
+        + '<div class="kpi-value" style="font-size:18px">'+k.n+'</div>'
+        + '<div class="kpi-label">'+k.l+'</div></div>';
+    }).join("");
+  }
+
+  /* ── Sample movement ── */
+  function loadSampleMovements(force) {
+    if (advancedState.sampleLoaded && !force) return;
+    var t = getToken();
+    var el = document.getElementById("sampleList");
+    if (el) el.innerHTML = '<p class="empty-reg">Loading…</p>';
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.success) {
+          advancedState.lastSamples = res.samples || [];
+          advancedState.sampleLoaded = true;
+          renderSampleList(advancedState.lastSamples);
+        } else {
+          if (el) el.innerHTML = '<p class="empty-reg">'+((res&&res.message)||"No data")+'</p>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        if (el) el.innerHTML = '<p class="empty-reg">'+(err.message||"Failed to load")+'</p>';
+      })
+      .apiCall("getSampleMovements", { viewLocation: getViewLocationForRequest() }, t);
+  }
+
+  function getSampleFilterState() {
+    return {
+      dateFrom: (document.getElementById("smpDateFrom")||{}).value || "",
+      dateTo:   (document.getElementById("smpDateTo")||{}).value   || "",
+      status:   (document.getElementById("smpStatus")||{}).value   || "",
+      search:   ((document.getElementById("smpSearch")||{}).value||"").toLowerCase().trim()
+    };
+  }
+  function applySampleFilters() { renderSampleList(advancedState.lastSamples); }
+  function clearSampleFilters() {
+    ["smpDateFrom","smpDateTo","smpSearch"].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.value = "";
+    });
+    var st = document.getElementById("smpStatus"); if (st) st.selectedIndex = 0;
+    renderSampleList(advancedState.lastSamples);
+  }
+
+  function renderSampleList(rows) {
+    var f = getSampleFilterState();
+    var filtered = (rows||[]).filter(function(r) {
+      var d = r["Date Out"] ? String(r["Date Out"]).substring(0,10) : "";
+      if (f.dateFrom && d && d < f.dateFrom) return false;
+      if (f.dateTo   && d && d > f.dateTo)   return false;
+      if (f.status && r["Status"] !== f.status) return false;
+      if (f.search) {
+        var hay = ((r["Item Name"]||"") + " " + (r["Item Code"]||"") + " " + (r["Issued To"]||"")).toLowerCase();
+        if (hay.indexOf(f.search) < 0) return false;
+      }
+      return true;
+    });
+    var countEl = document.getElementById("sampleListCount");
+    if (countEl) countEl.textContent = filtered.length + " record" + (filtered.length === 1 ? "" : "s");
+    var el = document.getElementById("sampleList");
+    if (!el) return;
+    if (!filtered.length) {
+      el.innerHTML = '<p class="empty-reg">No samples match the filters.</p>'; return;
+    }
+    var html = '<table class="data-table"><thead><tr>'
+      + '<th>ID</th><th>Item</th><th>Loc</th><th>Issued To</th><th>Purpose</th>'
+      + '<th>Out</th><th>Exp. return</th><th>Returned</th><th>Status</th><th>Action</th>'
+      + '</tr></thead><tbody>';
+    filtered.forEach(function(r) {
+      var status = r["Status"] || "Out";
+      var actions = "";
+      if (status === "Out") {
+        actions = '<button class="btn-sm secondary" onclick="returnSample(\''+r["Sample ID"]+'\', this)">Return</button>'
+                + ' <button class="btn-sm" style="background:rgba(229,89,89,0.12);color:#e55959" onclick="markSampleLostUI(\''+r["Sample ID"]+'\', this)">Lost</button>';
+      } else {
+        actions = '<span style="color:var(--muted2);font-size:11px">—</span>';
+      }
+      var smpThumb = itemThumb(r["Item Name"], r["Item Code"]);
+      var smpName = r["Item Name"]||r["Item Code"]||"—";
+      html += '<tr>'
+        + '<td style="font-family:monospace;font-size:11px">'+(r["Sample ID"]||"—")+'</td>'
+        + '<td>'+smpThumb+'<span>'+smpName+'</span></td>'
+        + '<td>'+(r["Location"]||"—")+'</td>'
+        + '<td>'+(r["Issued To"]||"—")+'</td>'
+        + '<td style="color:var(--muted);font-size:12px">'+(r["Purpose"]||"")+'</td>'
+        + '<td style="color:var(--muted)">'+(r["Date Out"]?String(r["Date Out"]).substring(0,10):"—")+'</td>'
+        + '<td style="color:var(--muted)">'+(r["Expected Return"]?String(r["Expected Return"]).substring(0,10):"—")+'</td>'
+        + '<td style="color:var(--muted)">'+(r["Date Returned"]?String(r["Date Returned"]).substring(0,10):"—")+'</td>'
+        + '<td>'+statusBadge(status)+'</td>'
+        + '<td>'+actions+'</td>'
+        + '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  function returnSample(sampleId, btn) {
+    var qty = prompt("How many units are being returned?", "1");
+    if (!qty) return;
+    var n = Number(qty);
+    if (!n || n <= 0) { showFlash("Invalid quantity", false); return; }
+    if (btn) { btn.disabled = true; btn.textContent = "…"; }
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.success) {
+          showFlash(res.message||"Sample returned", true);
+          advancedState.sampleLoaded = false;
+          advancedState.iccLoaded = false;
+          loadSampleMovements(true);
+        } else {
+          if (btn) { btn.disabled = false; btn.textContent = "Return"; }
+          showFlash((res&&res.message)||"Failed", false);
+        }
+      })
+      .withFailureHandler(function(err) {
+        if (btn) { btn.disabled = false; btn.textContent = "Return"; }
+        showFlash(err.message||"Failed", false);
+      })
+      .apiCall("returnSampleMovement", { sampleId: sampleId, qty: n, viewLocation: getViewLocationForRequest() }, getToken());
+  }
+
+  function markSampleLostUI(sampleId, btn) {
+    if (!confirm("Mark this sample as LOST? Inventory will not be adjusted.")) return;
+    if (btn) { btn.disabled = true; btn.textContent = "…"; }
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.success) {
+          showFlash(res.message||"Marked lost", true);
+          advancedState.sampleLoaded = false;
+          loadSampleMovements(true);
+        } else {
+          if (btn) { btn.disabled = false; btn.textContent = "Lost"; }
+          showFlash((res&&res.message)||"Failed", false);
+        }
+      })
+      .withFailureHandler(function(err) {
+        if (btn) { btn.disabled = false; btn.textContent = "Lost"; }
+        showFlash(err.message||"Failed", false);
+      })
+      .apiCall("markSampleLost", { sampleId: sampleId, viewLocation: getViewLocationForRequest() }, getToken());
+  }
+
+  /* ── Vendor profitability (admin only) ── */
+  function loadVendorProfitability(force) {
+    if (advancedState.vendorProfitLoaded && !force) return;
+    var perms = (state.bootstrap && state.bootstrap.permissions) || {};
+    if (!perms.finance && !perms.admin) return;
+    var t = getToken();
+    var el = document.getElementById("vendorProfitTable");
+    if (el) el.innerHTML = '<p class="empty-reg">Loading…</p>';
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.success) {
+          advancedState.vendorProfitLoaded = true;
+          renderVendorProfitability(res.vendors || []);
+        } else {
+          if (el) el.innerHTML = '<p class="empty-reg">'+((res&&res.message)||"No data")+'</p>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        if (el) el.innerHTML = '<p class="empty-reg">'+(err.message||"Failed to load")+'</p>';
+      })
+      .apiCall("getVendorProfitability", {}, t);
+  }
+
+  function renderVendorProfitability(vendors) {
+    var el = document.getElementById("vendorProfitTable");
+    var badge = document.getElementById("vendorProfitBadge");
+    if (badge) badge.textContent = vendors.length + " vendor" + (vendors.length === 1 ? "" : "s");
+    if (!vendors || !vendors.length) {
+      el.innerHTML = '<p class="empty-reg">No issue activity yet (need issued items + pricing data to compute profit).</p>';
+      return;
+    }
+    var html = '<table class="data-table"><thead><tr>'
+      + '<th>Vendor</th><th>Units</th><th>Revenue</th><th>COGS</th><th>Profit</th><th>Margin %</th>'
+      + '</tr></thead><tbody>';
+    vendors.forEach(function(v) {
+      var margin = Number(v.margin) || 0;
+      var mCls = margin >= 20 ? "s-received" : margin >= 10 ? "s-recorded" : "s-pending";
+      html += '<tr>'
+        + '<td>'+(v.vendor||"—")+'</td>'
+        + '<td><strong>'+(v.units||0)+'</strong></td>'
+        + '<td>'+fmtMoney(v.revenue)+'</td>'
+        + '<td>'+fmtMoney(v.cogs)+'</td>'
+        + '<td><strong style="color:'+(v.profit>=0?"var(--green)":"var(--red)")+'">'+fmtMoney(v.profit)+'</strong></td>'
+        + '<td><span class="status-pill '+mCls+'">'+margin+'%</span></td>'
+        + '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  /* ── Send weekly report on-demand ── */
+  function sendWeeklyReportNow(btn) {
+    if (!confirm("Send the weekly summary email to all admins now?")) return;
+    if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (btn) { btn.disabled = false; btn.textContent = "Send report to admins now"; }
+        if (res && res.success) {
+          var n = (res.sent != null) ? res.sent : ((res.data&&res.data.sent)||0);
+          showFlash("Weekly report sent to " + n + " admin recipient(s).", true);
+        } else {
+          showFlash((res&&res.message)||"Send failed", false);
+        }
+      })
+      .withFailureHandler(function(err) {
+        if (btn) { btn.disabled = false; btn.textContent = "Send report to admins now"; }
+        showFlash(err.message||"Send failed", false);
+      })
+      .apiCall("sendWeeklyReportNow", {}, getToken());
+  }
+
+  function submitTransfer(btn) {
+    var block = document.getElementById("formTransfer");
+    var data = formToObject(block);
+    var t = getToken();
+    if (!data.item || !data.fromLocation || !data.toLocation || !data.qty) {
+      showFlash("All fields are required", false); return;
+    }
+    btn.disabled = true; btn.textContent = "Moving…";
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false; btn.textContent = "Move stock now";
+        if (res && res.success) {
+          showFlash(res.message||"Stock transferred", true);
+          advancedState.iccLoaded = false;
+          advancedState.transferLoaded = false;
+          loadBootstrap("Refreshing…");
+        } else {
+          showFlash((res&&res.message)||"Transfer failed", false);
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false; btn.textContent = "Move stock now";
+        showFlash(err.message||"Transfer failed", false);
+      })
+      .apiCall("createStockTransfer", {
+        item: data.item, fromLocation: data.fromLocation, toLocation: data.toLocation,
+        qty: Number(data.qty), notes: data.notes, autoComplete: true,
+        viewLocation: getViewLocationForRequest()
+      }, t);
+  }
+
+  function submitPricing(btn) {
+    var block = document.getElementById("formPricing");
+    var data = formToObject(block);
+    var t = getToken();
+    btn.disabled = true; btn.textContent = "Saving…";
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false; btn.textContent = "Save pricing";
+        if (res && res.success) {
+          showFlash(res.message||"Pricing saved", true);
+          advancedState.pricingLoaded = false;
+          advancedState.financeLoaded = false;
+          loadPricing();
+        } else {
+          showFlash((res&&res.message)||"Save failed", false);
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false; btn.textContent = "Save pricing";
+        showFlash(err.message||"Save failed", false);
+      })
+      .apiCall("upsertPricing", {
+        itemCode: data.itemCode, itemName: data.itemName,
+        costPrice: Number(data.costPrice)||0, sellingPrice: Number(data.sellingPrice)||0,
+        mrp: Number(data.mrp)||0, preferredVendor: data.preferredVendor,
+        viewLocation: getViewLocationForRequest()
+      }, t);
+  }
+
+  /* ─────────────────────────────────────────────────────
+     NAV & PANELS
+  ───────────────────────────────────────────────────── */
+  function buildNav(perms) {
+    var nav = $("#nav"); nav.innerHTML = "";
+    var firstId = "summary";
+    NAV_ITEMS.forEach(function(item) {
+      if (item.perm && perms && !perms[item.perm]) return;
+      var b = document.createElement("button");
+      b.textContent = item.label;
+      b.setAttribute("data-panel", item.id);
+      b.onclick = function(){ showPanel(item.id); };
+      nav.appendChild(b);
+    });
+    var firstBtn = nav.querySelector("button");
+    if (firstBtn) { firstId = firstBtn.getAttribute("data-panel")||firstId; firstBtn.classList.add("active"); }
+    showPanel(firstId);
+  }
+
+  function showPanel(id) {
+    var app = document.getElementById("app"); if (!app) return;
+    app.querySelectorAll(".tab-panel").forEach(function(p) {
+      p.classList.toggle("is-active", p.getAttribute("data-panel")===id);
+    });
+    $$('#nav button').forEach(function(b) {
+      b.classList.toggle("active", (b.getAttribute("data-panel")||b.dataset.panel)===id);
+    });
+    var regKey = getRegisterKeyForPanel(id);
+    if (regKey && !registerLoaded[regKey]) {
+      loadRegisterPage(regKey, true);
+    }
+    if (id === "inventory") {
+      loadInventoryControlCenter(false);
+    } else if (id === "transfer") {
+      populateTransferLocationFilters();
+      loadTransferLog(false);
+    } else if (id === "sample") {
+      loadSampleMovements(false);
+    } else if (id === "pricing") {
+      loadPricing(false);
+    } else if (id === "finance") {
+      loadFinance();
+      loadVendorProfitability(false);
+    }
+    if (window.AppViewport && window.AppViewport.boot) {
+      setTimeout(function(){ window.AppViewport.boot(); }, 40);
+    }
+  }
+
+  /* ─────────────────────────────────────────────────────
+     AUTH & BOOTSTRAP
+  ───────────────────────────────────────────────────── */
+  function getToken() {
+    if (state.token) return state.token;
+    var params = new URLSearchParams(window.location.search);
+    var t = params.get("token")||URL_TOKEN||"";
+    try { if (!t) t = localStorage.getItem("keInvAuthToken")||""; } catch(e){}
+    state.token = t; return t;
+  }
+
+  function showLoginGate(msg) {
+    hideLoader();
+    $("#gate").style.display = "block";
+    $("#gateLoading").style.display = "none";
+    $("#loginCard").style.display = "block";
+    $("#app").style.display = "none";
+    $("#authActions").style.display = "none";
+    if (msg) { var err = $("#loginErr"); err.classList.add("show"); err.textContent = msg; }
+  }
+
+  function applyBootstrap(data) {
+    if (!data||typeof data!=="object") { hideLoader(); showLoginGate("Dashboard data failed. Try refreshing."); return; }
+    state.bootstrap = data;
+    if (!data.authenticated) { hideLoader(); showLoginGate(data.message||"Please sign in."); return; }
+    try { localStorage.setItem("keInvAuthToken", getToken()); } catch(e){}
+    $("#gate").style.display = "none";
+    $("#app").style.display = "block";
+    $("#authActions").style.display = "flex";
+    var u = data.user||{}, loc = data.location||{};
+    $("#userMeta").textContent = (u.name||"User") + " · " + (u.email||"");
+    renderLocationControl(loc);
+    var pill = $("#rolePill");
+    pill.textContent = u.role||"";
+    pill.style.display = "inline-flex";
+    if (!loc.isAdmin && loc.userLocation) {
+      try { localStorage.removeItem(VIEW_STORAGE_KEY); } catch(e){}
+    }
+    resetAllRegisterPages();
+    resetRegisterLoadedFlags();
+    try {
+      buildNav(data.permissions||{});
+        renderRegisterStatusOptions();
+      fillSelects(data.lists||{}, data.locations||[], loc);
+      rebuildItemImageMap();
+      renderRegisters(data.registers||{});
+      renderSummary(data.summary||{});
+    } catch(err) {
+      console.error("Dashboard render error:", err);
+      showFlash("Some sections failed to render: "+(err.message||err), false);
+    }
+    if (window.AppViewport && window.AppViewport.boot) {
+      setTimeout(function(){ window.AppViewport.boot(); }, 40);
+    }
+    hideLoader();
+  }
+
+  function loadBootstrap(loaderMessage) {
+    var token = getToken();
+    if (!token) { hideLoader(); showLoginGate(); return; }
+    showLoader(loaderMessage||"Loading dashboard…");
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (!data) { hideLoader(); showLoginGate("Server returned no data. Redeploy the web app and try again."); return; }
+        applyBootstrap(data);
+      })
+      .withFailureHandler(function(e) {
+        hideLoader(); state.token = "";
+        try { localStorage.removeItem("keInvAuthToken"); } catch(x){}
+        showLoginGate(e&&e.message?e.message:"Failed to load dashboard.");
+      })
+      .getDashboardBootstrap(token, getViewLocationForRequest());
+  }
+
+  function refreshAfterSaveQuick(token, viewLocation, action) {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        hideLoader();
+        if (!data || !data.lists || !data.summary) {
+          return;
+        }
+        state.bootstrap = state.bootstrap || {};
+        state.bootstrap.lists = data.lists;
+        state.bootstrap.summary = data.summary;
+        if (data.location) {
+          state.bootstrap.location = data.location;
+        }
+        fillSelects(data.lists || {}, state.bootstrap.locations || [], state.bootstrap.location || {});
+        rebuildItemImageMap();
+        renderSummary(data.summary || {});
+        advancedState.iccLoaded = false;
+        advancedState.financeLoaded = false;
+        if (action === "upsertPricing") {
+          advancedState.pricingLoaded = false;
+          if (document.querySelector('.tab-panel.is-active[data-panel="pricing"]')) {
+            loadPricing();
+          }
+        }
+        if (action === "createStockTransfer" && document.querySelector('.tab-panel.is-active[data-panel="inventory"]')) {
+          loadInventoryControlCenter(true);
+        }
+      })
+      .withFailureHandler(function() {
+        hideLoader();
+      })
+      .getPostSaveRefresh(token, viewLocation);
+  }
+
+  function runInlineLogin() {
+    var id = $("#loginId").value.trim(), pw = $("#loginPw").value;
+    var err = $("#loginErr"); err.classList.remove("show");
+    showLoader("Signing in…");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res||!res.token) { hideLoader(); err.classList.add("show"); err.textContent = "Login failed."; return; }
+        state.token = res.token;
+        try { localStorage.setItem("keInvAuthToken", res.token); } catch(e){}
+        loadBootstrap("Opening dashboard…");
+      })
+      .withFailureHandler(function(e) { hideLoader(); err.classList.add("show"); err.textContent = e.message||"Login failed"; })
+      .loginUser(id, pw);
+  }
+
+  /* ─────────────────────────────────────────────────────
+     FORM BINDINGS
+  ───────────────────────────────────────────────────── */
+  function readFileAsDataUrl(file, cb, errCb) {
+    try {
+      if (!file) { cb(""); return; }
+      var reader = new FileReader();
+      reader.onload = function(e) { cb(String(e.target && e.target.result || "")); };
+      reader.onerror = function() { if (errCb) errCb("Could not read image file."); };
+      reader.readAsDataURL(file);
+    } catch (e) {
+      if (errCb) errCb(e.message || "Could not read image file.");
+    }
+  }
+
+  function setupItemImagePreview() {
+    var form = document.getElementById("formItem");
+    if (!form) return;
+    var cameraInput = form.querySelector('input[name="imageFileCamera"]');
+    var galleryInput = form.querySelector('input[name="imageFileGallery"]');
+    var linkInput = form.querySelector('input[name="imageUrl"]');
+    var preview = document.getElementById("itemImagePreview");
+    if (!cameraInput || !galleryInput || !linkInput || !preview) return;
+
+    function setPreviewFromSrc(src) {
+      if (!src) {
+        preview.innerHTML = "No image";
+        return;
+      }
+      preview.innerHTML = '<img src="' + src + '" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.2)">';
+    }
+
+    function handleFileChange(primaryInput, otherInput) {
+      var f = primaryInput.files && primaryInput.files[0];
+      if (!f) {
+        var otherFile = otherInput.files && otherInput.files[0];
+        if (!otherFile) setPreviewFromSrc(linkInput.value);
+        return;
+      }
+      // Keep one active source at a time for clarity.
+      otherInput.value = "";
+      readFileAsDataUrl(f, function(dataUrl) { setPreviewFromSrc(dataUrl); });
+    }
+
+    cameraInput.addEventListener("change", function() { handleFileChange(cameraInput, galleryInput); });
+    galleryInput.addEventListener("change", function() { handleFileChange(galleryInput, cameraInput); });
+
+    linkInput.addEventListener("input", function() {
+      if ((cameraInput.files && cameraInput.files.length) || (galleryInput.files && galleryInput.files.length)) return;
+      setPreviewFromSrc(linkInput.value);
+    });
+  }
+
+  function bindForm(id, action) {
+    var block = document.getElementById(id); if (!block) return;
+    var btn = block.querySelector(".btn-save"); if (!btn) return;
+    btn.addEventListener("click", function() {
+      var payload = formToObject(block);
+      payload.token = getToken(); payload.viewLocation = getViewLocationForRequest();
+
+      function submitPayload() {
+        btn.disabled = true;
+        var token = getToken(), viewLocation = payload.viewLocation;
+        showLoader("Saving…");
+        google.script.run
+          .withSuccessHandler(function(res) {
+            btn.disabled = false;
+            if (!res) { hideLoader(); showFlash("No response from server.", false); return; }
+            if (res.success) {
+              showFlash(res.message, true);
+              block.querySelectorAll("input, select, textarea").forEach(function(el) {
+                if (el.type==="number") el.value = el.min||"0";
+                else if (el.tagName==="SELECT") el.selectedIndex = 0;
+                else el.value = "";
+              });
+              var preview = document.getElementById("itemImagePreview");
+              if (preview && id === "formItem") preview.innerHTML = "No image";
+              refreshAfterSaveQuick(token, viewLocation, action);
+            } else {
+              hideLoader(); showFlash(res.message||"Failed", false);
+            }
+          })
+          .withFailureHandler(function(err) { btn.disabled=false; hideLoader(); showFlash(err.message, false); })
+          .apiCall(action, payload, token);
+      }
+
+      // Special handling for item image upload (camera/gallery file).
+      if (id === "formItem") {
+        var cameraInput = block.querySelector('input[name="imageFileCamera"]');
+        var galleryInput = block.querySelector('input[name="imageFileGallery"]');
+        var file = (cameraInput && cameraInput.files && cameraInput.files[0]) ||
+                   (galleryInput && galleryInput.files && galleryInput.files[0]);
+        if (file) {
+          if (file.size > 6 * 1024 * 1024) {
+            showFlash("Image too large. Use <= 6MB file.", false);
+            return;
+          }
+          payload.imageName = file.name || "";
+          payload.imageMimeType = file.type || "image/jpeg";
+          readFileAsDataUrl(file, function(dataUrl) {
+            payload.imageData = dataUrl;
+            submitPayload();
+          }, function(msg) {
+            showFlash(msg || "Could not read image file.", false);
+          });
+          return;
+        }
+      }
+      submitPayload();
+    });
+  }
+
+  /* ─────────────────────────────────────────────────────
+     EVENT LISTENERS
+  ───────────────────────────────────────────────────── */
+  document.getElementById("btnRefresh").addEventListener("click", function(){ loadBootstrap("Refreshing…"); });
+  document.getElementById("btnLoginInline").addEventListener("click", runInlineLogin);
+  document.getElementById("loginPw").addEventListener("keydown", function(e){ if(e.key==="Enter") runInlineLogin(); });
+  document.getElementById("btnLogout").addEventListener("click", function() {
+    var token = getToken();
+    google.script.run
+      .withSuccessHandler(function() {
+        state.token = "";
+        try { localStorage.removeItem("keInvAuthToken"); } catch(e){}
+        showLoginGate("Signed out.");
+      })
+      .logoutUser(token);
+  });
+
+  [
+    ["formVendor","addVendor"],["formItem","addNewItem"],
+    ["formRequest","createRequest"],["formPayment","recordPayment"],
+    ["formOrder","placeOrder"],["formReceive","receiveGoods"],["formIssue","issueItem"],
+    ["formTransfer","createStockTransfer"],["formPricing","upsertPricing"],
+    ["formStorageLocation","addStorageLocation"],
+    ["formSampleIssue","createSampleMovement"]
+  ].forEach(function(pair){ bindForm(pair[0], pair[1]); });
+  setupItemImagePreview();
+
+  // Register table interactions (filter, clear, pagination)
+  document.getElementById("app").addEventListener("click", function(e) {
+    var t = e.target;
+    var kpi = t.closest ? t.closest("[data-kpi-key]") : null;
+    if (kpi) {
+      handleKpiClick(kpi.getAttribute("data-kpi-key"));
+      return;
+    }
+    if (t.classList.contains("reg-filter-btn")) {
+      var card = t.closest("[data-reg-card]");
+      var key = getRegisterKeyFromCard(card);
+      if (key) loadRegisterPage(key, true);
+      return;
+    }
+    if (t.classList.contains("reg-clear-btn")) {
+      var card2 = t.closest("[data-reg-card]");
+      var key2 = getRegisterKeyFromCard(card2);
+      if (key2&&registerState[key2]) {
+        registerState[key2].dateFrom = "";
+        registerState[key2].dateTo = "";
+        registerState[key2].status = "";
+        registerState[key2].page = 1;
+        syncRegisterFiltersToDom(key2, registerState[key2]);
+        loadRegisterPage(key2, true);
+      }
+      return;
+    }
+    if (t.classList.contains("reg-page-btn")&&t.dataset.regAction) {
+      var key3 = t.getAttribute("data-reg");
+      if (!key3||!registerState[key3]) return;
+      if (t.dataset.regAction==="prev"&&registerState[key3].page>1) {
+        registerState[key3].page--; loadRegisterPage(key3, false);
+      }
+      if (t.dataset.regAction==="next") {
+        registerState[key3].page++; loadRegisterPage(key3, false);
+      }
+    }
+  });
+
+  // Kick off
+  showLoader("Checking session…");
+  loadBootstrap("Loading dashboard…");
+  </script>
+</body>
+</html>

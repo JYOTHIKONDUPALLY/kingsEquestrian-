@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>Horse Health Checklist — Kings Equestrian</title>
+  <style>
+    :root { --bg:#0f172a; --card:#111827; --text:#e5e7eb; --muted:#9ca3af; --accent:#d4af37; --border:#334155; }
+    * { box-sizing: border-box; }
+    body.app-page {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0b1220, #111827);
+      color: var(--text);
+      padding: 0;
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    .content.form-page-body { padding: 12px; width: 100%; max-width: 100%; }
+    .checklist {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .chk-header {
+      text-align: center;
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .chk-location { margin-bottom: 12px; }
+    .chk-location select {
+      max-width: 280px;
+      margin: 0 auto;
+      display: block;
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #0b1220;
+      color: var(--text);
+      font-size: 14px;
+    }
+    .brand-logo { width: 72px; height: 72px; margin: 0 auto 8px; display: block; }
+    .brand-name {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .brand-tag { font-size: 10px; letter-spacing: 1px; color: var(--muted); margin-top: 2px; }
+    .chk-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 12px 0 0;
+      color: var(--text);
+    }
+    .horse-id-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+      text-align: left;
+    }
+    .horse-id-grid label,
+    .field label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .horse-id-grid input,
+    .horse-id-grid select,
+    .meta-row input,
+    .meta-row select,
+    .check-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #0b1220;
+      color: var(--text);
+      font-size: 14px;
+    }
+    input[type="date"] { color-scheme: dark; }
+    .chk-body { padding: 16px 18px 22px; }
+    .meta-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .section-head {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 20px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(201, 168, 76, 0.25);
+    }
+    .check-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 18px;
+    }
+    .check-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: rgba(11, 18, 32, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .check-icon {
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: rgba(201, 168, 76, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .check-content { flex: 1; min-width: 0; }
+    .check-label {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.35;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+    .check-hint { font-size: 12px; color: var(--muted); margin-bottom: 8px; line-height: 1.4; }
+    .check-input { margin-bottom: 8px; }
+    .radio-row, .check-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      font-size: 14px;
+      color: var(--text);
+    }
+    .radio-row label, .check-row label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 400;
+      cursor: pointer;
+    }
+    .radio-row input, .check-row input { width: auto; margin: 0; accent-color: var(--accent); }
+    .details-input { margin-top: 6px; }
+    .full { grid-column: 1 / -1; }
+    .chk-footer {
+      text-align: center;
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.4);
+    }
+    .chk-footer .brand-logo { width: 48px; height: 48px; margin-bottom: 6px; }
+    .submit-btn {
+      display: block;
+      width: 100%;
+      margin-top: 18px;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #111827;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    @media (max-width: 640px) {
+      .check-grid, .horse-id-grid, .meta-row { grid-template-columns: 1fr; }
+    }
+    @media (min-width: 1200px) {
+      html:not(.app-fullwidth) body.app-page { max-width: 760px; margin: 0 auto; }
+      html:not(.app-fullwidth) .checklist { max-width: 760px; }
+    }
+  </style>
+</head>
+<body class="app-page">
+<script>
+  window.__APP_PAGE__ = '<?= appPage ?>';
+  window.__APP_TAB__ = 'forms';
+</script>
+<?!= include('AppChrome'); ?>
+<div class="content form-page-body">
+  <form id="healthCheckForm" class="checklist" novalidate>
+    <header class="chk-header">
+      <div class="chk-location">
+        <label for="location" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Location</label>
+        <select id="location" name="Location" required>
+          <option value="">Select location</option>
+        </select>
+      </div>
+      <svg class="brand-logo" viewBox="0 0 120 120" aria-label="Kings Equestrian">
+        <circle cx="60" cy="60" r="54" fill="none" stroke="#c9a84c" stroke-width="2"/>
+        <path d="M60 18 L68 32 L82 28 L76 42 L90 48 L74 52 L78 68 L60 58 L42 68 L46 52 L30 48 L44 42 L38 28 L52 32 Z" fill="#d4af37" stroke="#8b6914" stroke-width="1"/>
+        <ellipse cx="60" cy="72" rx="22" ry="14" fill="none" stroke="#9ca3af" stroke-width="1.5"/>
+        <path d="M38 78 Q60 95 82 78" fill="none" stroke="#9ca3af" stroke-width="1.5"/>
+      </svg>
+      <div class="brand-name">Kings Equestrian</div>
+      <div class="brand-tag">Saddle Up!</div>
+      <h1 class="chk-title">Horse Health Checklist</h1>
+      <div class="horse-id-grid">
+        <div>
+          <label for="horse">Horse name</label>
+          <select id="horse" name="Horse" required disabled><option value="">Select location first</option></select>
+        </div>
+        <div>
+          <label for="horseAge">Age</label>
+          <input id="horseAge" name="Horse_Age" type="text" placeholder="e.g. 10 years">
+        </div>
+        <div>
+          <label for="horseColour">Colour</label>
+          <input id="horseColour" name="Horse_Colour" type="text" placeholder="e.g. Bay">
+        </div>
+        <div>
+          <label for="horseSex">Sex</label>
+          <select id="horseSex" name="Horse_Sex">
+            <option value="">—</option>
+            <option>Mare</option>
+            <option>Stallion</option>
+            <option>Gelding</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <div class="chk-body">
+      <div class="meta-row">
+        <div class="field">
+          <label for="date">Date of check</label>
+          <input id="date" name="Date" type="date" required>
+        </div>
+        <div class="field">
+          <label for="checkedBy">Checked by</label>
+          <input id="checkedBy" name="Checked_By" type="text" placeholder="Staff name">
+        </div>
+      </div>
+
+      <div class="section-head">Daily health check</div>
+      <div class="check-grid">
+        <div class="check-item">
+          <div class="check-icon">🌡</div>
+          <div class="check-content">
+            <div class="check-label">Temperature</div>
+            <div class="check-hint">Normal range: 37.5°C – 38.5°C</div>
+            <input class="check-input" name="Temperature_C" type="text" inputmode="decimal" placeholder="°C e.g. 37.8">
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">❤</div>
+          <div class="check-content">
+            <div class="check-label">Heart rate</div>
+            <div class="check-hint">28 – 44 beats per minute at rest</div>
+            <input class="check-input" name="Heart_Rate" type="text" inputmode="numeric" placeholder="bpm">
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">🫁</div>
+          <div class="check-content">
+            <div class="check-label">Respiratory rate</div>
+            <div class="check-hint">8 – 14 breaths per minute at rest</div>
+            <input class="check-input" name="Respiratory_Rate" type="text" inputmode="numeric" placeholder="breaths/min">
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">💩</div>
+          <div class="check-content">
+            <div class="check-label">Assess droppings</div>
+            <input class="check-input" name="Droppings_Amount" type="text" placeholder="Amount">
+            <div class="radio-row">
+              <label><input type="radio" name="Droppings_Consistency" value="Diarrhoea"> Diarrhoea</label>
+              <label><input type="radio" name="Droppings_Consistency" value="Soft"> Soft</label>
+              <label><input type="radio" name="Droppings_Consistency" value="Normal" checked> Normal</label>
+              <label><input type="radio" name="Droppings_Consistency" value="Hard"> Hard</label>
+            </div>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">🍽</div>
+          <div class="check-content">
+            <div class="check-label">Appetite</div>
+            <div class="radio-row">
+              <label><input type="radio" name="Appetite" value="Decreased"> Decreased</label>
+              <label><input type="radio" name="Appetite" value="Normal" checked> Normal</label>
+              <label><input type="radio" name="Appetite" value="Increased"> Increased</label>
+            </div>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">💧</div>
+          <div class="check-content">
+            <div class="check-label">Drinking</div>
+            <div class="radio-row">
+              <label><input type="radio" name="Drinking" value="Decreased"> Decreased</label>
+              <label><input type="radio" name="Drinking" value="Normal" checked> Normal</label>
+              <label><input type="radio" name="Drinking" value="Increased"> Increased</label>
+            </div>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">🚽</div>
+          <div class="check-content">
+            <div class="check-label">Urination — frequency &amp; habits</div>
+            <div class="radio-row">
+              <label><input type="radio" name="Urination" value="Normal" checked> Normal</label>
+              <label><input type="radio" name="Urination" value="Abnormal"> Abnormal</label>
+            </div>
+            <input class="check-input details-input" name="Urination_Details" type="text" placeholder="Details if abnormal">
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">🐴</div>
+          <div class="check-content">
+            <div class="check-label">General demeanour</div>
+            <div class="radio-row">
+              <label><input type="radio" name="Demeanour" value="Normal" checked> Normal</label>
+              <label><input type="radio" name="Demeanour" value="Abnormal"> Abnormal</label>
+            </div>
+            <input class="check-input details-input" name="Demeanour_Details" type="text" placeholder="Details">
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">✋</div>
+          <div class="check-content">
+            <div class="check-label">Skin</div>
+            <div class="radio-row">
+              <label><input type="radio" name="Skin" value="Normal" checked> Normal</label>
+              <label><input type="radio" name="Skin" value="Abnormal"> Abnormal</label>
+            </div>
+            <input class="check-input details-input" name="Skin_Details" type="text" placeholder="Details">
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">📍</div>
+          <div class="check-content">
+            <div class="check-label">Digital pulse</div>
+            <div class="radio-row">
+              <label><input type="radio" name="Digital_Pulse" value="Normal" checked> Normal</label>
+              <label><input type="radio" name="Digital_Pulse" value="Increased"> Increased</label>
+            </div>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">🦶</div>
+          <div class="check-content">
+            <div class="check-label">Hoof temperature</div>
+            <div class="radio-row">
+              <label><input type="radio" name="Hoof_Temperature" value="Normal" checked> Normal</label>
+              <label><input type="radio" name="Hoof_Temperature" value="Increased"> Increased</label>
+            </div>
+          </div>
+        </div>
+        <div class="check-item full">
+          <div class="check-icon">🔧</div>
+          <div class="check-content">
+            <div class="check-label">Pick out feet &amp; check shoes (if appropriate)</div>
+            <div class="radio-row">
+              <label><input type="radio" name="Feet_Shoes" value="Normal" checked> Normal</label>
+              <label><input type="radio" name="Feet_Shoes" value="Abnormal"> Abnormal</label>
+            </div>
+            <input class="check-input details-input" name="Feet_Shoes_Details" type="text" placeholder="Details">
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">🏃</div>
+          <div class="check-content">
+            <div class="check-label">Movement / stance</div>
+            <div class="radio-row">
+              <label><input type="radio" name="Movement" value="Normal" checked> Normal</label>
+              <label><input type="radio" name="Movement" value="Abnormal"> Abnormal</label>
+            </div>
+            <input class="check-input details-input" name="Movement_Details" type="text" placeholder="Details">
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">👁</div>
+          <div class="check-content">
+            <div class="check-label">Eyes</div>
+            <div class="radio-row">
+              <label><input type="radio" name="Eyes" value="Normal" checked> Normal</label>
+              <label><input type="radio" name="Eyes" value="Abnormal"> Abnormal</label>
+            </div>
+            <input class="check-input details-input" name="Eyes_Details" type="text" placeholder="Details">
+          </div>
+        </div>
+      </div>
+
+      <div class="section-head">Half yearly check</div>
+      <div class="check-grid">
+        <div class="check-item full">
+          <div class="check-icon">📋</div>
+          <div class="check-content">
+            <div class="check-label">Body condition</div>
+            <input class="check-input" name="Body_Condition" type="text" placeholder="e.g. In very good condition">
+          </div>
+        </div>
+        <div class="check-item full">
+          <div class="check-icon">🔍</div>
+          <div class="check-content">
+            <div class="check-label">Thorough skin check</div>
+            <div class="radio-row">
+              <label><input type="radio" name="Skin_Check_Thorough" value="Normal" checked> Normal</label>
+              <label><input type="radio" name="Skin_Check_Thorough" value="Abnormal"> Abnormal</label>
+            </div>
+            <input class="check-input details-input" name="Skin_Check_Details" type="text" placeholder="Details">
+          </div>
+        </div>
+      </div>
+
+      <div class="section-head">Annual check</div>
+      <div class="check-grid">
+        <div class="check-item">
+          <div class="check-icon">🩺</div>
+          <div class="check-content">
+            <div class="check-label">Routine vet check — date completed</div>
+            <input class="check-input" name="Vet_Check_Date" type="date">
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">🦷</div>
+          <div class="check-content">
+            <div class="check-label">Dental check — date completed</div>
+            <input class="check-input" name="Dental_Check_Date" type="date">
+          </div>
+        </div>
+        <div class="check-item full">
+          <div class="check-icon">💉</div>
+          <div class="check-content">
+            <div class="check-label">Vaccinations</div>
+            <div class="check-row">
+              <label><input type="checkbox" name="Vaccination_Tetanus" value="Yes"> Tetanus</label>
+              <label><input type="checkbox" name="Vaccination_Influenza" value="Yes"> Influenza</label>
+              <label><input type="checkbox" name="Vaccination_Other" value="Yes"> Other</label>
+            </div>
+            <input class="check-input" name="Vaccination_Notes" type="text" placeholder="Notes e.g. oral — past">
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn">Submit health checklist</button>
+    </div>
+
+    <footer class="chk-footer">
+      <svg class="brand-logo" viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="54" fill="none" stroke="#c9a84c" stroke-width="2"/>
+        <path d="M60 22 L66 34 L78 30 L72 42 L86 46 L72 50 L74 64 L60 56 L46 64 L48 50 L34 46 L48 42 L42 30 L54 34 Z" fill="#d4af37"/>
+      </svg>
+      <div class="brand-name">Kings Equestrian</div>
+    </footer>
+  </form>
+</div>
+
+<script>
+  const FORM_KEY = "health";
+  const PAGE_KEY = "form-health-check";
+
+  function redirectToApp(url) {
+    if (!url) return;
+    try {
+      if (window.top && window.top !== window.self) {
+        window.top.location.replace(url);
+        return;
+      }
+    } catch (e) {}
+    window.location.replace(url);
+  }
+
+  function goToLogin() {
+    if (window.google && google.script && google.script.run) {
+      google.script.run.withSuccessHandler(redirectToApp).getLoginUrl(PAGE_KEY);
+      return;
+    }
+    redirectToApp("?page=login");
+  }
+
+  function syncTokenFromUrl() {
+    var p = new URLSearchParams(window.location.search);
+    var t = p.get("token");
+    if (t) localStorage.setItem("opsAuthToken", t);
+  }
+
+  function getAuthToken() {
+    syncTokenFromUrl();
+    return localStorage.getItem("opsAuthToken") || "";
+  }
+
+  function requireAuth() {
+    var token = getAuthToken();
+    if (!token) {
+      goToLogin();
+      return "";
+    }
+    return token;
+  }
+
+  var dateEl = document.getElementById("date");
+  var locationEl = document.getElementById("location");
+  var horseEl = document.getElementById("horse");
+
+  function setDefaultDates() {
+    dateEl.value = new Date().toISOString().slice(0, 10);
+  }
+  setDefaultDates();
+
+  function getPayload(formEl) {
+    var data = new FormData(formEl);
+    var payload = {};
+    data.forEach(function(v, k) {
+      if (payload[k] !== undefined) {
+        if (!Array.isArray(payload[k])) payload[k] = [payload[k]];
+        payload[k].push(v);
+      } else {
+        payload[k] = v;
+      }
+    });
+    return payload;
+  }
+
+  function fillSelect(selectEl, values, placeholder, disabled) {
+    selectEl.innerHTML = "";
+    var emptyOpt = document.createElement("option");
+    emptyOpt.value = "";
+    emptyOpt.textContent = placeholder || "Select";
+    selectEl.appendChild(emptyOpt);
+    (values || []).forEach(function(value) {
+      var opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = value;
+      selectEl.appendChild(opt);
+    });
+    selectEl.disabled = !!disabled;
+  }
+
+  function fillHorseSelect(horses, disabled) {
+    horseEl.innerHTML = "";
+    var emptyOpt = document.createElement("option");
+    emptyOpt.value = "";
+    emptyOpt.textContent = disabled ? "Select location first" : "Select horse";
+    horseEl.appendChild(emptyOpt);
+    (horses || []).forEach(function(h) {
+      var opt = document.createElement("option");
+      opt.value = h.value;
+      opt.textContent = h.label;
+      horseEl.appendChild(opt);
+    });
+    horseEl.disabled = !!disabled;
+  }
+
+  function loadHorseDetails(name) {
+    var token = requireAuth();
+    if (!token || !name || !(window.google && google.script.run)) return;
+    google.script.run
+      .withSuccessHandler(function(d) {
+        document.getElementById("horseAge").value = (d && d.age) ? d.age : "";
+        document.getElementById("horseColour").value = (d && d.colour) ? d.colour : "";
+        if (d && d.sex) document.getElementById("horseSex").value = d.sex;
+      })
+      .withFailureHandler(function() {})
+      .getHorseDetailsForHealthCheck(name, token);
+  }
+
+  function handleDropdownError(error) {
+    if (String(error && error.message || "").toLowerCase().includes("unauthorized")) {
+      localStorage.removeItem("opsAuthToken");
+      goToLogin();
+      return;
+    }
+    alert("Unable to load data: " + (error && error.message ? error.message : error));
+  }
+
+  function loadBootstrap() {
+    var token = requireAuth();
+    if (!token || !(window.google && google.script.run)) return;
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (window.AppLocation) {
+          window.AppLocation.applyField(locationEl, data);
+        } else {
+          fillSelect(locationEl, data.locations || data.Location || [], "Select location", false);
+        }
+        if (data.locationLocked && locationEl.value) {
+          loadHorsesForLocation(locationEl.value);
+        } else {
+          fillHorseSelect([], true);
+        }
+      })
+      .withFailureHandler(handleDropdownError)
+      .getHealthFormBootstrap(token);
+  }
+
+  function loadHorsesForLocation(location) {
+    var token = requireAuth();
+    if (!token || !location) {
+      fillHorseSelect([], true);
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(data) {
+        fillHorseSelect(data.horses || [], false);
+      })
+      .withFailureHandler(handleDropdownError)
+      .getHealthOptionsForLocation(location, token);
+  }
+
+  locationEl.addEventListener("change", function() {
+    var loc = locationEl.value;
+    if (!loc) {
+      fillHorseSelect([], true);
+      return;
+    }
+    fillHorseSelect([], true);
+    loadHorsesForLocation(loc);
+  });
+
+  horseEl.addEventListener("change", function() {
+    if (horseEl.value) loadHorseDetails(horseEl.value);
+  });
+
+  document.getElementById("healthCheckForm").addEventListener("submit", function(e) {
+    if (!this.checkValidity()) {
+      e.preventDefault();
+      this.reportValidity();
+      return;
+    }
+    e.preventDefault();
+    var payload = getPayload(this);
+    var token = requireAuth();
+    if (token && window.google && google.script.run) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          var msg = "Health checklist saved.";
+          if (res && res.status) msg += " Status: " + res.status;
+          alert(msg);
+          document.getElementById("healthCheckForm").reset();
+          setDefaultDates();
+          loadBootstrap();
+        })
+        .withFailureHandler(function(error) {
+          if (String(error.message || "").toLowerCase().includes("unauthorized")) {
+            localStorage.removeItem("opsAuthToken");
+            goToLogin();
+            return;
+          }
+          alert("Submit failed: " + error.message);
+        })
+        .submitFormData(FORM_KEY, payload, token);
+      return;
+    }
+    alert("Health checklist saved (preview mode).");
+  });
+
+  loadBootstrap();
+</script>
+</body>
+</html>

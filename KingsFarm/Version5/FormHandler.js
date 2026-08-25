@@ -205,7 +205,7 @@ function sendReceiptForRow(rowIndex) {
   if (!rEmail) throw new Error('No email found for rider ' + rKeNo);
 
   const receiptNo  = _generateReceiptNo(rKeNo);
-  const receiptPDF = generate80GReceipt(rName, pan, amount, txnRef, receiptNo);
+  const receiptPDF = generate80GReceipt(rName, pan, amount, txnRef, receiptNo, payDate);
 
   // Store in Drive — non-fatal
   let driveInfo = null;
@@ -308,6 +308,186 @@ function _appendToLedger(ss, d) {
     Logger.log('_appendToLedger: row ' + lr + ' for ' + d.keNo + ' — Rs.' + d.amount + ' on ' + fmtDate(d.payDate));
   } catch (e) {
     Logger.log('_appendToLedger ERROR: ' + e + '\n' + e.stack);
+  }
+}
+
+// ────────────────────────────────────────────────────────────
+//  PORTAL PAYMENT SUBMIT (replaces Google Form)
+// ────────────────────────────────────────────────────────────
+
+function getPaymentUploadsFolder() {
+  let main = DriveApp.getFoldersByName('Kings Equestrian Payment Screenshots');
+  main = main.hasNext() ? main.next() : DriveApp.createFolder('Kings Equestrian Payment Screenshots');
+  return main;
+}
+
+/** Last known PAN/Aadhaar from Payment Form Response for this KE / phone. */
+function _lookupPriorPanForRider_(keNo, phone) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(CONFIG.SHEETS.PAYMENT_FORM);
+    if (!sheet || sheet.getLastRow() < 2) return '';
+    const data = sheet.getDataRange().getValues();
+    const keNorm = String(keNo || '').trim().toUpperCase();
+    const phNorm = normalisePhone(phone);
+    for (let i = data.length - 1; i >= 1; i--) {
+      const rowKe = String(data[i][CONFIG.PAYMENT_COLS.KE_NO] || '').trim().toUpperCase();
+      const rowPh = normalisePhone(data[i][CONFIG.PAYMENT_COLS.PHONE]);
+      const pan = String(data[i][CONFIG.PAYMENT_COLS.PAN] || '').trim();
+      if (!pan) continue;
+      if ((keNorm && rowKe === keNorm) || (phNorm && rowPh === phNorm)) return pan;
+    }
+  } catch (e) {
+    Logger.log('_lookupPriorPanForRider_ ' + e);
+  }
+  return '';
+}
+
+function getPortalPaymentPrefill(keNo) {
+  try {
+    keNo = String(keNo || '').trim().toUpperCase();
+    if (!keNo) return { success: false, pan: '', phone: '' };
+    const rider = findRiderByKENo(keNo);
+    const phone = rider ? String(rider.row[CONFIG.RIDER_COLS.PHONE] || '').trim() : '';
+    const pan = _lookupPriorPanForRider_(keNo, phone);
+    return { success: true, keNo: keNo, phone: phone, pan: pan };
+  } catch (e) {
+    Logger.log('getPortalPaymentPrefill ' + e);
+    return { success: false, pan: '', phone: '' };
+  }
+}
+
+function _savePaymentScreenshots(files, keNo) {
+  const folder = getPaymentUploadsFolder();
+  const ts = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd_HHmmss');
+  const urls = [];
+  (files || []).forEach(function(f, i) {
+    if (!f || !f.data) return;
+    const bytes = Utilities.base64Decode(f.data);
+    const blob = Utilities.newBlob(bytes, f.mimeType || 'application/octet-stream', f.name || ('screenshot_' + (i + 1)));
+    const file = folder.createFile(blob);
+    const safeName = String(f.name || 'screenshot').replace(/[\\/:*?"<>|]/g, '_');
+    file.setName(keNo + '_' + ts + '_' + (i + 1) + '_' + safeName);
+    urls.push(file.getUrl());
+  });
+  return urls.join('\n');
+}
+
+function _ensurePaymentFormSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(CONFIG.SHEETS.PAYMENT_FORM);
+  if (sheet) return sheet;
+  sheet = ss.insertSheet(CONFIG.SHEETS.PAYMENT_FORM);
+  const headers = [
+    'Timestamp', 'KE No', 'Phone', 'Amount Paid', 'Screenshot',
+    'Payment Date', 'Transaction Ref', 'PAN/Aadhaar', 'Verified',
+    'Receipt Sent', 'Receipt Sent At', 'Receipt No', 'Drive Link'
+  ];
+  sheet.appendRow(headers);
+  sheet.getRange(1, 1, 1, headers.length)
+    .setBackground('#1f4e3d').setFontColor('#fff').setFontWeight('bold');
+  sheet.setFrozenRows(1);
+  return sheet;
+}
+
+/**
+ * Called from My Rides. payload:
+ * { keNo, phone, amount, payDate (yyyy-mm-dd), txnRef, pan,
+ *   files: [{ name, mimeType, data (base64) }] }
+ */
+function submitPaymentFromPortal(p) {
+  try {
+    p = p || {};
+    const keNo  = String(p.keNo || '').trim().toUpperCase();
+    const phone = String(p.phone || '').trim();
+    const amount = Number(p.amount);
+    const pan    = String(p.pan || '').trim();
+    const txnRef = String(p.txnRef || '').trim();
+    const payDateStr = String(p.payDate || '').trim();
+    const files = Array.isArray(p.files) ? p.files : [];
+
+    if (!keNo) {
+      return { success: false, error: 'Please enter your Registration Number provided in your email.' };
+    }
+    if (!normalisePhone(phone) || normalisePhone(phone).length < 10) {
+      return { success: false, error: 'Please enter your registered phone number.' };
+    }
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return { success: false, error: 'Please enter the exact amount paid.' };
+    }
+    if (!files.length) {
+      return { success: false, error: 'Please upload a clear screenshot or receipt of the completed payment.' };
+    }
+    if (files.length > 5) {
+      return { success: false, error: 'You can upload up to 5 files.' };
+    }
+    if (!pan) {
+      return { success: false, error: 'PAN / Aadhaar number is required for issuing official payment receipts.' };
+    }
+
+    const rider = findRiderByKENo(keNo);
+    if (!rider) {
+      return { success: false, error: 'Registration number not found. Please use the KE Number from your email.' };
+    }
+    if (normalisePhone(rider.row[CONFIG.RIDER_COLS.PHONE]) !== normalisePhone(phone)) {
+      return { success: false, error: 'Phone number does not match this Registration Number.' };
+    }
+
+    let payDate = '';
+    if (payDateStr) {
+      const dt = new Date(payDateStr + 'T00:00:00');
+      if (!isNaN(dt.getTime())) payDate = dt;
+    }
+
+    const screenshot = _savePaymentScreenshots(files, keNo);
+    if (!screenshot) {
+      return { success: false, error: 'Could not save the screenshot. Please try again with a smaller file.' };
+    }
+
+    const sheet = _ensurePaymentFormSheet();
+    const row = new Array(13).fill('');
+    const now = new Date();
+    row[CONFIG.PAYMENT_COLS.TIMESTAMP] = now;
+    row[CONFIG.PAYMENT_COLS.KE_NO]     = keNo;
+    row[CONFIG.PAYMENT_COLS.PHONE]     = phone;
+    row[CONFIG.PAYMENT_COLS.AMOUNT]    = amount;
+    row[CONFIG.PAYMENT_COLS.SCREENSHOT]= screenshot;
+    row[CONFIG.PAYMENT_COLS.PAY_DATE]  = payDate || '';
+    row[CONFIG.PAYMENT_COLS.TXN_REF]   = txnRef;
+    row[CONFIG.PAYMENT_COLS.PAN]       = pan;
+    sheet.appendRow(row);
+    const rowIndex = sheet.getLastRow();
+
+    sheet.getRange(rowIndex, CONFIG.PAYMENT_COLS.VERIFIED + 1)
+      .setValue('Yes')
+      .setBackground('#d4edda').setFontColor('#155724').setFontWeight('bold');
+    if (payDate) {
+      sheet.getRange(rowIndex, CONFIG.PAYMENT_COLS.PAY_DATE + 1).setNumberFormat('dd-MMM-yyyy');
+    }
+
+    if (_isDuplicatePayment(phone, amount, payDate || now, now)) {
+      sheet.getRange(rowIndex, CONFIG.PAYMENT_COLS.RECEIPT_SENT + 1)
+        .setValue('Duplicate - Skipped')
+        .setBackground('#fff3cd').setFontColor('#856404');
+      return {
+        success: true,
+        message: 'This payment looks like a duplicate of one already receipted. Your submission has been recorded.'
+      };
+    }
+
+    try {
+      sendReceiptForRow(rowIndex);
+      return { success: true, message: 'Payment submitted. Your official receipt will be emailed shortly.' };
+    } catch (receiptErr) {
+      Logger.log('submitPaymentFromPortal receipt: ' + receiptErr);
+      return {
+        success: true,
+        message: 'Payment submitted for verification. If you do not receive a receipt, please contact us at +91-9980895533.'
+      };
+    }
+  } catch (err) {
+    Logger.log('submitPaymentFromPortal ERROR: ' + err + '\n' + (err.stack || ''));
+    return { success: false, error: 'Could not submit payment. Please try again.' };
   }
 }
 

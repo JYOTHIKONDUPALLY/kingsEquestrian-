@@ -1,0 +1,216 @@
+<style>
+  html.app-mobile {
+    font-size: 19px !important;
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+  }
+  html.app-mobile body { font-size: 19px; line-height: 1.5; }
+  html.app-scaled body { min-height: auto; overflow-x: hidden !important; }
+  html.app-scaled .app-main { overflow-x: hidden !important; }
+
+  html.app-fullwidth,
+  html.app-fullwidth body,
+  html.app-fullwidth #app,
+  html.app-fullwidth .app-main {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+</style>
+
+<script>
+(function (global) {
+  function isMobileUa() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(
+      global.navigator.userAgent || ""
+    );
+  }
+
+  function hasTouchInput() {
+    return !!("ontouchstart" in global || (global.navigator && (global.navigator.maxTouchPoints || 0) > 0));
+  }
+
+  function getScreenShortSide() {
+    if (global.screen && global.screen.width) {
+      return Math.round(Math.min(global.screen.width, global.screen.height || global.screen.width));
+    }
+    return 0;
+  }
+
+  function getRealMobileWidth() {
+    var vv = global.visualViewport;
+    var shortSide = getScreenShortSide();
+    var inFrame = global.self !== global.top;
+    if (vv && vv.width > 0 && vv.width < 900) {
+      var vvW = Math.round(vv.width);
+      if (shortSide && vvW > shortSide + 80 && (inFrame || isMobileUa())) {
+        return shortSide;
+      }
+      return vvW;
+    }
+    if (shortSide > 0 && shortSide < 900) return shortSide;
+    if (isMobileUa()) return 390;
+    var iw = global.innerWidth || 0;
+    return Math.round(iw > 0 && iw < 900 ? iw : 390);
+  }
+
+  function isMobileDevice() {
+    if (isMobileUa()) return true;
+    var shortSide = getScreenShortSide();
+    if (hasTouchInput() && shortSide > 0 && shortSide <= 600) return true;
+    if (hasTouchInput() && global.visualViewport && global.visualViewport.width > 0 && global.visualViewport.width <= 600) {
+      return true;
+    }
+    return false;
+  }
+
+  function shouldApplyHostFix() {
+    if (!isMobileDevice()) return false;
+    var w = getRealMobileWidth();
+    return w > 0 && w <= 600;
+  }
+
+  function updateViewportMeta() {
+    if (!shouldApplyHostFix()) return;
+    var w = getRealMobileWidth();
+    var meta = global.document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = global.document.createElement("meta");
+      meta.setAttribute("name", "viewport");
+      global.document.head.appendChild(meta);
+    }
+    meta.setAttribute(
+      "content",
+      "width=" + w + ", initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    );
+  }
+
+  function fitGoogleScriptHostFrame() {
+    try {
+      if (!shouldApplyHostFix()) return;
+      if (!global.google || !global.google.script || !global.google.script.host) return;
+      var host = global.google.script.host;
+      var w = getRealMobileWidth();
+      if (w >= 280 && typeof host.setWidth === "function") {
+        host.setWidth(w);
+      }
+    } catch (err) {
+      if (global.console && global.console.warn) {
+        global.console.warn("[AppViewport] setWidth failed:", err);
+      }
+    }
+  }
+
+  function applyLayoutScaleFix() {
+    var root = global.document.documentElement;
+    if (!root) return;
+    if (!shouldApplyHostFix()) {
+      root.style.zoom = "";
+      root.classList.remove("app-scaled");
+      return;
+    }
+    var layoutW = root.clientWidth || global.innerWidth || 0;
+    var targetW = getRealMobileWidth();
+    if (layoutW > targetW + 24) {
+      // GAS mobile can lock to desktop viewport (~980px).
+      // In that case we must magnify, not shrink, to recover readable UI.
+      var scale = (layoutW / targetW) * 0.9;
+      scale = Math.max(1, Math.min(2.8, scale));
+      root.style.zoom = String(scale);
+      root.classList.add("app-scaled");
+    } else {
+      root.style.zoom = "1";
+      root.classList.remove("app-scaled");
+    }
+  }
+
+  function fitHostHeightToContent() {
+    try {
+      if (!shouldApplyHostFix()) return;
+      if (!global.google || !global.google.script || !global.google.script.host) return;
+      var host = global.google.script.host;
+      if (typeof host.setHeight !== "function") return;
+      var root = global.document.documentElement;
+      var zoom = parseFloat(root.style.zoom) || 1;
+      var scrollH = Math.max(
+        global.document.body.scrollHeight || 0,
+        root.scrollHeight || 0
+      );
+      var h = Math.ceil(scrollH * zoom) + 8;
+      var viewH = global.visualViewport ? Math.round(global.visualViewport.height) : 0;
+      var cap = viewH > 0 ? viewH + 36 : 840;
+      host.setHeight(Math.min(Math.max(h, 360), cap));
+    } catch (err) {
+      if (global.console && global.console.warn) {
+        global.console.warn("[AppViewport] setHeight failed:", err);
+      }
+    }
+  }
+
+  function applyAppMobileClass() {
+    var root = global.document.documentElement;
+    if (!root) return;
+    if (shouldApplyHostFix()) {
+      root.classList.add("app-mobile");
+      root.style.fontSize = "19px";
+    } else {
+      root.classList.remove("app-mobile");
+      root.style.fontSize = "";
+    }
+  }
+
+  function applyAppFullWidth() {
+    var root = global.document.documentElement;
+    if (!root) return;
+    var hostname = (global.location.hostname || "").toLowerCase();
+    var inFrame = global.self !== global.top;
+    var gasHost =
+      hostname.indexOf("script.google.com") >= 0 ||
+      hostname.indexOf("googleusercontent.com") >= 0;
+    if (inFrame || gasHost || shouldApplyHostFix()) {
+      root.classList.add("app-fullwidth");
+    } else if ((global.innerWidth || 0) < 1200) {
+      root.classList.add("app-fullwidth");
+    } else {
+      root.classList.remove("app-fullwidth");
+    }
+  }
+
+  function bootViewport() {
+    updateViewportMeta();
+    fitGoogleScriptHostFrame();
+    applyAppFullWidth();
+    applyAppMobileClass();
+    applyLayoutScaleFix();
+    global.setTimeout(fitHostHeightToContent, 40);
+    global.setTimeout(fitHostHeightToContent, 280);
+  }
+
+  function scheduleViewportPasses() {
+    bootViewport();
+    [0, 80, 250, 700, 1500, 3000].forEach(function (d) {
+      global.setTimeout(bootViewport, d);
+    });
+  }
+
+  scheduleViewportPasses();
+  global.addEventListener("resize", bootViewport);
+  global.addEventListener("orientationchange", function () {
+    global.setTimeout(scheduleViewportPasses, 220);
+  });
+  if (global.visualViewport) {
+    global.visualViewport.addEventListener("resize", bootViewport);
+  }
+  global.document.addEventListener("DOMContentLoaded", scheduleViewportPasses);
+
+  global.AppViewport = {
+    boot: bootViewport,
+    fitHost: fitGoogleScriptHostFrame,
+    applyMobile: applyAppMobileClass,
+    getDeviceWidth: getRealMobileWidth
+  };
+})(window);
+</script>

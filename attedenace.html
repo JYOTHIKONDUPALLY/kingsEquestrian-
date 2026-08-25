@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a1a10">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<title>KE Attendance — Staff</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --ink:#0a1a10;--forest:#0e2818;--pine:#163d22;--canopy:#1c5430;
+  --fern:#247a42;--sage:#36a85e;--mint:#62c987;--mist:#a3ddb8;
+  --dew:#d1f0de;--foam:#edf9f2;
+  --bark:#c8a96e;--bark-lt:#f0e3c5;
+  --ember:#d64a2a;--ember-lt:#fde8e2;
+  --ice:#f5f9f6;--white:#ffffff;
+  --border:rgba(36,122,66,0.14);--border-md:rgba(36,122,66,0.24);--border-lg:rgba(36,122,66,0.36);
+  --shadow:0 2px 12px rgba(10,26,16,0.1);--shadow-lg:0 8px 32px rgba(10,26,16,0.16);
+  --r:12px;--r-sm:8px;--r-lg:16px;
+}
+html{background:var(--ink)}
+body{font-family:'Instrument Sans',sans-serif;background:var(--ice);min-height:100vh;color:var(--ink);-webkit-font-smoothing:antialiased}
+
+/* ── HEADER ── */
+header{
+  background:var(--forest);
+  padding:0 16px;
+  height:58px;
+  display:flex;align-items:center;gap:12px;
+  position:sticky;top:0;z-index:300;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+}
+header::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(255,255,255,0.012) 40px,rgba(255,255,255,0.012) 41px);pointer-events:none}
+.logo-wrap{width:34px;height:34px;border-radius:9px;background:var(--canopy);border:1px solid rgba(162,221,184,0.25);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;position:relative;z-index:1}
+.hd-text{position:relative;z-index:1}
+.hd-text h1{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#fff;letter-spacing:.01em}
+.hd-text p{font-size:10px;color:var(--mist);margin-top:1px;font-family:'DM Mono',monospace}
+.hd-right{margin-left:auto;display:flex;align-items:center;gap:8px;position:relative;z-index:1}
+.sync-pill{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);padding:4px 10px;border-radius:20px}
+.sync-dot{width:5px;height:5px;border-radius:50%;background:var(--bark);animation:pulse 1.4s ease-in-out infinite}
+.sync-dot.ready{background:var(--mint);animation:none}
+.sync-lbl{font-size:10px;color:var(--mist);font-family:'DM Mono',monospace}
+.ico-btn{width:32px;height:32px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:8px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── DATE STRIP ── */
+.date-strip{background:var(--forest);padding:0 16px 12px;display:flex;gap:6px}
+.d-tab{flex:1;padding:7px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--mist);cursor:pointer;border-radius:7px;border:1px solid transparent;transition:all .18s;font-family:'Instrument Sans',sans-serif;letter-spacing:.02em}
+.d-tab.on{background:var(--canopy);color:#fff;border-color:rgba(162,221,184,0.3)}
+.d-tab:hover:not(.on){background:rgba(255,255,255,0.06)}
+
+/* ── NAV TABS ── */
+.nav-tabs{background:var(--white);display:flex;border-bottom:1.5px solid var(--border);position:sticky;top:58px;z-index:200;box-shadow:0 1px 0 var(--border);overflow-x:auto;scrollbar-width:none}
+.nav-tabs::-webkit-scrollbar{display:none}
+.n-tab{flex:1;padding:11px 10px;background:none;border:none;border-bottom:2px solid transparent;font-family:'Instrument Sans',sans-serif;font-size:12px;color:#8aaa90;cursor:pointer;font-weight:500;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:5px;min-width:108px}
+.n-tab.on{color:var(--canopy);border-bottom-color:var(--canopy);font-weight:600}
+
+/* ── STATS BAR ── */
+.stats{background:linear-gradient(135deg,var(--forest) 0%,var(--pine) 60%,var(--canopy) 100%);padding:16px 0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));position:relative;overflow:hidden}
+.stats::before{content:"";position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(98,201,135,0.05);pointer-events:none}
+.s-item{flex:1;text-align:center;position:relative}
+.s-item+.s-item::before{content:"";position:absolute;left:0;top:15%;height:70%;width:1px;background:rgba(255,255,255,0.1)}
+.s-num{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#fff;line-height:1}
+.s-lbl{font-size:9px;color:var(--mist);margin-top:3px;text-transform:uppercase;letter-spacing:.1em;font-family:'DM Mono',monospace}
+.s-num.green{color:var(--mint)}
+.s-num.red{color:#f08070}
+.s-num.amber{color:var(--bark)}
+
+/* ── CONTENT ── */
+.content{padding:14px;max-width:760px;margin:0 auto}
+
+/* ── SESSION CARD ── */
+.s-card{background:var(--white);border-radius:var(--r-lg);margin-bottom:10px;border:1px solid var(--border);overflow:hidden;transition:box-shadow .2s}
+.s-card:hover{box-shadow:var(--shadow)}
+.s-card-bar{height:3px;background:var(--border)}
+.s-card.s-present .s-card-bar{background:linear-gradient(90deg,#28a745,var(--mint))}
+.s-card.s-noshow .s-card-bar{background:linear-gradient(90deg,var(--ember),#f08070)}
+.s-card.s-scored .s-card-bar{background:linear-gradient(90deg,#3b5de8,#7b8ff8)}
+.s-body{padding:14px 15px}
+.s-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:9px}
+.s-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--ink);line-height:1.2}
+.badge{font-size:9px;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0;text-transform:uppercase;letter-spacing:.06em;font-family:'DM Mono',monospace}
+.b-pending{background:var(--bark-lt);color:#7a5a10;border:1px solid #d8c080}
+.b-present{background:#e6f9ee;color:#1a6e3a;border:1px solid #9addb5}
+.b-noshow{background:var(--ember-lt);color:var(--ember);border:1px solid #f0b8a8}
+.b-scored{background:#eaedff;color:#3040aa;border:1px solid #b8c0f8}
+.s-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--fern);background:var(--foam);padding:3px 9px;border-radius:20px;border:1px solid var(--border)}
+.s-svc{font-size:11px;color:#7aaa80;margin-bottom:8px}
+.s-att{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--fern);font-weight:600;margin-bottom:10px;font-family:'DM Mono',monospace}
+.att-dot{width:6px;height:6px;border-radius:50%;background:var(--sage)}
+
+/* ── ATTEND BUTTONS ── */
+.att-row{display:flex;gap:6px;margin-bottom:10px}
+.att-btn{flex:1;padding:9px 8px;border-radius:9px;border:1.5px solid;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .15s;font-family:'Instrument Sans',sans-serif}
+.att-btn:disabled{opacity:.4;cursor:default;pointer-events:none}
+.btn-p{background:#f2faf5;border-color:#9addb5;color:#1a6e3a}
+.btn-p.on{background:#28a745;border-color:#28a745;color:#fff}
+.btn-n{background:var(--ember-lt);border-color:#f0b8a8;color:var(--ember)}
+.btn-n.on{background:var(--ember);border-color:var(--ember);color:#fff}
+
+/* ── SCORE PANEL ── */
+.score-panel{background:var(--foam);border:1px solid var(--border-md);border-radius:var(--r);padding:13px;margin-bottom:10px;animation:slideIn .2s ease}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.sp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sp-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.06em}
+.sp-guide{font-size:10px;color:#8aaa90;font-family:'DM Mono',monospace}
+.sc-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.sc-label{font-size:11px;color:var(--ink);font-weight:600;width:82px;flex-shrink:0}
+.sc-btns{display:flex;gap:4px}
+.sc-btn{width:34px;height:28px;border-radius:7px;border:1.5px solid var(--border-md);background:var(--white);cursor:pointer;font-size:11px;font-weight:700;color:#8aaa90;transition:all .15s}
+.sc-btn.sel-1{background:#d64a2a;border-color:#d64a2a;color:#fff}
+.sc-btn.sel-2{background:#d88020;border-color:#d88020;color:#fff}
+.sc-btn.sel-3{background:#c8a020;border-color:#c8a020;color:#fff}
+.sc-btn.sel-4{background:#28a745;border-color:#28a745;color:#fff}
+.avg-block{display:flex;align-items:center;justify-content:space-between;padding:10px 0 8px;border-top:1px solid var(--border-md);margin-top:4px}
+.avg-label{font-size:11px;font-weight:600;color:#8aaa90;font-family:'DM Mono',monospace}
+.avg-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:800}
+.criteria-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.crit-badge{font-size:10px;padding:3px 8px;border-radius:20px;font-weight:600}
+.crit-p{background:#e6f9ee;color:#1a6e3a;border:1px solid #9addb5}
+.crit-s{background:var(--bark-lt);color:#7a5a10;border:1px solid #d8c080}
+.save-btn{width:100%;padding:9px;border-radius:9px;background:var(--canopy);color:#fff;border:none;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.04em;transition:background .15s}
+.save-btn:disabled{opacity:.4;cursor:default}
+.save-btn:hover:not(:disabled){background:var(--fern)}
+.score-saved{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#e6f9ee;border:1px solid #9addb5;border-radius:9px;margin-bottom:10px}
+.ss-left{font-size:11px;font-weight:600;color:#1a6e3a}
+.ss-avg{font-family:'Syne',sans-serif;font-size:20px;font-weight:800}
+.ss-dim{font-size:10px;color:#5a9a70;font-family:'DM Mono',monospace;margin-top:1px}
+
+/* ── TXN PANEL ── */
+.txn-toggle{width:100%;background:var(--foam);border:1px solid var(--border);border-radius:9px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:'Instrument Sans',sans-serif;transition:background .15s}
+.txn-toggle:hover{background:var(--dew)}
+.txn-left{display:flex;align-items:center;gap:8px}
+.txn-ico{width:26px;height:26px;background:var(--dew);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px}
+.txn-lbl{font-size:11px;font-weight:600;color:var(--canopy)}
+.txn-sub{font-size:10px;color:#8aaa90;margin-top:1px}
+.txn-count{font-size:12px;font-weight:700;color:var(--canopy);font-family:'DM Mono',monospace;background:var(--dew);padding:2px 8px;border-radius:20px;border:1px solid var(--border-md)}
+.txn-arrow{font-size:10px;color:#8aaa90;transition:transform .2s;margin-left:4px}
+.txn-drawer{display:none;border:1px solid var(--border);border-radius:var(--r);margin-top:7px;overflow:hidden}
+.txn-drawer.open{display:block}
+.txn-head{background:var(--forest);padding:9px 13px}
+.txn-head-txt{font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.08em;font-family:'DM Mono',monospace}
+.txn-row{display:flex;align-items:center;padding:10px 13px;border-bottom:1px solid var(--border);gap:10px;background:var(--white)}
+.txn-row:last-child{border-bottom:none}
+.txn-info{flex:1}
+.txn-desc{font-size:12px;font-weight:600;color:var(--ink)}
+.txn-ref{font-size:10px;color:#8aaa90;font-family:'DM Mono',monospace;margin-top:1px}
+.txn-amt{font-size:13px;font-weight:700;color:var(--canopy);font-family:'DM Mono',monospace}
+.txn-dt{font-size:10px;color:#8aaa90;margin-top:1px;text-align:right}
+.txn-dot{width:6px;height:6px;border-radius:50%;background:#28a745;flex-shrink:0}
+.no-txn{padding:12px 13px;font-size:11px;color:#8aaa90;text-align:center;background:var(--white)}
+
+/* ── CURRICULUM TAB ── */
+.curr-cont{padding:12px;max-width:760px;margin:0 auto}
+.srch-wrap{margin-bottom:12px;position:relative}
+.srch-inp{width:100%;padding:10px 14px 10px 38px;border:1.5px solid var(--border-md);border-radius:var(--r);font-size:12px;font-family:'Instrument Sans',sans-serif;outline:none;background:var(--white);color:var(--ink);transition:border-color .15s}
+.srch-inp:focus{border-color:var(--sage)}
+.srch-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none}
+.level-block{margin-bottom:14px}
+.level-hdr{background:var(--forest);padding:10px 14px;border-radius:var(--r) var(--r) 0 0;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden}
+.level-hdr::after{content:"";position:absolute;right:-20px;top:-20px;width:80px;height:80px;border-radius:50%;background:rgba(98,201,135,0.08);pointer-events:none}
+.level-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#fff}
+.level-ct{font-size:10px;color:var(--mist);background:rgba(255,255,255,0.1);padding:2px 8px;border-radius:20px;font-family:'DM Mono',monospace}
+.class-row{background:var(--white);border:1px solid var(--border);border-top:none;padding:11px 14px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:background .15s}
+.class-row:last-child{border-radius:0 0 var(--r) var(--r)}
+.class-row:hover{background:var(--foam)}
+.class-num{width:26px;height:26px;border-radius:50%;background:var(--canopy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'DM Mono',monospace;flex-shrink:0;margin-top:1px}
+.class-name{font-size:13px;font-weight:600;color:var(--ink)}
+.class-obj{font-size:11px;color:#8aaa90;margin-top:2px}
+.class-expand{display:none;margin-top:9px;padding:11px;background:var(--foam);border-radius:9px;border:1px solid var(--border)}
+.class-expand.open{display:block}
+.ce-row{display:flex;gap:8px;margin-bottom:7px}
+.ce-key{font-size:10px;font-weight:700;color:#8aaa90;text-transform:uppercase;letter-spacing:.07em;width:80px;flex-shrink:0;padding-top:1px;font-family:'DM Mono',monospace}
+.ce-val{font-size:11px;color:var(--ink);flex:1;line-height:1.5}
+.score-guide{display:flex;flex-direction:column;gap:4px;margin-top:2px}
+.sg-row{display:flex;align-items:flex-start;gap:7px}
+.sg-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;font-family:'DM Mono',monospace}
+.n1{background:#d64a2a;color:#fff} .n2{background:#d88020;color:#fff} .n3{background:#c8a020;color:#fff} .n4{background:#28a745;color:#fff}
+.sg-desc{font-size:11px;color:var(--ink)}
+
+/* ── RIDERS TAB ── */
+.r-card{background:var(--white);border-radius:var(--r-lg);padding:13px 14px;margin-bottom:9px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.r-top{display:flex;align-items:center;gap:11px;margin-bottom:10px}
+.r-av{width:42px;height:42px;border-radius:11px;background:var(--dew);border:1.5px solid var(--border-md);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--canopy);flex-shrink:0}
+.r-name{font-size:14px;font-weight:600;color:var(--ink)}
+.r-phone{font-size:11px;color:#8aaa90;margin-top:2px;font-family:'DM Mono',monospace}
+.r-keno{margin-left:auto;font-size:10px;font-weight:700;font-family:'DM Mono',monospace;background:var(--forest);color:var(--mist);padding:4px 9px;border-radius:7px;flex-shrink:0}
+.r-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
+.r-chip{font-size:10px;padding:3px 8px;border-radius:20px;font-weight:600}
+.rc-svc{background:var(--foam);color:var(--canopy);border:1px solid var(--border)}
+.rc-att{background:#e6f9ee;color:#1a6e3a;border:1px solid #9addb5}
+.rc-score{background:#eaedff;color:#3040aa;border:1px solid #b8c0f8}
+.r-txn{border-top:1px solid var(--border);padding-top:9px}
+.r-txn-title{font-size:9px;font-weight:700;color:#8aaa90;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-family:'DM Mono',monospace}
+.r-txn-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--foam);font-size:11px}
+.r-txn-row:last-child{border-bottom:none}
+.rtd{color:#8aaa90}.rta{font-weight:700;color:var(--canopy);font-family:'DM Mono',monospace}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:44px 20px;color:#8aaa90;font-size:13px;line-height:2}
+.e-ico{font-size:40px;margin-bottom:12px}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--forest);color:#fff;font-size:11px;font-weight:600;padding:10px 20px;border-radius:100px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:9999;border:1px solid rgba(162,221,184,0.2);font-family:'DM Mono',monospace}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── CUSTOM DATE ── */
+.custom-date-wrap{background:var(--forest);padding:0 16px 12px;display:none}
+input[type=date]{border:1.5px solid var(--border-md);border-radius:8px;padding:7px 12px;font-size:12px;background:var(--white);color:var(--ink);font-family:'Instrument Sans',sans-serif}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">🐴</div>
+  <div class="hd-text">
+    <h1>KE Attendance</h1>
+    <p id="hd-date">Loading…</p>
+  </div>
+  <div class="hd-right">
+    <div class="sync-pill">
+      <div class="sync-dot" id="syncDot"></div>
+      <span class="sync-lbl" id="syncLbl">Syncing</span>
+    </div>
+    <button class="ico-btn" onclick="loadAttendance()" title="Refresh">↻</button>
+  </div>
+</header>
+
+<div class="date-strip">
+  <div class="d-tab on" onclick="switchDate('today',this)">Today</div>
+  <div class="d-tab" onclick="switchDate('tomorrow',this)">Tomorrow</div>
+  <div class="d-tab" onclick="switchDate('custom',this)">📅 Custom</div>
+</div>
+
+<div class="custom-date-wrap" id="customDateWrap">
+  <input type="date" id="customDate" onchange="loadAttendance()">
+</div>
+
+<div class="nav-tabs">
+  <button class="n-tab on" onclick="switchMain('sessions',this)">📋 Sessions</button>
+  <button class="n-tab" onclick="switchMain('curriculum',this)">📚 Curriculum</button>
+  <button class="n-tab" onclick="switchMain('transactions',this)">💳 Transactions</button>
+  <button class="n-tab" onclick="switchMain('riders',this)">🏇 Riders</button>
+</div>
+
+<div id="statsBar" class="stats" style="display:none">
+  <div class="s-item"><div class="s-num" id="sTotal">0</div><div class="s-lbl">Total</div></div>
+  <div class="s-item"><div class="s-num green" id="sPresent">0</div><div class="s-lbl">Present</div></div>
+  <div class="s-item"><div class="s-num red" id="sNoShow">0</div><div class="s-lbl">No-Show</div></div>
+  <div class="s-item"><div class="s-num amber" id="sScored">0</div><div class="s-lbl">Scored</div></div>
+  <div class="s-item"><div class="s-num" id="sUnmarked">0</div><div class="s-lbl">Pending</div></div>
+</div>
+
+<!-- SESSIONS TAB -->
+<div id="tab-sessions" class="content">
+  <div class="empty"><div class="e-ico">⏳</div><p>Loading sessions…</p></div>
+</div>
+
+<!-- CURRICULUM TAB -->
+<div id="tab-curriculum" style="display:none" class="curr-cont">
+  <div class="srch-wrap">
+    <span class="srch-ico">🔍</span>
+    <input class="srch-inp" id="currSearch" placeholder="Search classes, objectives…" oninput="filterCurriculum(this.value)">
+  </div>
+  <div id="currList"></div>
+</div>
+
+<!-- TRANSACTIONS TAB -->
+<div id="tab-transactions" style="display:none" class="content">
+  <div id="txnPageContent">
+    <div class="empty"><div class="e-ico">💳</div><p>Loading transactions…</p></div>
+  </div>
+</div>
+
+<!-- RIDERS TAB -->
+<div id="tab-riders" style="display:none" class="content">
+  <div class="srch-wrap">
+    <span class="srch-ico">🔍</span>
+    <input class="srch-inp" id="riderSearch" placeholder="Search name, phone or KE No…" oninput="filterRiders(this.value)">
+  </div>
+  <div id="riderList">
+    <div class="empty"><div class="e-ico">🐎</div><p>Loading riders…</p></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ─────────────────────────────────────────
+   DEMO DATA — replace calls with google.script.run
+───────────────────────────────────────── */
+var DEMO_SESSIONS = [
+  {rowIndex:2,keNo:"KE240101",name:"Arjun Sharma",phone:"9876543210",service:"Private Lesson",timeSlot:"06:00 - 06:30",participants:1,attendance:"",classesAttended:4,
+   payments:[{amount:2500,payDate:"01-May-2026",txnRef:"TXN001",receiptNo:"RCP001",paidOn:"01-May-2026 10:15"}]},
+  {rowIndex:3,keNo:"KE240102",name:"Priya Patel",phone:"9876543211",service:"Group Riding",timeSlot:"07:00 - 07:30",participants:2,attendance:"Present",classesAttended:8,
+   payments:[{amount:1800,payDate:"28-Apr-2026",txnRef:"TXN002",receiptNo:"RCP002",paidOn:"28-Apr-2026 14:22"}]},
+  {rowIndex:4,keNo:"KE240103",name:"Rahul Singh",phone:"9876543212",service:"Beginner Package",timeSlot:"07:30 - 08:00",participants:1,attendance:"",classesAttended:1,payments:[]},
+  {rowIndex:5,keNo:"KE240104",name:"Sneha Rao",phone:"9876543213",service:"Private Lesson",timeSlot:"08:00 - 08:30",participants:1,attendance:"No-Show",classesAttended:3,
+   payments:[{amount:3000,payDate:"30-Apr-2026",txnRef:"TXN003",receiptNo:"RCP003",paidOn:"30-Apr-2026 09:00"}]},
+  {rowIndex:6,keNo:"KE240105",name:"Vikram Nair",phone:"9876543214",service:"Trek Experience",timeSlot:"09:00 - 09:30",participants:3,attendance:"",classesAttended:12,
+   payments:[{amount:4500,payDate:"02-May-2026",txnRef:"TXN004",receiptNo:"RCP004",paidOn:"02-May-2026 08:45"}]},
+];
+
+var CURRICULUM = [
+  {level:"Level 1",num:1,title:"Safe Approach",obj:"Approach horse safely and confidently",exercise:"Approach from shoulder, observe behavior",scores:{"4":"Confident safe","3":"Minor hesitation","2":"Needs help","1":"Unsafe"},primary:"Safety & Behavior",secondary:"Confidence & Attitude"},
+  {level:"Level 1",num:2,title:"Haltering",obj:"Put on and remove halter correctly",exercise:"Halter horse and secure properly",scores:{"4":"Independent correct","3":"Minor error","2":"Needs help","1":"Incorrect"},primary:"Safety & Behavior",secondary:"Horse Knowledge"},
+  {level:"Level 1",num:3,title:"Leading Basics",obj:"Lead horse correctly at walk",exercise:"Walk with horse maintaining position",scores:{"4":"Controlled safe","3":"Minor correction","2":"Inconsistent","1":"Unsafe"},primary:"Safety & Behavior",secondary:"Control at Walk"},
+  {level:"Level 1",num:4,title:"Leading Turns",obj:"Turn horse correctly while leading",exercise:"Practice left/right turns",scores:{"4":"Smooth turns","3":"Minor issue","2":"Needs help","1":"Incorrect"},primary:"Safety & Behavior",secondary:"Control at Walk"},
+  {level:"Level 1",num:5,title:"Tying Knot",obj:"Tie quick release knot",exercise:"Tie and untie using safe knot",scores:{"4":"Correct secure","3":"Minor error","2":"Needs help","1":"Incorrect"},primary:"Safety & Behavior",secondary:"Horse Knowledge"},
+  {level:"Level 2",num:6,title:"Grooming Basics",obj:"Groom horse safely and correctly",exercise:"Full grooming sequence",scores:{"4":"Complete correct","3":"Minor gaps","2":"Needs help","1":"Unsafe/incomplete"},primary:"Horse Care",secondary:"Safety & Behavior"},
+  {level:"Level 2",num:7,title:"Tacking Up",obj:"Saddle and bridle horse correctly",exercise:"Full tacking sequence with check",scores:{"4":"Correct independent","3":"Minor error","2":"Needs help","1":"Incorrect/unsafe"},primary:"Horse Knowledge",secondary:"Safety & Behavior"},
+  {level:"Level 2",num:8,title:"Mounting",obj:"Mount correctly using block",exercise:"Safe mounting sequence",scores:{"4":"Safe controlled","3":"Minor issue","2":"Needs help","1":"Unsafe"},primary:"Riding Technique",secondary:"Safety & Behavior"},
+  {level:"Level 3",num:9,title:"Walk & Halt",obj:"Walk and halt confidently",exercise:"Walk circles, halt on command",scores:{"4":"Balanced smooth","3":"Minor issue","2":"Inconsistent","1":"Unable"},primary:"Riding Technique",secondary:"Control at Walk"},
+  {level:"Level 3",num:10,title:"Rising Trot",obj:"Rise to trot correctly",exercise:"Trot 20m circle both reins",scores:{"4":"Correct balanced","3":"Minor error","2":"Inconsistent","1":"Unable"},primary:"Riding Technique",secondary:"Rhythm & Balance"},
+];
+
+var sessions=[], allRiders=[], ridersLoaded=false;
+var sessionScores={}, pendingScores={};
+var currentDate='today', currentMain='sessions';
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showToast(m){var t=document.getElementById('toast');t.innerHTML=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2600);}
+
+function switchDate(tab,el){
+  currentDate=tab;
+  document.querySelectorAll('.d-tab').forEach(function(t){t.classList.remove('on');});
+  el.classList.add('on');
+  document.getElementById('customDateWrap').style.display=tab==='custom'?'block':'none';
+  if(currentMain==='sessions') loadAttendance();
+}
+
+function switchMain(tab,el){
+  currentMain=tab;
+  document.querySelectorAll('.n-tab').forEach(function(t){t.classList.remove('on');});
+  el.classList.add('on');
+  ['sessions','curriculum','transactions','riders'].forEach(function(t){
+    document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
+  });
+  document.getElementById('statsBar').style.display=tab==='sessions'?'flex':'none';
+  if(tab==='curriculum') renderCurriculum();
+  if(tab==='transactions') renderTransactions();
+  if(tab==='riders'){
+    if(!ridersLoaded) loadRiders();
+    else renderRiders(allRiders);
+  }
+}
+
+function loadAttendance(){
+  /* REPLACE WITH: google.script.run.withSuccessHandler(renderSessions).getSessionsForDate_Fast(getDateParam()); */
+  sessions=DEMO_SESSIONS.map(function(s){return Object.assign({},s);});
+  renderSessions();
+  document.getElementById('hd-date').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
+  setTimeout(function(){
+    document.getElementById('syncDot').className='sync-dot ready';
+    document.getElementById('syncLbl').textContent='Ready';
+  },1200);
+}
+
+function renderSessions(){
+  var total=sessions.length, present=0, noshow=0, scored=0, unmarked=0;
+  sessions.forEach(function(s){
+    if(s.attendance==='Present') present++;
+    else if(s.attendance==='No-Show') noshow++;
+    else unmarked++;
+    if(sessionScores[s.rowIndex]) scored++;
+  });
+  document.getElementById('sTotal').textContent=total;
+  document.getElementById('sPresent').textContent=present;
+  document.getElementById('sNoShow').textContent=noshow;
+  document.getElementById('sScored').textContent=scored;
+  document.getElementById('sUnmarked').textContent=unmarked;
+  document.getElementById('statsBar').style.display=sessions.length?'flex':'none';
+  document.getElementById('tab-sessions').innerHTML=sessions.length
+    ?sessions.map(buildSessionCard).join('')
+    :'<div class="empty"><div class="e-ico">🐴</div><p>No sessions scheduled</p></div>';
+}
+
+function buildSessionCard(s,idx){
+  var isP=s.attendance==='Present', isN=s.attendance==='No-Show', mkd=isP||isN;
+  var sc=sessionScores[s.rowIndex];
+  var cls='s-card'+(isP?(sc?' s-scored':' s-present'):isN?' s-noshow':'');
+  var bdgCls=isP?(sc?'b-scored':'b-present'):isN?'b-noshow':'b-pending';
+  var bdgTxt=isP?(sc?'✓ Scored':'✓ Present'):isN?'✗ No-Show':'Pending';
+  var dis=mkd?' disabled':'';
+  var txnRows=(s.payments&&s.payments.length)
+    ?s.payments.map(function(p){
+        return '<div class="txn-row">'
+          +'<div class="txn-info"><div class="txn-desc">'+esc(p.receiptNo||'Receipt')+'</div><div class="txn-ref">'+esc(p.txnRef)+'</div></div>'
+          +'<div><div class="txn-amt">₹'+Number(p.amount).toLocaleString('en-IN')+'</div><div class="txn-dt">'+esc(p.payDate)+'</div></div>'
+          +'<div class="txn-dot"></div></div>';
+      }).join('')
+    :'<div class="no-txn">No payment records</div>';
+  var scoreSection='';
+  if(sc){
+    var avg=((sc.safety+sc.riding+sc.knowledge+sc.attitude)/4).toFixed(1);
+    var col=avg>=3.5?'#1a6e3a':avg>=2.5?'#7a5a10':avg>=1.5?'#a04010':'#c04020';
+    scoreSection='<div class="score-saved"><div>'
+      +'<div class="ss-left">✓ Assessment saved</div>'
+      +'<div class="ss-dim">S:'+sc.safety+' R:'+sc.riding+' K:'+sc.knowledge+' A:'+sc.attitude+'</div>'
+      +'</div><div class="ss-avg" style="color:'+col+'">'+avg+'</div></div>';
+  } else if(isP){
+    scoreSection=buildScorePanel(idx,s);
+  }
+  return '<div class="'+cls+'" id="card-'+idx+'">'
+    +'<div class="s-card-bar"></div><div class="s-body">'
+    +'<div class="s-top"><div class="s-name">'+esc(s.name)+(s.participants>1?' ×'+s.participants:'')+'</div>'
+    +'<span class="badge '+bdgCls+'">'+bdgTxt+'</span></div>'
+    +'<div class="s-chips">'
+    +'<span class="chip">🕐 '+esc(s.timeSlot||'TBD')+'</span>'
+    +'<span class="chip">🗒 '+esc(s.keNo)+'</span>'
+    +'<span class="chip">📞 '+esc(s.phone)+'</span>'
+    +'</div>'
+    +'<div class="s-svc">'+esc(s.service)+'</div>'
+    +'<div class="s-att"><div class="att-dot"></div>'+s.classesAttended+' class'+(s.classesAttended!==1?'es':'')+' attended</div>'
+    +'<div class="att-row">'
+    +'<button class="att-btn btn-p'+(isP?' on':'')+'"'+dis+' onclick="markAtt('+idx+',\'Present\')">✓ Present</button>'
+    +'<button class="att-btn btn-n'+(isN?' on':'')+'"'+dis+' onclick="markAtt('+idx+',\'No-Show\')">✗ No-Show</button>'
+    +'</div>'
+    +scoreSection
+    +'<button class="txn-toggle" onclick="toggleTxn(this,'+idx+')">'
+    +'<div class="txn-left"><div class="txn-ico">💳</div><div>'
+    +'<div class="txn-lbl">Payments</div>'
+    +'<div class="txn-sub">'+(s.payments?s.payments.length:0)+' record'+((!s.payments||s.payments.length!==1)?'s':'')+'</div>'
+    +'</div></div>'
+    +'<div style="display:flex;align-items:center;gap:4px">'
+    +'<span class="txn-count">'+(s.payments?s.payments.length:0)+'</span>'
+    +'<span class="txn-arrow" id="arr-'+idx+'">▶</span></div></button>'
+    +'<div class="txn-drawer" id="txd-'+idx+'">'
+    +'<div class="txn-head"><div class="txn-head-txt">Transaction History</div></div>'
+    +txnRows+'</div>'
+    +'</div></div>';
+}
+
+function buildScorePanel(idx,s){
+  var prim=s.classesAttended<=3?'Safety & Behavior':s.service.includes('Private')?'Riding Technique':'Safety & Behavior';
+  var sec=s.classesAttended<=3?'Confidence & Attitude':'Horse Knowledge';
+  function row(field,label){
+    return '<div class="sc-row"><div class="sc-label">'+label+'</div><div class="sc-btns">'
+      +'<button class="sc-btn" onclick="setScore('+idx+',\''+field+'\',1,this)">1</button>'
+      +'<button class="sc-btn" onclick="setScore('+idx+',\''+field+'\',2,this)">2</button>'
+      +'<button class="sc-btn" onclick="setScore('+idx+',\''+field+'\',3,this)">3</button>'
+      +'<button class="sc-btn" onclick="setScore('+idx+',\''+field+'\',4,this)">4</button>'
+      +'</div></div>';
+  }
+  return '<div class="score-panel" id="sp-'+idx+'">'
+    +'<div class="sp-header"><span class="sp-title">Assessment</span><span class="sp-guide">1 Poor · 2 Dev · 3 Good · 4 Excellent</span></div>'
+    +row('Safety','Safety')+row('Riding','Riding')+row('Knowledge','Knowledge')+row('Attitude','Attitude')
+    +'<div class="avg-block"><span class="avg-label">Avg Score</span>'
+    +'<span class="avg-val" id="av-'+idx+'">—</span></div>'
+    +'<div class="criteria-row">'
+    +'<span class="crit-badge crit-p">'+esc(prim)+'</span>'
+    +'<span class="crit-badge crit-s">'+esc(sec)+'</span></div>'
+    +'<button class="save-btn" id="sb-'+idx+'" disabled onclick="saveScore('+idx+','+s.rowIndex+')">Save Assessment</button>'
+    +'</div>';
+}
+
+function setScore(idx,field,val,el){
+  if(!pendingScores[idx]) pendingScores[idx]={};
+  var fieldMap={Safety:'safety',Riding:'riding',Knowledge:'knowledge',Attitude:'attitude'};
+  var key=fieldMap[field]||field.toLowerCase();
+  pendingScores[idx][key]=val;
+  var sp=document.getElementById('sp-'+idx);
+  if(sp){
+    var rows=sp.querySelectorAll('.sc-row');
+    var fields=['safety','riding','knowledge','attitude'];
+    var labels=['Safety','Riding','Knowledge','Attitude'];
+    rows.forEach(function(row,ri){
+      if(labels[ri]===field){
+        row.querySelectorAll('.sc-btn').forEach(function(b,bi){
+          b.className='sc-btn'+(bi+1===val?' sel-'+val:'');
+        });
+      }
+    });
+  }
+  var sc=pendingScores[idx];
+  if(sc.safety&&sc.riding&&sc.knowledge&&sc.attitude){
+    var avg=((sc.safety+sc.riding+sc.knowledge+sc.attitude)/4).toFixed(1);
+    var av=document.getElementById('av-'+idx);
+    if(av){av.textContent=avg;av.style.color=avg>=3.5?'#1a6e3a':avg>=2.5?'#7a5a10':avg>=1.5?'#a04010':'#c04020';}
+    var sb=document.getElementById('sb-'+idx);if(sb)sb.disabled=false;
+  }
+}
+
+function saveScore(idx,rowIndex){
+  var sc=pendingScores[idx];
+  if(!sc||!sc.safety||!sc.riding||!sc.knowledge||!sc.attitude){showToast('Fill all 4 scores first');return;}
+  sessionScores[rowIndex]=Object.assign({},sc);
+  var avg=((sc.safety+sc.riding+sc.knowledge+sc.attitude)/4).toFixed(1);
+  /* REPLACE WITH: google.script.run.saveAssessment(rowIndex, sessions[idx].keNo, scores) */
+  showToast('✓ Score saved — Avg: '+avg+(parseFloat(avg)>=2?' (PASS)':' (REPEAT)'));
+  delete pendingScores[idx];
+  renderSessions();
+}
+
+function markAtt(idx,status){
+  sessions[idx].attendance=status;
+  /* REPLACE WITH: google.script.run.saveAttendance(sessions[idx].rowIndex, status, null) */
+  showToast(status==='Present'?'✓ Marked Present — add scores below':'✗ Marked No-Show');
+  renderSessions();
+}
+
+function toggleTxn(btn,idx){
+  var drawer=document.getElementById('txd-'+idx);
+  var arrow=document.getElementById('arr-'+idx);
+  var open=drawer.classList.toggle('open');
+  if(arrow){arrow.textContent=open?'▼':'▶';arrow.style.transform=open?'rotate(0)':'';}
+}
+
+/* ── CURRICULUM ── */
+function renderCurriculum(){
+  var levels={};
+  CURRICULUM.forEach(function(c){if(!levels[c.level])levels[c.level]=[];levels[c.level].push(c);});
+  var h='';
+  Object.keys(levels).forEach(function(lv){
+    h+='<div class="level-block"><div class="level-hdr">'
+      +'<span class="level-name">'+esc(lv)+'</span>'
+      +'<span class="level-ct">'+levels[lv].length+' classes</span>'
+      +'</div>';
+    levels[lv].forEach(function(c){
+      var sg=[4,3,2,1].map(function(n){
+        return '<div class="sg-row"><div class="sg-num n'+n+'">'+n+'</div><div class="sg-desc">'+esc(c.scores[String(n)])+'</div></div>';
+      }).join('');
+      h+='<div class="class-row" onclick="toggleClassExpand(this)">'
+        +'<div class="class-num">'+c.num+'</div>'
+        +'<div style="flex:1">'
+        +'<div class="class-name">'+esc(c.title)+'</div>'
+        +'<div class="class-obj">'+esc(c.obj)+'</div>'
+        +'<div class="class-expand">'
+        +'<div class="ce-row"><div class="ce-key">Exercise</div><div class="ce-val">'+esc(c.exercise)+'</div></div>'
+        +'<div class="ce-row"><div class="ce-key">Primary</div><div class="ce-val"><span class="crit-badge crit-p">'+esc(c.primary)+'</span></div></div>'
+        +'<div class="ce-row"><div class="ce-key">Secondary</div><div class="ce-val"><span class="crit-badge crit-s">'+esc(c.secondary)+'</span></div></div>'
+        +'<div class="ce-row"><div class="ce-key">Scoring</div><div class="ce-val"><div class="score-guide">'+sg+'</div></div></div>'
+        +'</div>'
+        +'</div></div>';
+    });
+    h+='</div>';
+  });
+  document.getElementById('currList').innerHTML=h;
+}
+
+function toggleClassExpand(row){var e=row.querySelector('.class-expand');if(e)e.classList.toggle('open');}
+function filterCurriculum(q){
+  document.querySelectorAll('.class-row').forEach(function(r){
+    r.style.display=(!q||r.textContent.toLowerCase().indexOf(q.toLowerCase())>-1)?'flex':'none';
+  });
+}
+
+/* ── TRANSACTIONS ── */
+function renderTransactions(){
+  var allPay=[];
+  DEMO_SESSIONS.forEach(function(r){
+    (r.payments||[]).forEach(function(p){allPay.push(Object.assign({name:r.name,keNo:r.keNo},p));});
+  });
+  var today=new Date().toISOString().slice(0,10);
+  var filtered=allPay.filter(function(p){
+    var fi=document.getElementById('txnDateF');
+    var sel=fi?fi.value:today;
+    var fd=p.payDate?new Date(p.payDate).toISOString().slice(0,10):'';
+    return !sel||fd===sel;
+  });
+  var sel=today;
+  var h='<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow)">'
+    +'<div style="background:var(--forest);padding:12px 15px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;flex-wrap:wrap">'
+    +'<div><div style="font-size:11px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.08em;font-family:\'DM Mono\',monospace">Transactions</div>'
+    +'<div style="font-size:11px;color:var(--mist);margin-top:2px">'+filtered.length+' records</div></div>'
+    +'<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">'
+    +'<label style="font-size:10px;color:var(--mist);font-family:\'DM Mono\',monospace;text-transform:uppercase;letter-spacing:.06em">Payment Date</label>'
+    +'<input type="date" id="txnDateF" value="'+today+'" onchange="renderTransactions()" style="border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:6px 10px;font-size:12px;background:#fff;color:var(--ink);min-width:148px">'
+    +'</div></div>';
+  if(!filtered.length){h+='<div class="empty"><div class="e-ico">💳</div><p>No transactions for selected date</p></div></div>';document.getElementById('txnPageContent').innerHTML=h;return;}
+  filtered.forEach(function(t){
+    h+='<div style="display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);gap:10px;background:var(--white)">'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--ink)">'+esc(t.name)+'</div>'
+      +'<div style="font-size:10px;color:#8aaa90;font-family:\'DM Mono\',monospace;margin-top:1px">'+esc(t.txnRef)+(t.receiptNo?' · '+esc(t.receiptNo):'')+'</div>'
+      +'<div style="font-size:11px;color:var(--fern);margin-top:2px">'+esc(t.keNo)+'</div></div>'
+      +'<div style="text-align:right"><div style="font-size:14px;font-weight:700;color:var(--canopy);font-family:\'DM Mono\',monospace">₹'+Number(t.amount).toLocaleString('en-IN')+'</div>'
+      +'<div style="font-size:10px;color:#8aaa90;margin-top:1px">'+esc(t.payDate)+'</div></div>'
+      +'<div style="width:6px;height:6px;border-radius:50%;background:#28a745;flex-shrink:0"></div></div>';
+  });
+  h+='</div>';
+  document.getElementById('txnPageContent').innerHTML=h;
+}
+
+/* ── RIDERS ── */
+function loadRiders(){
+  /* REPLACE WITH: google.script.run.withSuccessHandler(function(data){allRiders=data;ridersLoaded=true;renderRiders(allRiders);}).getAllRidersWithStats_Fast(); */
+  allRiders=DEMO_SESSIONS.map(function(s){return {keNo:s.keNo,name:s.name,phone:s.phone,services:s.service,classesAttended:s.classesAttended,payments:s.payments};});
+  ridersLoaded=true;
+  renderRiders(allRiders);
+}
+
+function renderRiders(list){
+  var el=document.getElementById('riderList');
+  if(!list||!list.length){el.innerHTML='<div class="empty"><div class="e-ico">🔍</div><p>No riders found</p></div>';return;}
+  el.innerHTML=list.map(function(r){
+    var initials=r.name.split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase();
+    var scored=sessions.filter(function(s){return s.keNo===r.keNo&&sessionScores[s.rowIndex];}).length;
+    var pays=(r.payments||[]).slice(0,3).map(function(p){
+      return '<div class="r-txn-row"><span class="rtd">'+esc(p.txnRef||'Payment')+' · '+esc(p.payDate||'')+'</span><span class="rta">₹'+Number(p.amount).toLocaleString('en-IN')+'</span></div>';
+    }).join('');
+    return '<div class="r-card">'
+      +'<div class="r-top">'
+      +'<div class="r-av">'+initials+'</div>'
+      +'<div><div class="r-name">'+esc(r.name)+'</div><div class="r-phone">'+esc(r.phone)+'</div></div>'
+      +'<div class="r-keno">'+esc(r.keNo)+'</div>'
+      +'</div>'
+      +'<div class="r-chips">'
+      +'<span class="r-chip rc-svc">'+esc(r.services)+'</span>'
+      +'<span class="r-chip rc-att">✓ '+r.classesAttended+' attended</span>'
+      +(scored?'<span class="r-chip rc-score">★ '+scored+' scored</span>':'')
+      +'</div>'
+      +(pays?'<div class="r-txn"><div class="r-txn-title">Recent Payments</div>'+pays+'</div>':'')
+      +'</div>';
+  }).join('');
+}
+
+function filterRiders(q){
+  if(!q||!q.trim()){renderRiders(allRiders);return;}
+  var ql=q.trim().toLowerCase();
+  renderRiders(allRiders.filter(function(r){return r.name.toLowerCase().indexOf(ql)>-1||String(r.phone||'').indexOf(ql)>-1||String(r.keNo||'').toLowerCase().indexOf(ql)>-1;}));
+}
+
+/* ── INIT ── */
+loadAttendance();
+setTimeout(function(){if(!ridersLoaded)loadRiders();},1400);
+</script>
+</body>
+</html>

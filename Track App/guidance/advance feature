@@ -1,0 +1,725 @@
+Absolutely — this should be one of the most important dashboard blocks because inventory visibility is critical for:
+
+✔ Stock planning
+✔ Avoiding over-ordering
+✔ Preventing stock-outs
+✔ Cross-location transfers
+✔ Financial valuation
+✔ Competition readiness
+
+You should build a LIVE INVENTORY CONTROL CENTER in the dashboard.
+
+📦 INVENTORY LEVELS BY ITEM & LOCATION (CORE DASHBOARD MODULE)
+
+Create a major section in dashboard:
+
+🟦 INVENTORY CONTROL CENTER
+📊 1. LIVE INVENTORY TABLE
+
+Place in Dashboard:
+
+Start around:
+
+A55:K100
+Columns
+Item Code
+Item Name
+Category
+Vendor
+Bangalore Qty
+Hyderabad Qty
+Pune Qty
+Farm Qty
+Total Qty
+Min Level
+Status
+🧠 HOW THIS WORKS
+
+Instead of separate rows for each location, dashboard should consolidate inventory.
+
+Example:
+
+Item	BLR	HYD	PUNE	FARM	Total
+Helmet	12	4	2	1	19
+📄 2. INVENTORY MASTER STRUCTURE (IMPORTANT)
+
+Inventory master still stores:
+
+Item Code
+Item Name
+Location
+Current Qty
+
+Multiple rows per location.
+
+Example:
+
+Item	Location	Qty
+Helmet	Bangalore	12
+Helmet	Hyderabad	4
+📊 3. DASHBOARD LOCATION-WISE FORMULAS
+
+Use:
+
+Bangalore Qty
+=SUMIFS(INVENTORY_MASTER!G:G, INVENTORY_MASTER!A:A,A56, INVENTORY_MASTER!F:F,"Bangalore")
+Hyderabad Qty
+=SUMIFS(INVENTORY_MASTER!G:G, INVENTORY_MASTER!A:A,A56, INVENTORY_MASTER!F:F,"Hyderabad")
+Pune Qty
+=SUMIFS(INVENTORY_MASTER!G:G, INVENTORY_MASTER!A:A,A56, INVENTORY_MASTER!F:F,"Pune")
+Farm Qty
+=SUMIFS(INVENTORY_MASTER!G:G, INVENTORY_MASTER!A:A,A56, INVENTORY_MASTER!F:F,"Farm")
+Total Qty
+=SUM(B56:E56)
+🚨 4. LOW STOCK ALERT SYSTEM
+Status Formula
+=IF(I56<J56,"LOW STOCK","OK")
+🔴 CONDITIONAL FORMATTING
+
+Apply:
+
+Condition	Color
+LOW STOCK	Red
+Near Min Level	Orange
+Healthy Stock	Green
+📦 5. INVENTORY VALUE TRACKING (VERY IMPORTANT)
+
+Add columns:
+
+Cost Price
+Inventory Value
+Formula
+=TotalQty * CostPrice
+📊 6. INVENTORY VALUE DASHBOARD KPIs
+
+Top dashboard KPIs:
+
+Total Inventory Value
+Total Inventory Units
+Low Stock Items
+Dead Stock
+Fast Moving Items
+🧠 7. FAST MOVING vs DEAD STOCK
+
+Create analytics:
+
+Fast Moving
+
+Items issued frequently.
+
+Formula:
+
+=COUNTIFS(ISSUE_REGISTER!C:C,ItemCode)
+Dead Stock
+
+No movement in 90 days.
+
+📍 8. LOCATION-WISE INVENTORY ANALYTICS
+
+Create section:
+
+Location	Inventory Units	Inventory Value
+Example
+
+| Bangalore | 420 | ₹8,20,000 |
+| Hyderabad | 210 | ₹3,60,000 |
+
+🔄 9. STOCK TRANSFER SYSTEM (VERY IMPORTANT)
+
+You should also support:
+
+Bangalore → Hyderabad
+Farm → Pune
+📄 NEW SHEET: STOCK_TRANSFER
+Transfer ID
+Item Code
+From Location
+To Location
+Qty
+Transferred By
+Date
+Status
+Transfer Logic
+
+When transfer approved:
+
+Source Qty --
+Destination Qty ++
+📊 10. INVENTORY HEATMAP (ADVANCED)
+
+Dashboard visual:
+
+Item	BLR	HYD	PUNE	FARM
+Helmet	🟢	🟡	🔴	🟢
+📧 11. WEEKLY INVENTORY EMAIL
+
+Should include:
+
+Low Stock Items
+Overstocked Items
+Inventory Value
+Location-wise Inventory
+Top Moving Items
+Pending Orders
+🔥 12. BEST PRACTICE (HIGHLY RECOMMENDED)
+
+Create inventory categories:
+
+Rider Apparel
+Helmet
+Boots
+Body Protector
+Gloves
+Chaps
+Horse Equipment
+Saddles
+Bridles
+Breast Plates
+Rugs
+Pads
+🚀 FINAL RESULT
+
+Your dashboard now becomes:
+
+✔ Inventory ERP
+✔ Retail ERP
+✔ Financial ERP
+✔ Multi-location inventory control system
+
+with:
+
+✅ Live stock visibility
+✅ Inventory valuation
+✅ Low stock alerts
+✅ Transfer tracking
+✅ Vendor & customer profitability
+✅ Monthly & yearly analytics
+✅ Location-wise inventory intelligence
+
+🔥 NEXT LEVEL
+
+You are now ready for:
+
+👉 Barcode scanning
+👉 QR saddle tracking
+👉 RFID tack room management
+👉 Mobile inventory app
+👉 Auto reorder suggestions
+
+This is now approaching a professional equestrian retail + academy management platform.
+
+Business may consume some as vendor some then can be samples 
+
+We should able to monitor how many of them we are carrying as business owned inventory for business use purposes
+
+Excellent — this is a very important enterprise inventory concept.
+
+You actually have 3 different inventory ownership types:
+
+🧭 INVENTORY OWNERSHIP TYPES
+Type	Meaning
+Customer Inventory	Ordered specifically for customer
+Business Inventory	Owned by Kings Equestrian for operations / resale
+Sample Inventory	Demo / trial / display items
+🔥 WHY THIS IS CRITICAL
+
+Without this separation you cannot know:
+
+✔ What stock belongs to customer orders
+✔ What stock is available for sale
+✔ What stock is business operational stock
+✔ What stock is demo/sample only
+✔ Actual inventory valuation
+✔ Real profitability
+
+🧩 1. UPDATE INVENTORY_MASTER (VERY IMPORTANT)
+
+Add these columns:
+
+Inventory Type
+Ownership Purpose
+Allocated To
+FINAL INVENTORY_MASTER STRUCTURE
+Item Code
+Item Name
+Category
+Vendor
+Location
+Current Qty
+Inventory Type
+Ownership Purpose
+Allocated To
+Storage Location
+Cost Price
+Inventory Value
+📦 2. INVENTORY TYPE OPTIONS
+
+Dropdown:
+
+Business Inventory
+Customer Order Inventory
+Sample / Demo Inventory
+Operational Inventory
+🧠 EXPLANATION
+🟦 Business Inventory
+
+For:
+
+✔ Retail sale
+✔ General stock
+✔ Resale inventory
+
+Example:
+
+Helmets stocked for future customers
+🟩 Customer Order Inventory
+
+Specific customer order.
+
+Example:
+
+Boots ordered for Aarav
+🟨 Sample / Demo Inventory
+
+Used for:
+
+✔ Display
+✔ Trial fitting
+✔ Demonstration
+✔ Marketing shoots
+
+Example:
+
+Sample GPA helmet for fittings
+🟧 Operational Inventory
+
+Used internally:
+
+✔ Riding school use
+✔ Therapy use
+✔ Stable use
+✔ Competition team use
+
+Example:
+
+Business-owned saddle used for training
+📊 3. DASHBOARD INVENTORY BREAKDOWN (VERY IMPORTANT)
+
+Create section:
+
+🟦 INVENTORY OWNERSHIP ANALYTICS
+Table
+Inventory Type	Qty	Value
+Business Inventory	120	₹8,20,000
+Customer Inventory	40	₹3,10,000
+Sample Inventory	12	₹1,40,000
+Operational Inventory	35	₹5,60,000
+📈 4. FORMULAS
+Business Inventory Qty
+=SUMIFS(INVENTORY_MASTER!F:F, INVENTORY_MASTER!G:G,"Business Inventory")
+Business Inventory Value
+=SUMIFS(INVENTORY_MASTER!L:L, INVENTORY_MASTER!G:G,"Business Inventory")
+📍 5. LOCATION-WISE OWNERSHIP TRACKING
+
+Dashboard should show:
+
+Location	Business	Sample	Operational
+Bangalore	42	4	8
+👤 6. CUSTOMER-ALLOCATED INVENTORY
+
+For customer orders:
+
+Column:
+
+Allocated To
+
+Example:
+
+Allocated To = Aarav
+
+This prevents accidental sale to another customer.
+
+🚨 7. SAMPLE INVENTORY CONTROL (VERY IMPORTANT)
+
+You should track:
+
+✔ Sample issued to trainer
+✔ Sample at competition
+✔ Demo items used in photoshoots
+
+📄 NEW SHEET: SAMPLE_MOVEMENT
+Sample ID
+Item
+Location
+Issued To
+Purpose
+Date Out
+Date Returned
+Status
+🏢 8. BUSINESS OPERATIONAL STOCK
+
+This is extremely important for Kings Equestrian because you operate:
+
+✔ Riding school
+✔ Competitions
+✔ Therapy programs
+✔ Horse safaris
+
+Operational stock should not accidentally appear as “available for sale”.
+
+🔐 9. SALE RESTRICTION LOGIC
+
+Apps Script:
+
+if(inventoryType == "Operational Inventory"){
+  SpreadsheetApp.getUi().alert("Operational stock cannot be sold");
+  return;
+}
+📦 10. INVENTORY AVAILABILITY LOGIC
+
+Dashboard should show:
+
+Item	Total Qty	Available for Sale
+Helmet	20	12
+Why difference?
+
+Because:
+
+Some stock is:
+- Operational
+- Sample
+- Allocated
+📊 11. TRUE AVAILABLE STOCK FORMULA
+=BusinessInventory - Allocated - Reserved
+🧠 12. INVENTORY RESERVATION SYSTEM
+
+When customer request approved:
+
+Status:
+
+Reserved
+
+This prevents duplicate allocation.
+
+📈 13. INVENTORY VALUATION (VERY IMPORTANT)
+
+Now you can know:
+
+Inventory Type	Value
+Business Stock	₹8L
+Operational Stock	₹5L
+Sample Stock	₹1L
+
+This becomes:
+
+✔ Accounting asset tracking
+✔ Insurance valuation
+✔ Audit support
+
+📧 14. WEEKLY MANAGEMENT REPORT
+
+Should now include:
+
+Business Inventory Value
+Operational Inventory Value
+Sample Inventory Value
+Allocated Inventory
+Available Sale Inventory
+🚀 FINAL RESULT
+
+You now have:
+
+✔ Retail inventory
+✔ Operational inventory
+✔ Sample inventory
+✔ Customer-allocated inventory
+✔ Inventory valuation
+✔ Real available stock tracking
+✔ Inventory ownership intelligence
+
+🔥 THIS IS NOW ENTERPRISE-GRADE
+
+This structure is similar to what:
+
+premium tack stores
+equestrian academies
+sports retailers
+luxury equipment distributors
+
+use internally.
+
+HIGHLY RECOMMENDED NEXT STEP
+
+You are now ready for:
+
+👉 Inventory reservation system
+👉 Barcode/RFID saddle tracking
+👉 Auto reorder suggestions
+👉 Equipment lifecycle tracking
+👉 Asset depreciation tracking for operational equipment
+
+This would make Kings Equestrian’s system extremely sophisticated and scalable.
+
+Priving should only visible to admin not to any one 
+
+Perfect — this is a very important security and business control requirement.
+
+👉 Pricing, margins, vendor costs, profitability and financials should be:
+
+✅ Visible ONLY to Admin
+❌ Hidden from Trainers
+❌ Hidden from Coordinators
+❌ Hidden from most staff
+❌ Hidden from location managers (optional)
+
+This is standard ERP practice.
+
+🔐 FINANCIAL DATA SEGREGATION (CRITICAL)
+
+You should separate the system into:
+
+Layer	Visibility
+Operational Layer	Everyone (limited)
+Financial Layer	Admin + Accounts only
+🧩 1. CREATE FINANCIAL SHEETS (ADMIN ONLY)
+
+Move pricing & profitability into separate sheets.
+
+📄 SHEET: ITEM_PRICING_MASTER
+Item Code
+Cost Price
+Selling Price
+MRP
+Profit Margin
+Preferred Vendor
+Last Purchase Cost
+📄 SHEET: FINANCIAL_ANALYTICS
+Revenue
+Vendor Payables
+Customer Receivables
+Gross Profit
+Inventory Value
+📄 SHEET: VENDOR_FINANCIALS
+Vendor
+Total Ordered
+Total Paid
+Pending Payable
+🔒 2. SHEET ACCESS CONTROL (VERY IMPORTANT)
+Admin Access
+
+Can view:
+
+✔ Pricing
+✔ Profit
+✔ Vendor costs
+✔ Financial analytics
+✔ Margins
+
+Accounts Access
+
+Can view:
+
+✔ Vendor payment status
+✔ Customer payments
+✔ Payables / receivables
+
+Optional:
+
+❌ Hide profit margins if needed
+
+Trainers / Coordinators
+
+Should NOT see:
+
+❌ Cost price
+❌ Profit margins
+❌ Vendor payable
+❌ Selling strategy
+
+⚙️ 3. APPS SCRIPT SECURITY LAYER
+CORE ROLE CHECK
+function isAdmin(){
+
+  var email = Session.getActiveUser().getEmail();
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet()
+              .getSheetByName("USER_MASTER");
+
+  var data = sheet.getDataRange().getValues();
+
+  for(var i=1;i<data.length;i++){
+
+    if(data[i][0]==email && data[i][2]=="Admin"){
+      return true;
+    }
+
+  }
+
+  return false;
+}
+🔐 4. RESTRICT PRICING ACCESS
+
+Example:
+
+function openPricingSheet(){
+
+  if(!isAdmin()){
+    SpreadsheetApp.getUi().alert("Access Denied");
+    return;
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.setActiveSheet(ss.getSheetByName("ITEM_PRICING_MASTER"));
+}
+👁️ 5. HIDE PRICING COLUMNS IN DASHBOARD
+
+Dashboard visible to normal users should NOT show:
+
+Cost Price
+Selling Price
+Profit
+Margin
+Vendor Cost
+📊 6. SPLIT DASHBOARD INTO TWO
+🟦 OPERATIONS DASHBOARD (GENERAL USERS)
+
+Visible to:
+
+✔ Trainers
+✔ Coordinators
+✔ Managers
+
+Contains:
+
+Inventory Levels
+Requests
+Issue Status
+Orders
+Location Stock
+Customer Tracking
+🟥 FINANCIAL DASHBOARD (ADMIN ONLY)
+
+Visible ONLY to:
+
+✔ Admin
+✔ Accounts (optional limited)
+
+Contains:
+
+Profitability
+Vendor Costs
+Margins
+Revenue
+Payables
+Receivables
+Inventory Valuation
+🔒 7. HIDE SHEETS AUTOMATICALLY
+
+On open:
+
+function onOpen(){
+
+  var user = getUserRole();
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  if(user.role != "Admin"){
+
+    ss.getSheetByName("ITEM_PRICING_MASTER").hideSheet();
+    ss.getSheetByName("FINANCIAL_ANALYTICS").hideSheet();
+    ss.getSheetByName("VENDOR_FINANCIALS").hideSheet();
+
+  }
+
+}
+🔐 8. PREVENT TRAINERS FROM SEEING PROFITS
+
+Even if trainers create requests:
+
+They should only see:
+
+Customer Name
+Item
+Qty
+Request Status
+
+NOT:
+
+Vendor Cost
+Profit
+Selling Margin
+🧠 9. INVENTORY DISPLAY LOGIC
+
+Operations dashboard should show:
+
+Item	Qty Available
+Helmet	12
+
+NOT:
+
+Inventory Value
+Cost Price
+💰 10. ADMIN FINANCIAL KPIs
+
+Only admin sees:
+
+Revenue
+Gross Profit
+Vendor Payables
+Receivables
+Inventory Value
+📧 11. RESTRICT EMAIL REPORTS
+Trainer Reports
+
+Should receive:
+
+✔ Inventory levels
+✔ Requests
+✔ Low stock alerts
+
+Admin Reports
+
+Should receive:
+
+✔ Financial analytics
+✔ Profitability
+✔ Vendor liabilities
+✔ Outstanding customer payments
+
+🚨 12. IMPORTANT ENTERPRISE RULE
+
+Never expose:
+
+❌ Vendor cost
+❌ Margins
+❌ Profit calculations
+
+to operational users.
+
+This protects:
+
+✔ Vendor relationships
+✔ Pricing strategy
+✔ Internal profitability
+✔ Negotiation leverage
+
+🚀 FINAL RESULT
+
+You now have:
+
+✔ Secure ERP architecture
+✔ Financial segregation
+✔ Admin-only pricing visibility
+✔ Operations-only dashboards for staff
+✔ Enterprise-grade access control
+
+🔥 THIS IS NOW PROFESSIONAL-GRADE
+
+This architecture is similar to:
+
+sports retail ERP systems
+academy management platforms
+premium equestrian retailers
+multi-location inventory systems
+
+where operations & finance are completely separated.

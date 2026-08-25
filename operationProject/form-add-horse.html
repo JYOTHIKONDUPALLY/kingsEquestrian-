@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+  <title><?= editHorseId ? 'Edit Horse' : 'Add Horse' ?> (Horses)</title>
+  <style>
+    :root { --bg:#0f172a; --card:#111827; --text:#e5e7eb; --muted:#9ca3af; --accent:#d4af37; --border:#334155; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Arial, sans-serif; background:linear-gradient(135deg,#0b1220,#111827); color:var(--text); padding:16px; padding-top:max(16px, env(safe-area-inset-top)); }
+    .wrap { max-width:760px; margin:0 auto; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:22px; }
+    h1 { margin:0 0 6px; font-size:24px; }
+    p { margin:0 0 18px; color:var(--muted); }
+    .grid { display:grid; gap:14px; grid-template-columns:1fr 1fr; }
+    .field { display:flex; flex-direction:column; gap:6px; }
+    .full { grid-column:1 / -1; }
+    label { font-size:14px; font-weight:600; }
+    .hint { font-size:12px; color:var(--muted); font-weight:400; }
+    input, select, textarea { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#0b1220; color:var(--text); }
+    button { margin-top:18px; border:none; background:var(--accent); color:#111827; font-weight:700; padding:12px 16px; border-radius:10px; cursor:pointer; width:100%; }
+    @media (max-width: 640px) { .grid { grid-template-columns:1fr; } }
+    body.app-page { padding: 0; padding-bottom: max(24px, env(safe-area-inset-bottom)); width: 100%; max-width: 100%; margin: 0; overflow-x: hidden; }
+    .content.form-page-body { padding: 12px; width: 100%; max-width: 100%; }
+    .wrap { width: 100%; max-width: 100%; }
+    @media (min-width: 1200px) { html:not(.app-fullwidth) body.app-page { max-width: 760px; margin: 0 auto; } html:not(.app-fullwidth) .wrap { max-width: 760px; } }
+  </style>
+</head>
+<body class="app-page">
+<script>
+  window.__APP_PAGE__ = '<?= appPage ?>';
+  window.__APP_TAB__ = 'forms';
+  window.__EDIT_HORSE_ID__ = '<?= editHorseId ?>';
+</script>
+<?!= include('AppChrome'); ?>
+<?!= include('ProfilePhoto'); ?>
+<div class="content form-page-body">
+  <main class="wrap">
+    <h1 id="formTitle">Add New Horse</h1>
+    <p id="formSubtitle">Sheet: Horses — register a horse for your locations.</p>
+    <form id="addHorseForm" novalidate>
+      <div class="grid">
+        <div class="field full">
+          <label for="horseName">Horse Name</label>
+          <input id="horseName" name="Horse_Name" type="text" required placeholder="e.g. Midnight Star">
+        </div>
+        <div class="field full" style="margin-top:4px;padding-top:12px;border-top:1px solid var(--border)">
+          <label style="color:var(--accent)">Additional fields</label>
+        </div>
+        <div class="field">
+          <label for="chipNo">Chip no.</label>
+          <input id="chipNo" name="Chip_No" type="text" placeholder="Microchip number">
+        </div>
+        <div class="field">
+          <label for="efiId">EFI ID</label>
+          <input id="efiId" name="EFI_ID" type="text" placeholder="EFI registration ID">
+        </div>
+        <div class="field full" id="horsePhotoMount"></div>
+        <div class="field">
+          <label for="location">Location</label>
+          <select id="location" name="Location" required><option value="">Select location</option></select>
+        </div>
+        <div class="field">
+          <label for="trainer">Trainer</label>
+          <select id="trainer" name="Trainer"><option value="">Select trainer</option></select>
+          <span class="hint">Lists trainers assigned to the selected location</span>
+        </div>
+        <div class="field">
+          <label for="groom">Groom</label>
+          <select id="groom" name="Groom"><option value="">Select groom</option></select>
+          <span class="hint">Lists grooms assigned to the selected location</span>
+        </div>
+        <div class="field">
+          <label for="status">Status</label>
+          <select id="status" name="Status" required>
+            <option value="Active" selected>Active</option>
+            <option>Training</option>
+            <option>Rest</option>
+            <option>Inactive</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="breed">Breed</label>
+          <input id="breed" name="Breed" type="text" placeholder="e.g. Thoroughbred">
+        </div>
+        <div class="field">
+          <label for="age">Age (years)</label>
+          <input id="age" name="Age" type="number" min="0" max="40" step="1">
+        </div>
+        <div class="field">
+          <label for="gender">Gender</label>
+          <select id="gender" name="Gender">
+            <option value="">—</option>
+            <option>Mare</option>
+            <option>Stallion</option>
+            <option>Gelding</option>
+            <option>Colt</option>
+            <option>Filly</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="owner">Owner</label>
+          <input id="owner" name="Owner" type="text" placeholder="Owner name">
+        </div>
+        <div class="field">
+          <label for="weightKg">Weight (kg)</label>
+          <input id="weightKg" name="Weight_Kg" type="number" min="0" step="0.1" placeholder="e.g. 450">
+        </div>
+        <div class="field">
+          <label for="facilityMultiplier">Facility Multiplier</label>
+          <input id="facilityMultiplier" name="Facility_Multiplier" type="number" min="0" step="0.01" placeholder="e.g. 1.0">
+          <span class="hint">Used in daily feed: Standard × Multiplier × Weight ÷ 100</span>
+        </div>
+        <div class="field">
+          <label for="leaseRider">Lease — rider name</label>
+          <input id="leaseRider" name="Lease_Rider" type="text" placeholder="Rider on lease">
+        </div>
+        <div class="field">
+          <label for="leaseDate">Lease date</label>
+          <input id="leaseDate" name="Lease_Date" type="date">
+        </div>
+        <div class="field full">
+          <label for="presentMedication">Present medication</label>
+          <textarea id="presentMedication" name="Present_Medication" rows="2" placeholder="Current meds / dosage (updated from daily routine too)"></textarea>
+        </div>
+        <div class="field full" style="margin-top:8px;padding-top:12px;border-top:1px solid var(--border)">
+          <label style="color:var(--accent)">Standard feed quantities (per day, kg / L)</label>
+          <span class="hint">Daily log pre-fills each feed time (7AM, 1PM, 6PM, Extra) using: (Standard per day × Facility Multiplier × Weight ÷ 100) ÷ 4</span>
+        </div>
+        <div class="field">
+          <label for="defWet">Standard — Wet grass (kg)</label>
+          <input id="defWet" name="Default_Wet_Grass" type="number" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <label for="defDry">Standard — Dry grass (kg)</label>
+          <input id="defDry" name="Default_Dry_Grass" type="number" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <label for="defMix">Standard — Feed mixed (kg)</label>
+          <input id="defMix" name="Default_Feed_Mixed" type="number" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <label for="defBarley">Standard — Barley (kg)</label>
+          <input id="defBarley" name="Default_Barley" type="number" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <label for="defOats">Standard — Oats (kg)</label>
+          <input id="defOats" name="Default_Oats" type="number" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <label for="defWater">Standard — Water (L)</label>
+          <input id="defWater" name="Default_Water_Liters" type="number" min="0" step="0.1">
+        </div>
+        <div class="field full">
+          <label for="horseId">Horse ID <span class="hint" id="horseIdHint">(optional — auto-generated if blank)</span></label>
+          <input id="horseId" name="Horse_ID" type="text" placeholder="e.g. H012">
+        </div>
+      </div>
+      <button type="submit" id="submitBtn"><?= editHorseId ? 'Save Changes' : 'Add Horse' ?></button>
+    </form>
+  </main>
+</div>
+<script>
+  const FORM_KEY = "horse";
+  const PAGE_KEY = "form-add-horse";
+  let editMode = false;
+  let editHorseId = "";
+
+  function redirectToApp(url) {
+    if (!url) return;
+    try {
+      if (window.top && window.top !== window.self) {
+        window.top.location.replace(url);
+        return;
+      }
+    } catch (e) {}
+    try {
+      var link = document.createElement("a");
+      link.href = url;
+      link.target = "_top";
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return;
+    } catch (e2) {}
+    window.location.replace(url);
+  }
+
+  function goToLogin() {
+    if (window.google && google.script && google.script.run) {
+      google.script.run.withSuccessHandler(redirectToApp).getLoginUrl(PAGE_KEY);
+      return;
+    }
+    redirectToApp("?page=login");
+  }
+
+  function syncTokenFromUrl() {
+    const p = new URLSearchParams(window.location.search);
+    const token = p.get("token");
+    if (token) localStorage.setItem("opsAuthToken", token);
+  }
+
+  function getAuthToken() {
+    syncTokenFromUrl();
+    return localStorage.getItem("opsAuthToken") || "";
+  }
+
+  function requireAuth() {
+    const token = getAuthToken();
+    if (!token) {
+      goToLogin();
+      return "";
+    }
+    return token;
+  }
+
+  function getPayload(formEl) {
+    return Object.fromEntries(new FormData(formEl).entries());
+  }
+
+  function fillSelect(selectEl, values, placeholder) {
+    selectEl.innerHTML = "";
+    const emptyOpt = document.createElement("option");
+    emptyOpt.value = "";
+    emptyOpt.textContent = placeholder || "Select";
+    selectEl.appendChild(emptyOpt);
+    (values || []).forEach(function(value) {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = value;
+      selectEl.appendChild(opt);
+    });
+  }
+
+  function loadStaffForLocation(location) {
+    const token = requireAuth();
+    const trainerEl = document.getElementById("trainer");
+    const groomEl = document.getElementById("groom");
+    if (!token || !(window.google && google.script && google.script.run)) {
+      fillSelect(trainerEl, [], "Select trainer");
+      fillSelect(groomEl, [], "Select groom");
+      return;
+    }
+    if (!location) {
+      fillSelect(trainerEl, [], "Select trainer");
+      fillSelect(groomEl, [], "Select groom");
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(data) {
+        fillSelect(trainerEl, (data && data.trainers) || [], "Select trainer");
+        fillSelect(groomEl, (data && data.grooms) || [], "Select groom");
+      })
+      .withFailureHandler(function(error) {
+        fillSelect(trainerEl, [], "Select trainer");
+        fillSelect(groomEl, [], "Select groom");
+        if (String(error && error.message || "").toLowerCase().includes("unauthorized")) {
+          localStorage.removeItem("opsAuthToken");
+          goToLogin();
+          return;
+        }
+        alert("Unable to load trainers/grooms: " + (error && error.message ? error.message : error));
+      })
+      .getHorseFormStaffForLocation(location, token);
+  }
+
+  function loadLocations() {
+    const token = requireAuth();
+    if (!token || !(window.google && google.script && google.script.run)) {
+      return;
+    }
+    google.script.run
+        .withSuccessHandler(function(options) {
+          var locEl = document.getElementById("location");
+          if (window.AppLocation) {
+            window.AppLocation.applyField(locEl, options);
+          } else {
+            fillSelect(locEl, options.Location || [], "Select location");
+          }
+          loadStaffForLocation(locEl.value);
+        })
+      .withFailureHandler(function(error) {
+        if (String(error && error.message || "").toLowerCase().includes("unauthorized")) {
+          localStorage.removeItem("opsAuthToken");
+          goToLogin();
+          return;
+        }
+        alert("Unable to load locations: " + (error && error.message ? error.message : error));
+      })
+      .getDropdownOptions(FORM_KEY, token);
+  }
+
+  document.getElementById("location").addEventListener("change", function() {
+    loadStaffForLocation(this.value);
+  });
+
+  function formatLeaseDateForInput(val) {
+    if (!val) return "";
+    if (val instanceof Date && !isNaN(val.getTime())) {
+      return val.toISOString().slice(0, 10);
+    }
+    var s = String(val).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    var d = new Date(s);
+    return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+  }
+
+  function fillHorseForm(data) {
+    document.getElementById("horseName").value = data.Horse_Name || "";
+    document.getElementById("chipNo").value = data.Chip_No || "";
+    document.getElementById("efiId").value = data.EFI_ID || "";
+    document.getElementById("horseId").value = data.horseId || data.Horse_ID || "";
+    document.getElementById("breed").value = data.Breed || "";
+    document.getElementById("age").value = data.Age || "";
+    document.getElementById("owner").value = data.Owner || "";
+    document.getElementById("status").value = data.Status || "Active";
+    document.getElementById("gender").value = data.Gender || "";
+    document.getElementById("weightKg").value = data.Weight_Kg || "";
+    document.getElementById("facilityMultiplier").value = data.Facility_Multiplier || "";
+    document.getElementById("leaseRider").value = data.Lease_Rider || "";
+    document.getElementById("leaseDate").value = formatLeaseDateForInput(data.Lease_Date);
+    document.getElementById("presentMedication").value = data.Present_Medication || "";
+    document.getElementById("defWet").value = data.Default_Wet_Grass || "";
+    document.getElementById("defDry").value = data.Default_Dry_Grass || "";
+    document.getElementById("defMix").value = data.Default_Feed_Mixed || "";
+    document.getElementById("defBarley").value = data.Default_Barley || "";
+    document.getElementById("defOats").value = data.Default_Oats || "";
+    document.getElementById("defWater").value = data.Default_Water_Liters || "";
+    var locEl = document.getElementById("location");
+    if (data.Location) locEl.value = data.Location;
+    loadStaffForLocation(locEl.value);
+    setTimeout(function() {
+      if (data.Trainer) document.getElementById("trainer").value = data.Trainer;
+      if (data.Groom) document.getElementById("groom").value = data.Groom;
+    }, 400);
+    if (window.ProfilePhoto && data.Photo_URL) {
+      ProfilePhoto.setExisting("horse", data.Photo_URL);
+    }
+  }
+
+  function getQueryParam(name) {
+    var names = [name, name.toLowerCase()];
+    var sources = [window.location.search];
+    try {
+      if (window.top && window.top !== window.self && window.top.location.search) {
+        sources.push(window.top.location.search);
+      }
+    } catch (e) {}
+    for (var s = 0; s < sources.length; s++) {
+      var p = new URLSearchParams(sources[s] || "");
+      for (var n = 0; n < names.length; n++) {
+        var v = p.get(names[n]);
+        if (v) return v;
+      }
+    }
+    return "";
+  }
+
+  function setEditUi() {
+    document.getElementById("formTitle").textContent = "Edit Horse";
+    document.getElementById("formSubtitle").textContent = "Update horse details, lease, medication, and feed standards.";
+    document.getElementById("submitBtn").textContent = "Save Changes";
+    document.getElementById("horseId").readOnly = true;
+    document.getElementById("horseIdHint").textContent = "(cannot change ID)";
+    try { document.title = "Edit Horse (Horses)"; } catch (e) {}
+  }
+
+  function setSubmitBusy(busy) {
+    var btn = document.getElementById("submitBtn");
+    if (!btn) return;
+    if (busy) {
+      if (!btn.dataset.defaultLabel) {
+        btn.dataset.defaultLabel = btn.textContent;
+      }
+      btn.disabled = true;
+      btn.textContent = "Saving…";
+      btn.style.opacity = "0.7";
+      btn.style.cursor = "wait";
+      return;
+    }
+    btn.disabled = false;
+    btn.textContent = btn.dataset.defaultLabel || (editMode ? "Save Changes" : "Add Horse");
+    btn.style.opacity = "";
+    btn.style.cursor = "";
+  }
+
+  function initEditMode() {
+    editHorseId = (window.__EDIT_HORSE_ID__ || "").trim() || getQueryParam("horseId");
+    if (!editHorseId) return;
+    editMode = true;
+    setEditUi();
+    var token = requireAuth();
+    if (!token || !google.script.run) return;
+    google.script.run
+      .withSuccessHandler(fillHorseForm)
+      .withFailureHandler(function(err) {
+        alert(err.message || err);
+      })
+      .getHorseForEdit(editHorseId, token);
+  }
+
+  document.getElementById("addHorseForm").addEventListener("submit", function(e) {
+    if (!this.checkValidity()) {
+      e.preventDefault();
+      this.reportValidity();
+      return;
+    }
+    e.preventDefault();
+    const payload = getPayload(this);
+    if (window.ProfilePhoto) {
+      Object.assign(payload, ProfilePhoto.readPayload("horse"));
+    }
+    if (editMode) {
+      payload._mode = "update";
+      payload.Horse_ID = editHorseId || payload.Horse_ID;
+    }
+    const token = requireAuth();
+    if (token && window.google && google.script && google.script.run) {
+      setSubmitBusy(true);
+      google.script.run
+        .withSuccessHandler(function(result) {
+          var msg = editMode ? "Horse updated successfully." : "Horse added successfully.";
+          if (result && result.horseId) {
+            msg += " ID: " + result.horseId;
+          }
+          alert(msg);
+          if (editMode) {
+            google.script.run.withSuccessHandler(redirectToApp).buildAppPageUrl("dashboard", token, "", "horses");
+            return;
+          }
+          document.getElementById("addHorseForm").reset();
+          document.getElementById("status").value = "Active";
+          loadLocations();
+          loadStaffForLocation("");
+          setSubmitBusy(false);
+        })
+        .withFailureHandler(function(error) {
+          setSubmitBusy(false);
+          if (String(error.message || "").toLowerCase().includes("unauthorized")) {
+            localStorage.removeItem("opsAuthToken");
+            goToLogin();
+            return;
+          }
+          alert("Submit failed: " + error.message);
+        })
+        .submitFormData(FORM_KEY, payload, token);
+      return;
+    }
+    alert(editMode ? "Horse updated (preview)." : "Horse added (preview mode).");
+    this.reset();
+    document.getElementById("status").value = "Active";
+  });
+
+  if (window.ProfilePhoto) {
+    ProfilePhoto.mount("#horsePhotoMount", { id: "horse", label: "Horse photo" });
+  }
+  loadLocations();
+  initEditMode();
+</script>
+</body>
+</html>

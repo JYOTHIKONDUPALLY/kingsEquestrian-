@@ -6,6 +6,9 @@
 // ============================================================
 
 function getAttendanceAppHtml() {
+  var appUiVersion = String((typeof CONFIG !== 'undefined' && CONFIG.APP_UI_VERSION) || '');
+  var buildStamp = String(Date.now());
+  var buildLabel = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
 
   var css = [
     '*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}',
@@ -24,13 +27,16 @@ function getAttendanceAppHtml() {
     'body{font-family:Outfit,sans-serif;background:var(--surface);min-height:100vh;color:var(--text-primary)}',
 
     // Header
-    'header{background:var(--green-dark);color:#fff;padding:0 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:200;height:60px;border-bottom:1px solid rgba(255,255,255,0.06)}',
+    'header{background:var(--green-dark);color:#fff;padding:8px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:200;min-height:60px;border-bottom:1px solid rgba(255,255,255,0.06)}',
     '.logo-wrap{width:36px;height:36px;border-radius:10px;background:var(--green-mid);border:1.5px solid rgba(201,168,76,0.4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}',
     '.header-text h1{font-size:15px;font-weight:700;letter-spacing:.02em;color:#fff}',
     '.header-text p{font-size:11px;color:var(--green-pale)}',
     '.header-right{margin-left:auto;display:flex;align-items:center;gap:8px}',
     '.hbtn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#fff;width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:background .15s;font-family:Outfit,sans-serif}',
     '.hbtn:hover{background:rgba(255,255,255,.16)}',
+    '.stale-banner{display:none;background:#92400e;color:#fffbeb;padding:10px 14px;font-size:12px;font-weight:600;text-align:center;border-bottom:1px solid #f59e0b}',
+    '.stale-banner.on{display:block}',
+    '.stale-banner button{margin-left:8px;padding:6px 12px;border:0;border-radius:8px;background:#fffbeb;color:#92400e;font:inherit;font-weight:700;cursor:pointer}',
 
     // Date strip
     '.date-strip{background:var(--green-dark);padding:0 16px 12px;display:flex;gap:6px;position:sticky;top:60px;z-index:199}',
@@ -148,6 +154,32 @@ function getAttendanceAppHtml() {
 
   // ── JavaScript ─────────────────────────────────────────
   var js = ''
+    + 'window.__APP_BUILD__=' + JSON.stringify(buildStamp) + ';\n'
+    + 'window.__APP_BUILD_LABEL__=' + JSON.stringify(buildLabel) + ';\n'
+    + 'window.__APP_UI_VERSION__=' + JSON.stringify(appUiVersion) + ';\n'
+    + 'function forceFreshAppReload(){'
+    +   'try{'
+    +     'var live=window.__LIVE_APP_UI_VERSION__||window.__APP_UI_VERSION__||String(Date.now());'
+    +     'sessionStorage.setItem("ke_reload_"+live,"1");'
+    +     'var u=new URL(location.href);'
+    +     'u.searchParams.set("_v",live);'
+    +     'u.searchParams.set("_cb",String(Date.now()));'
+    +     'location.replace(u.toString());'
+    +   '}catch(e){location.reload();}'
+    + '}\n'
+    + 'function checkStaleAppUi(){'
+    +   'if(typeof google==="undefined"||!google.script||!google.script.run)return;'
+    +   'google.script.run.withSuccessHandler(function(res){'
+    +     'var live=String((res&&res.version)||"").trim();'
+    +     'var page=String(window.__APP_UI_VERSION__||"").trim();'
+    +     'window.__LIVE_APP_UI_VERSION__=live;'
+    +     'if(!live||!page||live===page)return;'
+    +     'var tried="";try{tried=sessionStorage.getItem("ke_reload_"+live)||"";}catch(e){}'
+    +     'if(!tried){try{sessionStorage.setItem("ke_reload_"+live,"1");}catch(e2){}forceFreshAppReload();return;}'
+    +     'var ban=document.getElementById("stale-banner");if(ban)ban.classList.add("on");'
+    +   '}).withFailureHandler(function(){}).getAppUiVersion();'
+    + '}\n'
+    + 'checkStaleAppUi();\n'
     + 'var currentDate="today",currentMain="sessions",sessions=[],allRiders=[],ridersLoaded=false,ridersLoading=false;\n'
 
     + 'function switchDate(tab,el){'
@@ -426,7 +458,10 @@ function getAttendanceAppHtml() {
 
     + 'function updateHeaderDate(){'
     +   'var d=new Date();'
-    +   'document.getElementById("headerDate").textContent=d.toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"});'
+    +   'var dateTxt=d.toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"});'
+    +   'var build=window.__APP_BUILD_LABEL__||"";'
+    +   'var ver=window.__APP_UI_VERSION__||"";'
+    +   'document.getElementById("headerDate").textContent=dateTxt+(build?" · build "+build:"")+(ver?" · v"+ver:"");'
     + '}\n'
 
     // Preload indicator helpers
@@ -450,6 +485,10 @@ function getAttendanceAppHtml() {
     + '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">\n'
     + '<meta name="apple-mobile-web-app-capable" content="yes">\n'
     + '<meta name="theme-color" content="#0d2b1f">\n'
+    + '<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">\n'
+    + '<meta http-equiv="Pragma" content="no-cache">\n'
+    + '<meta http-equiv="Expires" content="0">\n'
+    + '<script>window.__APP_BUILD__=' + JSON.stringify(buildStamp) + ';window.__APP_BUILD_LABEL__=' + JSON.stringify(buildLabel) + ';window.__APP_UI_VERSION__=' + JSON.stringify(appUiVersion) + ';</script>\n'
     + '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
     + '<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">\n'
     + '<title>KE Attendance</title>\n'
@@ -468,6 +507,7 @@ function getAttendanceAppHtml() {
     +     '<button class="hbtn" onclick="loadAttendance()" title="Refresh">&#8635;</button>'
     +   '</div>'
     + '</header>\n'
+    + '<div id="stale-banner" class="stale-banner">A newer version of this app is available. <button type="button" id="stale-reload-btn" onclick="forceFreshAppReload()">Load update</button></div>\n'
 
     + '<div class="date-strip">'
     +   '<div class="dtab active" onclick="switchDate(\'today\',this)">Today</div>'

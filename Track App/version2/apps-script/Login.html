@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>KE Track v2 – Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      font-family: 'Outfit', sans-serif;
+      background:
+        radial-gradient(ellipse at 20% 10%, rgba(201,168,76,0.18), transparent 45%),
+        linear-gradient(145deg, #0b1220 0%, #152238 50%, #0d1117 100%);
+      color: #F0EAD6;
+    }
+    .card {
+      width: min(440px, 100%);
+      background: rgba(15, 34, 56, 0.92);
+      border: 1px solid rgba(201,168,76,0.35);
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    }
+    .brand {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 34px;
+      color: #C9A84C;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+    .sub { color: #9BACC4; font-size: 14px; margin-bottom: 20px; }
+    label { display: block; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #9BACC4; margin: 12px 0 6px; }
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.28);
+      color: #F0EAD6;
+      font-size: 16px;
+      font-family: inherit;
+    }
+    button {
+      width: 100%;
+      margin-top: 18px;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      background: #C9A84C;
+      color: #1A1A2E;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    .error { min-height: 20px; color: #ffb4b4; font-size: 14px; margin-top: 10px; }
+    .hint { font-size: 13px; color: #9BACC4; margin-top: 14px; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="brand">Kings Equestrian</div>
+    <p class="sub">Track App v2 — simplified inventory</p>
+    <form id="loginForm" novalidate>
+      <label for="identifier">Username / Email</label>
+      <input id="identifier" type="text" required autocomplete="username" placeholder="KE Admin or admin@ke.demo">
+      <label for="password">Password</label>
+      <input id="password" type="password" required autocomplete="current-password">
+      <button type="button" id="loginBtn">Sign in</button>
+      <div class="error" id="loginError"></div>
+    </form>
+    <p class="hint">Demo after seed: <strong>KE Admin</strong> / <strong>admin@123</strong></p>
+  </main>
+  <script>
+    var WEB_APP_URL = '<?= webAppUrl ?>';
+
+    function buildDashboardUrl(token) {
+      var base = WEB_APP_URL;
+      if (!base) return '';
+      var sep = base.indexOf('?') >= 0 ? '&' : '?';
+      return base + sep + 'page=dashboard&token=' + encodeURIComponent(token);
+    }
+
+    function runLogin() {
+      var btn = document.getElementById('loginBtn');
+      var err = document.getElementById('loginError');
+      var id = document.getElementById('identifier').value.trim();
+      var pw = document.getElementById('password').value;
+      err.textContent = '';
+      if (!id || !pw) {
+        err.textContent = 'Enter username and password.';
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.token) {
+            err.textContent = 'Login failed.';
+            btn.disabled = false;
+            btn.textContent = 'Sign in';
+            return;
+          }
+          try { localStorage.setItem('ke_v2_token', res.token); } catch (e) {}
+          var url = buildDashboardUrl(res.token);
+          if (url) {
+            window.top.location.href = url;
+          } else {
+            err.textContent = 'Deploy the web app first, then try again.';
+            btn.disabled = false;
+            btn.textContent = 'Sign in';
+          }
+        })
+        .withFailureHandler(function (e) {
+          err.textContent = (e && e.message) ? e.message : String(e);
+          btn.disabled = false;
+          btn.textContent = 'Sign in';
+        })
+        .loginUser(id, pw);
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', runLogin);
+    document.getElementById('loginForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      runLogin();
+    });
+  </script>
+</body>
+</html>

@@ -179,6 +179,9 @@ textarea{resize:vertical;min-height:78px}
 .file-upload input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .file-upload-label{display:flex;align-items:center;gap:.7rem;background:rgba(255,255,255,.04);border:1px dashed rgba(201,168,76,.4);border-radius:8px;padding:.7rem 1rem;font-size:.84rem;color:var(--muted);transition:border-color .2s;cursor:pointer}
 .file-upload-label:hover{border-color:var(--gold);color:var(--text)}
+/* Required state for invoice upload */
+.file-upload-label.invoice-required{border-color:rgba(224,82,82,.5);background:rgba(224,82,82,.04)}
+.file-upload-label.invoice-required:hover{border-color:var(--red)}
 .file-name{font-size:.78rem;color:var(--gold);margin-top:.3rem}
 
 /* ── SEARCHABLE COMBOBOX ── */
@@ -572,13 +575,24 @@ textarea{resize:vertical;min-height:78px}
         </div>
       </div>
 
+      <!-- ═══ INVOICE / RECEIPT SECTION ═══ -->
       <div class="form-section">
         <div class="form-section-title">📎 Invoice / Receipt</div>
+
+        <!-- Dynamic label/hint shown just above the uploader — updated by onExpenseTypeChange() -->
+        <div id="invoice-requirement-note" style="font-size:.78rem;margin-bottom:.75rem;padding:.55rem .85rem;border-radius:7px;background:rgba(224,82,82,.08);border:1px solid rgba(224,82,82,.25);color:var(--red);display:none">
+          ⚠️ Invoice / bill upload is <strong>mandatory</strong> for this expense type.
+        </div>
+
         <div class="form-group full">
-          <label>Upload Invoice / Bill</label>
+          <!-- Label text and req asterisk are toggled by JS -->
+          <label id="invoice-label">Upload Invoice / Bill <span id="invoice-req-star" class="req" style="display:none">*</span></label>
           <div class="file-upload">
             <input type="file" id="f-invoice" accept=".pdf,.jpg,.jpeg,.png" onchange="onFileChange(this)">
-            <div class="file-upload-label"><span>📄</span><span>Click to upload PDF, JPG, or PNG</span></div>
+            <div class="file-upload-label" id="invoice-upload-label">
+              <span>📄</span>
+              <span id="invoice-upload-text">Click to upload PDF, JPG, or PNG (max 8 MB)</span>
+            </div>
           </div>
           <div id="file-name-display" class="file-name hidden"></div>
         </div>
@@ -727,6 +741,40 @@ const cbState = {
   payee:    { items: [], filtered: [], focusIdx: -1, selectedValue: '' }
 };
 
+// ── Invoice requirement helper ─────────────────────────────────────────────
+// Returns true for every expense type that REQUIRES an invoice upload.
+// "Advance Request" is the only exempt type.
+function invoiceRequired() {
+  const expType = v('f-expense-type');
+  return expType !== '' && expType !== 'Advance Request';
+}
+
+// ── Update invoice section UI whenever expense type changes ───────────────
+function updateInvoiceUI() {
+  const required  = invoiceRequired();
+  const expType   = v('f-expense-type');
+  const noteEl    = document.getElementById('invoice-requirement-note');
+  const starEl    = document.getElementById('invoice-req-star');
+  const uploadLbl = document.getElementById('invoice-upload-label');
+  const uploadTxt = document.getElementById('invoice-upload-text');
+
+  if (required) {
+    // Show red warning banner
+    noteEl.style.display = '';
+    // Show asterisk on label
+    starEl.style.display = '';
+    // Give the dashed border a red tint
+    uploadLbl.classList.add('invoice-required');
+    uploadTxt.textContent = 'Click to upload PDF, JPG, or PNG (required, max 8 MB)';
+  } else {
+    // Advance Request — optional
+    noteEl.style.display = 'none';
+    starEl.style.display = 'none';
+    uploadLbl.classList.remove('invoice-required');
+    uploadTxt.textContent = 'Click to upload PDF, JPG, or PNG (optional for advance, max 8 MB)';
+  }
+}
+
 // ══════════════════════════════════════════
 // COMBOBOX ENGINE
 // ══════════════════════════════════════════
@@ -845,12 +893,13 @@ window.onload = async function () {
   // Try restoring session from localStorage
   const savedEmail = localStorage.getItem('ke_auth_email');
   const savedToken = localStorage.getItem('ke_auth_token');
+  const savedUserId = localStorage.getItem('ke_auth_userId');
 
-  if (savedEmail && savedToken) {
+  if (savedEmail || savedUserId) {
     try {
-      const userInfo = await gg('getCurrentUser', savedEmail, savedToken);
+      const userInfo = await gg('getCurrentUser', savedEmail || '', savedToken, savedUserId || '');
       if (userInfo && userInfo.status === 'SUCCESS') {
-        currentEmail = savedEmail;
+        currentEmail = savedEmail || '';
         sessionToken = savedToken;
         currentUser  = userInfo;
         showApp();
@@ -892,7 +941,7 @@ async function performLogin() {
       currentEmail = res.email || identifier;
       sessionToken = res.sessionToken;
       currentUser  = res;
-      saveSession(currentEmail, res.sessionToken);
+      saveSession(currentEmail, res.sessionToken, res.userId);
       showApp();
     } else if (res.status === '2FA_REQUIRED') {
       currentEmail = res.email || identifier;
@@ -968,14 +1017,14 @@ async function verifyOTPCode() {
   btn.textContent = 'Verifying…';
 
   try {
-    const res = await gg('verifyOTP', currentEmail, otp);
+    const res = await gg('verifyOTP', currentEmail, otp, currentUser && currentUser.userId ? currentUser.userId : '');
     if (res.status === 'SUCCESS') {
       clearOTPTimer();
       sessionToken = res.sessionToken;
       // Fetch full user info
-      const userInfo = await gg('getCurrentUser', currentEmail, res.sessionToken);
-      currentUser  = userInfo.status === 'SUCCESS' ? userInfo : { email: currentEmail, role: 'admin', name: currentEmail };
-      saveSession(currentEmail, res.sessionToken);
+      const userInfo = await gg('getCurrentUser', currentEmail, res.sessionToken, currentUser && currentUser.userId ? currentUser.userId : '');
+      currentUser  = userInfo.status === 'SUCCESS' ? userInfo : { email: currentEmail, role: 'admin', name: currentEmail, userId: currentUser && currentUser.userId ? currentUser.userId : '' };
+      saveSession(currentEmail, res.sessionToken, currentUser.userId);
       showApp();
     } else {
       showOTPError(res.message || 'Invalid code. Please try again.');
@@ -1034,11 +1083,13 @@ function clearSession() {
   sessionToken = null;
   localStorage.removeItem('ke_auth_email');
   localStorage.removeItem('ke_auth_token');
+  localStorage.removeItem('ke_auth_userId');
 }
 
-function saveSession(email, token) {
-  localStorage.setItem('ke_auth_email', email);
+function saveSession(email, token, userId) {
+  localStorage.setItem('ke_auth_email', email || '');
   localStorage.setItem('ke_auth_token', token);
+  localStorage.setItem('ke_auth_userId', userId || '');
 }
 
 function resetAppUI() {
@@ -1159,54 +1210,72 @@ async function loadEmployees() { const d = await gg('getEmployeeList'); employee
 
 async function loadRequests() {
   const rawRequests = await gg('getAllRequests');
+  // allRequests always holds the FULL list — accounts tab needs everything
   allRequests = Array.isArray(rawRequests) ? rawRequests : [];
-
-  if (currentUser && currentUser.role === 'user') {
-    const myEmail = (currentEmail || '').toLowerCase();
-    const myName = (currentUser.name || '').toLowerCase();
-    allRequests = allRequests.filter(r =>
-      ((r.email || '').toLowerCase() === myEmail) || ((r.requestor || '').toLowerCase() === myName)
-    );
-  }
 
   updateTabCounts();
   renderStats();
   applyListFilters();
   if (currentUser.role === 'accounts' || currentUser.role === 'admin') renderAccTab();
 }
-
-function updateTabCounts() {
-  document.getElementById('tc-all').textContent = allRequests.length;
-  document.getElementById('tc-acc').textContent = allRequests.filter(r => r.status === 'Approved').length;
+// Returns only the requests the current user should see in the LIST tab.
+// Accounts and admin see everything; regular users see only their own.
+function getMyRequests() {
+  if (currentUser.role === 'admin' || currentUser.role === 'accounts') {
+    return allRequests;
+  }
+  const myEmail = (currentEmail || '').toLowerCase().trim();
+  const myName  = (currentUser.name || '').toLowerCase().trim();
+  return allRequests.filter(r =>
+    (r.email  || '').toLowerCase().trim() === myEmail ||
+    (r.requestor || '').toLowerCase().trim() === myName
+  );
 }
 
-// ══════════════════════════════════════════
-// STATS
-// ══════════════════════════════════════════
+function updateTabCounts() {
+  const mine = getMyRequests();
+  document.getElementById('tc-all').textContent = mine.length;
+  // Accounts tab count stays based on full list (approved requests awaiting payment)
+  document.getElementById('tc-acc').textContent =
+    allRequests.filter(r => r.status === 'Approved').length;
+}
+
 function renderStats() {
+  const mine = getMyRequests();   // stats reflect what the user can see
   let total=0,pending=0,approved=0,paid=0,rejected=0,pa=0,aa=0,pda=0;
-  allRequests.forEach(r => {
+  mine.forEach(r => {
     total++;
-    const amt = Number(r.amount)||0;
-    switch((r.status||'').toLowerCase()){
+    const amt = Number(r.amount || 0) || 0;
+    switch ((r.status || '').toLowerCase()) {
       case 'pending':  pending++;  pa  += amt; break;
       case 'approved': approved++; aa  += amt; break;
       case 'paid':     paid++;     pda += amt; break;
       case 'rejected': rejected++; break;
     }
   });
-  sv('s-total',total); sv('s-pending',pending); sv('s-pending-amt',fmtAmt(pa));
-  sv('s-approved',approved); sv('s-approved-amt',fmtAmt(aa));
-  sv('s-paid',paid); sv('s-paid-amt',fmtAmt(pda)); sv('s-rejected',rejected);
+  sv('s-total',   total);
+  sv('s-pending',  pending);  sv('s-pending-amt',  fmtAmt(pa));
+  sv('s-approved', approved); sv('s-approved-amt', fmtAmt(aa));
+  sv('s-paid',     paid);     sv('s-paid-amt',     fmtAmt(pda));
+  sv('s-rejected', rejected);
 }
+
+// ══════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════
+
 function sv(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
 
 // ══════════════════════════════════════════
 // FORM LOGIC
 // ══════════════════════════════════════════
 function onExpenseTypeChange() {
+  // Show / hide Advance section
   document.getElementById('advance-section').style.display =
     document.getElementById('f-expense-type').value === 'Advance Request' ? 'block' : 'none';
+
+  // Update invoice upload UI (required vs optional)
+  updateInvoiceUI();
 }
 
 function onPayeeTypeChange() {
@@ -1245,7 +1314,17 @@ function onPayeeSelected(selVal) {
 
 function onFileChange(input) {
   const d = document.getElementById('file-name-display');
-  if (input.files && input.files[0]) { d.textContent='📎 '+input.files[0].name; d.classList.remove('hidden'); }
+  const MAX_INVOICE_BYTES = 8 * 1024 * 1024;
+  if (input.files && input.files[0]) {
+    if (input.files[0].size > MAX_INVOICE_BYTES) {
+      input.value = '';
+      d.classList.add('hidden');
+      toast('Invoice is too large. Please upload a PDF/JPG/PNG under 8 MB.', 'error');
+      return;
+    }
+    d.textContent='📎 '+input.files[0].name+' ('+Math.round(input.files[0].size/1024)+' KB)';
+    d.classList.remove('hidden');
+  }
   else d.classList.add('hidden');
 }
 
@@ -1272,14 +1351,33 @@ async function submitRequestForm() {
     payeeName=v('f-payee-name-text');
     if (!payeeName) return toast('Please enter the payee name','error');
   }
+
+  // ── Invoice validation ──────────────────────────────────────────────────
+  // Invoice is mandatory for all expense types EXCEPT "Advance Request".
+  const fi = document.getElementById('f-invoice');
+  if (invoiceRequired() && (!fi.files || !fi.files[0])) {
+    toast('📎 Please upload an invoice / bill — it is required for ' + expType + ' requests.', 'error');
+    // Scroll the invoice section into view so the user sees the red border
+    document.getElementById('invoice-upload-label').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  // ───────────────────────────────────────────────────────────────────────
+
   let invoiceBase64='',invoiceFileName='';
-  const fi=document.getElementById('f-invoice');
-  if (fi.files&&fi.files[0]) { invoiceFileName=fi.files[0].name; invoiceBase64=await toBase64(fi.files[0]); }
+  if (fi.files && fi.files[0]) {
+    if (fi.files[0].size > 8 * 1024 * 1024) {
+      toast('Invoice is too large. Please upload a PDF/JPG/PNG under 8 MB.', 'error');
+      return;
+    }
+    invoiceFileName=fi.files[0].name;
+    invoiceBase64=await toBase64(fi.files[0]);
+  }
   const btn=document.getElementById('submit-btn');
   btn.disabled=true; btn.textContent='⏳ Submitting...';
   try {
     const result=await gg('submitRequest',{
       requestorName,contact:'',email:currentEmail||'',sessionToken:sessionToken||'',
+      userId:currentUser && currentUser.userId ? currentUser.userId : '',
       department:dept,expenseType:expType,category:cat,description:desc,amount,expenseDate:date,
       payeeName,payeeType,upiId:'',refId:'',
       advanceReason:v('f-advance-reason'),expectedInvoiceDate:v('f-expected-date'),
@@ -1305,7 +1403,10 @@ function resetForm() {
   document.getElementById('payee-dd-group').style.display='';
   document.getElementById('payee-txt-group').style.display='none';
   document.querySelectorAll('input[name="location"]').forEach(c=>c.checked=false);
+  document.getElementById('f-invoice').value='';
   document.getElementById('file-name-display').classList.add('hidden');
+  // Reset invoice UI to default (no expense type selected)
+  updateInvoiceUI();
   setLoggedInRequestor();
 }
 
@@ -1313,13 +1414,23 @@ function resetForm() {
 // FILTERS & RENDER — REQUEST CARDS
 // ══════════════════════════════════════════
 function applyListFilters() {
-  const status=v('f-status'),type=v('f-type'),dept=v('f-dept-filter'),search=v('f-search').toLowerCase();
-  renderRequestCards(allRequests.filter(r=>
-    (!status||r.status===status)&&(!type||r.expenseType===type)&&
-    (!dept||r.dept===dept)&&
-    (!search||r.requestor.toLowerCase().includes(search)||r.id.toLowerCase().includes(search)||
-     (r.description||'').toLowerCase().includes(search)||(r.payeeName||'').toLowerCase().includes(search))
-  ),'requests-list',currentUser.role);
+  const base   = getMyRequests();          // scoped to current user
+  const status = v('f-status');
+  const type   = v('f-type');
+  const dept   = v('f-dept-filter');
+  const search = v('f-search').toLowerCase();
+
+  renderRequestCards(base.filter(r =>
+    (!status || r.status === status) &&
+    (!type   || r.expenseType === type) &&
+    (!dept   || r.dept === dept) &&
+    (!search ||
+      r.requestor.toLowerCase().includes(search) ||
+      r.id.toLowerCase().includes(search) ||
+      (r.description || '').toLowerCase().includes(search) ||
+      (r.payeeName   || '').toLowerCase().includes(search)
+    )
+  ), 'requests-list', currentUser.role);
 }
 
 function renderRequestCards(requests,containerId,role) {
@@ -1449,14 +1560,14 @@ function openRejectModal(reqId) {
 }
 async function doApprove(reqId) {
   const remarks=(document.getElementById('approve-remarks')||{}).value||'';
-  const r=await gg('approveRequest',reqId,remarks,currentEmail||'',sessionToken||'');
+  const r=await gg('approveRequest',reqId,remarks,currentEmail||'',sessionToken||'',currentUser && currentUser.userId ? currentUser.userId : '');
   if (r.success){toast('✅ Request approved','success');closeModal();await loadRequests();}
   else toast('❌ '+r.error,'error');
 }
 async function doReject(reqId) {
   const remarks=(document.getElementById('reject-remarks')||{}).value||'';
   if (!remarks.trim()) return toast('Please provide a rejection reason','error');
-  const r=await gg('rejectRequest',reqId,remarks,currentEmail||'',sessionToken||'');
+  const r=await gg('rejectRequest',reqId,remarks,currentEmail||'',sessionToken||'',currentUser && currentUser.userId ? currentUser.userId : '');
   if (r.success){toast('Request rejected','info');closeModal();await loadRequests();}
   else toast('❌ '+r.error,'error');
 }
@@ -1471,7 +1582,7 @@ async function doSettle(reqId) {
   if (!mode) return toast('Please select the payment mode','error');
   const btn=event.target; btn.disabled=true; btn.textContent='⏳ Processing…';
   try {
-    const r=await gg('settlePayment',reqId,utr,parseFloat(amount),date,mode,remarks,currentEmail||'',sessionToken||'');
+    const r=await gg('settlePayment',reqId,utr,parseFloat(amount),date,mode,remarks,currentEmail||'',sessionToken||'',currentUser && currentUser.userId ? currentUser.userId : '');
     if (r.success){toast('💳 Payment recorded! Email sent to requestor.','success');await loadRequests();}
     else toast('❌ '+r.error,'error');
   } finally { btn.disabled=false; btn.textContent='💳 Confirm Payment Done'; }

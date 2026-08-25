@@ -1,0 +1,1166 @@
+<!-- APPS SCRIPT: Paste full AppChrome.html (AppLoader + AppViewport inlined). -->
+<style>
+  html.app-mobile {
+    font-size: 18px !important;
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+  }
+  html.app-mobile body { font-size: 18px; line-height: 1.5; }
+  html.app-scaled body { min-height: auto; }
+</style>
+<script>
+(function (global) {
+  function isMobileUa() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(
+      global.navigator.userAgent || ""
+    );
+  }
+
+  /** Real phone width — never the oversized GAS iframe innerWidth. */
+  function getRealMobileWidth() {
+    var vv = global.visualViewport;
+    if (vv && vv.width > 0 && vv.width < 900) {
+      return Math.round(vv.width);
+    }
+    if (global.screen && global.screen.width) {
+      var portrait = Math.min(global.screen.width, global.screen.height || global.screen.width);
+      if (portrait > 0 && portrait < 900) {
+        return Math.round(portrait);
+      }
+    }
+    if (isMobileUa()) {
+      return 390;
+    }
+    var iw = global.innerWidth || 0;
+    return Math.round(iw > 0 && iw < 600 ? iw : 390);
+  }
+
+  function isMobileDevice() {
+    if (isMobileUa()) {
+      return true;
+    }
+    if (global.screen && global.screen.width) {
+      var shortSide = Math.min(global.screen.width, global.screen.height || global.screen.width);
+      if (shortSide > 0 && shortSide <= 768) {
+        return true;
+      }
+    }
+    if (global.visualViewport && global.visualViewport.width > 0 && global.visualViewport.width <= 768) {
+      return true;
+    }
+    return false;
+  }
+
+  function updateViewportMeta() {
+    if (!isMobileDevice()) {
+      return;
+    }
+    var w = getRealMobileWidth();
+    var meta = global.document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = global.document.createElement("meta");
+      meta.setAttribute("name", "viewport");
+      global.document.head.appendChild(meta);
+    }
+    meta.setAttribute(
+      "content",
+      "width=" + w + ", initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    );
+  }
+
+  function fitGoogleScriptHostFrame() {
+    try {
+      if (!global.google || !global.google.script || !global.google.script.host) {
+        return;
+      }
+      var host = global.google.script.host;
+      var w = getRealMobileWidth();
+      if (w >= 280 && typeof host.setWidth === "function") {
+        host.setWidth(w);
+      }
+    } catch (err) {
+      if (global.console && global.console.warn) {
+        global.console.warn("[KingsOps Viewport] setWidth:", err);
+      }
+    }
+  }
+
+  /** When iframe stays ~760px, zoom so layout matches ~360px phone (Chrome/Android). */
+  function applyLayoutScaleFix() {
+    var root = global.document.documentElement;
+    if (!root) {
+      return;
+    }
+    if (!isMobileDevice()) {
+      root.style.zoom = "";
+      root.classList.remove("app-scaled");
+      return;
+    }
+    var layoutW = root.clientWidth || global.innerWidth || 0;
+    var targetW = getRealMobileWidth();
+    if (layoutW > targetW + 24) {
+      var scale = targetW / layoutW;
+      scale = Math.max(0.4, Math.min(1, scale));
+      root.style.zoom = String(scale);
+      root.classList.add("app-scaled");
+    } else {
+      root.style.zoom = "1";
+      root.classList.remove("app-scaled");
+    }
+  }
+
+  function fitHostHeightToContent() {
+    try {
+      if (!global.google || !global.google.script || !global.google.script.host) {
+        return;
+      }
+      if (typeof global.google.script.host.setHeight !== "function") {
+        return;
+      }
+      var root = global.document.documentElement;
+      var zoom = parseFloat(root.style.zoom) || 1;
+      var scrollH = Math.max(
+        global.document.body.scrollHeight || 0,
+        root.scrollHeight || 0
+      );
+      var h = Math.ceil(scrollH * zoom) + 24;
+      var cap = global.visualViewport
+        ? Math.round(global.visualViewport.height + 48)
+        : 720;
+      global.google.script.host.setHeight(Math.min(Math.max(h, 360), cap));
+    } catch (err) {
+      if (global.console && global.console.warn) {
+        global.console.warn("[KingsOps Viewport] setHeight:", err);
+      }
+    }
+  }
+
+  function applyAppMobileClass() {
+    var root = global.document.documentElement;
+    if (!root) {
+      return;
+    }
+    if (isMobileDevice()) {
+      root.classList.add("app-mobile");
+      root.style.fontSize = "18px";
+    } else {
+      root.classList.remove("app-mobile");
+      root.style.fontSize = "";
+    }
+  }
+
+  function applyAppFullWidth() {
+    var root = global.document.documentElement;
+    if (!root) {
+      return;
+    }
+    var hostname = (global.location.hostname || "").toLowerCase();
+    var inFrame = global.self !== global.top;
+    var gasHost =
+      hostname.indexOf("script.google.com") >= 0 ||
+      hostname.indexOf("googleusercontent.com") >= 0;
+    if (inFrame || gasHost || isMobileDevice()) {
+      root.classList.add("app-fullwidth");
+    } else if ((global.innerWidth || 0) < 1200) {
+      root.classList.add("app-fullwidth");
+    } else {
+      root.classList.remove("app-fullwidth");
+    }
+  }
+
+  function bootViewport() {
+    updateViewportMeta();
+    fitGoogleScriptHostFrame();
+    applyAppFullWidth();
+    applyAppMobileClass();
+    applyLayoutScaleFix();
+    global.setTimeout(fitHostHeightToContent, 50);
+    global.setTimeout(fitHostHeightToContent, 400);
+  }
+
+  function scheduleViewportPasses() {
+    bootViewport();
+    [0, 80, 250, 700, 1500, 3000].forEach(function (d) {
+      global.setTimeout(bootViewport, d);
+    });
+  }
+
+  scheduleViewportPasses();
+  global.addEventListener("resize", bootViewport);
+  global.addEventListener("orientationchange", function () {
+    global.setTimeout(scheduleViewportPasses, 200);
+  });
+  if (global.visualViewport) {
+    global.visualViewport.addEventListener("resize", bootViewport);
+  }
+
+  global.AppViewport = {
+    boot: bootViewport,
+    fitHost: fitGoogleScriptHostFrame,
+    applyMobile: applyAppMobileClass,
+    getDeviceWidth: getRealMobileWidth
+  };
+})(window);
+</script>
+<style>
+  .app-loader-overlay {
+    position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center;
+    background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  }
+  .app-loader-overlay.is-visible { display: flex; }
+  .app-loader-panel {
+    text-align: center; padding: 22px 28px; border-radius: 14px;
+    background: linear-gradient(145deg, #16213E, #0F3460); border: 1px solid rgba(201, 168, 76, 0.35);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45); min-width: 200px; max-width: 90vw;
+  }
+  .app-loader-spinner {
+    width: 40px; height: 40px; margin: 0 auto 14px;
+    border: 3px solid rgba(201, 168, 76, 0.2); border-top-color: #C9A84C; border-radius: 50%;
+    animation: appLoaderSpin 0.75s linear infinite;
+  }
+  .app-loader-message { margin: 0; font-size: 14px; font-weight: 600; color: #F0EAD6; }
+  @keyframes appLoaderSpin { to { transform: rotate(360deg); } }
+  body.app-is-loading { overflow: hidden; }
+  body.app-is-loading .content.is-loading-data { pointer-events: none; opacity: 0.55; }
+  .stat-value.is-pending { color: transparent; position: relative; min-height: 1.2em; }
+  .stat-value.is-pending::after {
+    content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    width: 48px; height: 14px; border-radius: 6px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+    background-size: 200% 100%; animation: statShimmer 1.2s ease-in-out infinite;
+  }
+  @keyframes statShimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+  html.app-fullwidth,
+  html.app-fullwidth body,
+  html.app-fullwidth body.app-page,
+  html.app-fullwidth .dashboard-shell,
+  html.app-fullwidth .content {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* ── Location pill ─────────────────────────────────────────── */
+  .app-location-wrap { position: relative; display: inline-flex; align-items: center; }
+
+  .app-loc-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(201,168,76,0.12); border: 1px solid rgba(201,168,76,0.45);
+    color: #C9A84C; border-radius: 20px; padding: 4px 11px 4px 9px;
+    font-size: 11px; font-weight: 600; font-family: inherit;
+    cursor: pointer; white-space: nowrap; max-width: 210px;
+    transition: background 0.15s, border-color 0.15s; line-height: 1.4;
+  }
+  .app-loc-pill:hover:not(.is-locked) {
+    background: rgba(201,168,76,0.22); border-color: rgba(201,168,76,0.7);
+  }
+  .app-loc-pill.is-locked {
+    cursor: default; pointer-events: none;
+    background: rgba(155,172,196,0.10); border-color: rgba(155,172,196,0.3); color: #9BACC4;
+  }
+  .app-loc-pill .loc-icon  { font-size: 12px; flex-shrink: 0; }
+  .app-loc-pill .loc-text  { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 110px; }
+  .app-loc-pill .loc-id-tag {
+    background: rgba(201,168,76,0.2); border-radius: 8px;
+    padding: 1px 5px; font-size: 9px; font-weight: 700;
+    letter-spacing: 0.5px; flex-shrink: 0;
+  }
+  .app-loc-pill.is-locked .loc-id-tag { background: rgba(155,172,196,0.15); color: #9BACC4; }
+  .app-loc-pill .loc-chevron {
+    font-size: 8px; opacity: 0.7; flex-shrink: 0; transition: transform 0.2s;
+  }
+  .app-loc-pill.dd-open .loc-chevron { transform: rotate(180deg); }
+
+  .role-badge.is-loading {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.08);
+    color: #9BACC4;
+    min-width: 48px;
+    animation: roleSkeleton 1.2s ease-in-out infinite;
+  }
+  @keyframes roleSkeleton {
+    0%,100% { opacity: 0.5 } 50% { opacity: 1 }
+  }
+
+  /* ── Dropdown ─────────────────────────────────────────────── */
+  .app-loc-dropdown {
+    display: none; position: absolute; top: calc(100% + 8px); right: 0;
+    min-width: 275px; max-height: 340px; overflow-y: auto;
+    background: linear-gradient(145deg,#16213E,#0F3460);
+    border: 1px solid rgba(201,168,76,0.4); border-radius: 12px;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.55); z-index: 300; padding: 6px 0;
+    scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.3) transparent;
+  }
+  .app-loc-dropdown.is-open { display: block; }
+  .app-loc-dropdown::-webkit-scrollbar { width: 4px; }
+  .app-loc-dropdown::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 4px; }
+
+  .app-loc-dd-header {
+    padding: 9px 14px 7px; font-size: 9px; font-weight: 700; color: #9BACC4;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 4px;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .app-loc-option {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    color: #F0EAD6; font-size: 12px; font-weight: 500; padding: 9px 14px;
+    cursor: pointer; font-family: inherit; transition: background 0.12s;
+  }
+  .app-loc-option:hover  { background: rgba(201,168,76,0.11); }
+  .app-loc-option.active { background: rgba(201,168,76,0.18); color: #C9A84C; }
+
+  .app-loc-opt-row  { display: flex; align-items: center; gap: 8px; }
+  .app-loc-opt-name { flex: 1; font-weight: 600; font-size: 12px; }
+  .app-loc-opt-check{ color: #C9A84C; font-size: 12px; flex-shrink: 0; }
+
+  .app-loc-opt-badge {
+    background: rgba(201,168,76,0.18); color: #C9A84C;
+    font-size: 9px; font-weight: 700; padding: 2px 6px;
+    border-radius: 8px; flex-shrink: 0; letter-spacing: 0.3px;
+  }
+  .app-loc-opt-badge.all-badge { background: rgba(76,175,130,0.18); color: #4CAF82; }
+
+  .app-loc-opt-meta {
+    display: flex; gap: 10px; margin-top: 2px;
+    font-size: 10px; color: #9BACC4; font-weight: 400;
+  }
+  .app-loc-opt-meta span { display: flex; align-items: center; gap: 3px; }
+  .app-loc-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0; }
+
+  /* locked form selects */
+  select.location-locked { opacity: 0.85; cursor: not-allowed; pointer-events: none; }
+
+  @media (max-width: 480px) {
+    .app-loc-pill { max-width: 130px; font-size: 10px; padding: 3px 8px 3px 7px; }
+    .app-loc-pill .loc-id-tag { display: none; }
+    .app-loc-dropdown { min-width: 230px; right: -10px; }
+  }
+</style>
+
+
+
+<style>
+  .app-chrome-header {
+    background: linear-gradient(135deg, #16213E 0%, #0F3460 100%);
+    padding: 18px 16px 14px;
+    border-bottom: 1px solid rgba(201,168,76,0.3);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .app-chrome-header .header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .app-chrome-header .logo { font-size:18px; color:#C9A84C; font-weight:700; }
+  .app-chrome-header .logo span { display:block; font-size:11px; color:#9BACC4; font-weight:400; letter-spacing:2px; text-transform:uppercase; margin-top:2px; }
+  .app-chrome-header .auth-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+  .app-chrome-header .location-badge {
+    background:rgba(74,158,232,0.12); border:1px solid rgba(74,158,232,0.45); color:#8ec8ff;
+    font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px; white-space:nowrap;
+    max-width:160px; overflow:hidden; text-overflow:ellipsis;
+  }
+  .app-chrome-header .location-badge.is-loading { color:#9BACC4; border-color:rgba(255,255,255,0.08); background:rgba(255,255,255,0.05); }
+  .app-chrome-header .role-badge { background:rgba(201,168,76,0.15); border:1px solid rgba(201,168,76,0.4); color:#C9A84C; font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px; white-space:nowrap; }
+  .app-chrome-header .logout-btn { background:transparent; border:1px solid rgba(224,92,92,0.45); color:#ffb4b4; border-radius:20px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer; }
+  .app-chrome-header .logout-btn:disabled { opacity:0.65; cursor:wait; }
+  .app-chrome-header .date-bar { font-size:12px; color:#9BACC4; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .app-chrome-header .live-dot { width:6px; height:6px; background:#4CAF82; border-radius:50%; display:inline-block; }
+  .app-main-nav {
+    display:flex; background:#16213E; border-bottom:1px solid rgba(255,255,255,0.06);
+    overflow-x:auto; scrollbar-width:none; padding:0 8px; gap:2px;
+    position:sticky; top:68px; z-index:99;
+  }
+  .app-main-nav::-webkit-scrollbar { display:none; }
+  .app-main-nav .nav-btn { background:none; border:none; border-bottom:2px solid transparent; color:#9BACC4; font-size:11px; font-weight:500; padding:10px 12px; cursor:pointer; white-space:nowrap; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .app-main-nav .nav-btn .nav-icon { font-size:14px; }
+  .app-main-nav .nav-btn.active { color:#C9A84C; border-bottom-color:#C9A84C; }
+  .app-page .form-page-body { padding:0 0 24px; }
+
+  @media (max-width: 768px) {
+    .app-chrome-header { padding: 14px 14px 12px; }
+    .app-chrome-header .logo { font-size: 20px; }
+    .app-chrome-header .logo span { font-size: 12px; letter-spacing: 1.5px; }
+    .app-chrome-header .date-bar { font-size: 14px; }
+    .app-chrome-header .location-badge,
+    .app-chrome-header .role-badge,
+    .app-chrome-header .logout-btn { font-size: 13px; padding: 6px 12px; }
+    .app-loc-pill { font-size: 13px; padding: 6px 12px 6px 10px; max-width: 160px; }
+    .app-main-nav { top: 64px; padding: 0 6px; }
+    .app-main-nav .nav-btn { font-size: 12px; padding: 10px 10px; min-width: 56px; }
+    .app-main-nav .nav-btn .nav-icon { font-size: 16px; }
+  }
+
+  html.app-mobile .app-chrome-header .logo { font-size: 22px; }
+  html.app-mobile .app-chrome-header .logo span { font-size: 13px; }
+  html.app-mobile .app-chrome-header .date-bar { font-size: 16px; }
+  html.app-mobile .app-chrome-header .location-badge,
+  html.app-mobile .app-chrome-header .role-badge,
+  html.app-mobile .app-chrome-header .logout-btn { font-size: 14px; padding: 8px 14px; }
+  html.app-mobile .app-loc-pill { font-size: 14px; }
+  html.app-mobile .app-main-nav .nav-btn { font-size: 13px; padding: 12px 10px; min-width: 58px; }
+  html.app-mobile .app-main-nav .nav-btn .nav-icon { font-size: 18px; }
+
+  @media (max-width: 480px) {
+    .app-chrome-header .auth-actions { flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+    .app-chrome-header .location-badge { max-width: 130px; }
+  }
+</style>
+
+<div class="header app-chrome-header">
+  <div class="header-top">
+    <div class="logo">
+      🏇 Kings Equestrian
+      <span>Digital Ops System</span>
+    </div>
+    <div class="auth-actions">
+      <div class="location-badge" id="locationLabel" title="Your location">📍 —</div>
+      <div class="role-badge" id="roleLabel">User</div>
+      <div id="locControl" class="app-location-wrap" style="display:none" aria-hidden="true"></div>
+      <button class="logout-btn" id="logoutBtn" type="button">Logout</button>
+    </div>
+  </div>
+  <div class="date-bar">
+    <span class="live-dot"></span>
+    <span id="liveDate">Loading...</span>
+  </div>
+</div>
+
+<nav class="nav app-main-nav" id="mainNav">
+  <button type="button" class="nav-btn" data-nav="dashboard" data-tab="dashboard">
+    <span class="nav-icon">🏠</span>Home
+  </button>
+  <button type="button" class="nav-btn" data-nav="dashboard" data-tab="horses">
+    <span class="nav-icon">🐎</span>Horses
+  </button>
+  <button type="button" class="nav-btn" data-nav="dashboard" data-tab="inventory">
+    <span class="nav-icon">📦</span>Stock
+  </button>
+  <button type="button" class="nav-btn" data-nav="dashboard" data-tab="health">
+    <span class="nav-icon">🏥</span>Health
+  </button>
+  <button type="button" class="nav-btn" data-nav="dashboard" data-tab="shoeing">
+    <span class="nav-icon">🦶</span>Shoeing
+  </button>
+  <button type="button" class="nav-btn" data-nav="dashboard" data-tab="staff">
+    <span class="nav-icon">👥</span>Staff
+  </button>
+  <button type="button" class="nav-btn" data-nav="dashboard" data-tab="forms">
+    <span class="nav-icon">📋</span>Forms
+  </button>
+  <button type="button" class="nav-btn" data-nav="dashboard" data-tab="reports">
+    <span class="nav-icon">📊</span>Reports
+  </button>
+</nav>
+
+<div id="appLoaderOverlay" class="app-loader-overlay" aria-hidden="true" role="status">
+  <div class="app-loader-panel">
+    <div class="app-loader-spinner" aria-hidden="true"></div>
+    <p class="app-loader-message" id="appLoaderMessage">Loading…</p>
+  </div>
+</div>
+
+<script>
+(function() {
+  var overlay = null, messageEl = null, pending = 0;
+  function getOverlay() {
+    if (!overlay) {
+      overlay = document.getElementById('appLoaderOverlay');
+      messageEl = document.getElementById('appLoaderMessage');
+    }
+    return overlay;
+  }
+  window.AppLoader = {
+    show: function(message) {
+      var el = getOverlay();
+      if (!el) return;
+      pending++;
+      if (messageEl && message) messageEl.textContent = message;
+      el.classList.add('is-visible');
+      el.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('app-is-loading');
+    },
+    hide: function() {
+      var el = getOverlay();
+      if (!el) return;
+      pending = Math.max(0, pending - 1);
+      if (pending > 0) return;
+      el.classList.remove('is-visible');
+      el.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('app-is-loading');
+    },
+    forceHide: function() { pending = 0; this.hide(); },
+    setMessage: function(text) { if (messageEl && text) messageEl.textContent = text; }
+  };
+})();
+</script>
+
+<script>
+(function () {
+  /* Viewport / host iframe sizing: AppViewport.html (include at top of AppChrome) */
+
+  /* Set localStorage.opsDebug = "1" or add ?debug=1 to URL for extra logs */
+  var OPS_DEBUG = true;
+
+  function log() {
+    if (!OPS_DEBUG || typeof console === "undefined" || !console.log) return;
+    var args = ["[KingsOps Location]"].concat(Array.prototype.slice.call(arguments));
+    console.log.apply(console, args);
+  }
+
+  function logWarn() {
+    if (typeof console === "undefined" || !console.warn) return;
+    var args = ["[KingsOps Location]"].concat(Array.prototype.slice.call(arguments));
+    console.warn.apply(console, args);
+  }
+
+  function logError() {
+    if (typeof console === "undefined" || !console.error) return;
+    var args = ["[KingsOps Location]"].concat(Array.prototype.slice.call(arguments));
+    console.error.apply(console, args);
+  }
+
+  function tokenHint(token) {
+    if (!token) return "(none)";
+    return token.length <= 12 ? token : token.substring(0, 8) + "…";
+  }
+
+  function summarizeContext(data) {
+    if (!data) return null;
+    return {
+      email: data.email,
+      name: data.name,
+      role: data.role,
+      location: data.location,
+      locationId: data.locationId,
+      locationLabel: data.locationLabel,
+      isAdmin: data.isAdmin,
+      viewLocation: data.viewLocation,
+      viewLabel: data.viewLabel,
+      defaultAdminLocation: data.defaultAdminLocation,
+      adminOptionsCount: data.adminOptions ? data.adminOptions.length : 0,
+      locationsSheetCount: data.locations ? data.locations.length : 0
+    };
+  }
+
+  /* ── state ─────────────────────────────────────────────────── */
+  var ctx = null;
+  var SKEY = "opsViewLocation";
+  var ALL  = "__ALL__";
+  var ddOpen = false;
+
+  /* ── token ─────────────────────────────────────────────────── */
+  function syncToken() {
+    var t = new URLSearchParams(window.location.search).get("token");
+    if (t) try { localStorage.setItem("opsAuthToken", t); } catch(e){}
+  }
+  function getToken() { syncToken(); return localStorage.getItem("opsAuthToken") || ""; }
+
+  /* ── session storage for admin view ────────────────────────── */
+  function storedView() {
+    try { var v = sessionStorage.getItem(SKEY); return v === null ? null : v === ALL ? "" : v; }
+    catch(e){ return null; }
+  }
+  function hasStored() { try { return sessionStorage.getItem(SKEY) !== null; } catch(e){ return false; } }
+  function saveView(loc) {
+    try { sessionStorage.setItem(SKEY, isAll(loc) ? ALL : String(loc||"")); } catch(e){}
+  }
+
+  /* ── helpers ────────────────────────────────────────────────── */
+  function isAll(v) { var s=String(v||"").trim().toLowerCase(); return !s||s==="all"||s==="all locations"; }
+
+  function labelOf(locValue) {
+    if (!ctx || !ctx.adminOptions) return locValue || "—";
+    for (var i=0;i<ctx.adminOptions.length;i++){
+      var o=ctx.adminOptions[i];
+      if (o.value===locValue||o.id===locValue) return o.label||o.value;
+    }
+    return locValue || "—";
+  }
+
+  function closeDD() {
+    ddOpen = false;
+    var dd  = document.getElementById("appLocDropdown");
+    var btn = document.getElementById("appLocPill");
+    if (dd)  dd.classList.remove("is-open");
+    if (btn) { btn.classList.remove("dd-open"); btn.setAttribute("aria-expanded","false"); }
+  }
+
+  function fireChanged() {
+    try {
+      window.dispatchEvent(new CustomEvent("ops-location-changed",{
+        detail:{ viewLocation:AppLocation.getViewLocation(), viewLabel:AppLocation.getViewLabel(), context:ctx }
+      }));
+    } catch(e){}
+  }
+
+  /** Location display name from Users sheet / Locations tab */
+  function locationNameFromCtx(c) {
+    if (!c) return "—";
+    if (c.location) return String(c.location).trim();
+    var lbl = String(c.locationLabel || "").trim();
+    if (!lbl) return "—";
+    var m = lbl.match(/^LOC\d+\s*[·•·]\s*(.+)$/i);
+    return m ? m[1].trim() : lbl;
+  }
+
+  function headerLocationName() {
+    if (!ctx) return "—";
+    if (!ctx.isAdmin) {
+      return locationNameFromCtx(ctx);
+    }
+    if (isAll(ctx.viewLocation)) return "All Locations";
+    return locationNameFromCtx({
+      location: ctx.viewLocation,
+      locationLabel: ctx.viewLabel
+    });
+  }
+
+  function updateLocationBadge() {
+    var el = document.getElementById("locationLabel");
+    if (!el) {
+      logWarn("updateLocationBadge: #locationLabel not found in DOM");
+      return;
+    }
+    el.classList.remove("is-loading");
+    var name = headerLocationName();
+    log("updateLocationBadge →", name, "| ctx:", summarizeContext(ctx));
+    el.textContent = "📍 " + name;
+    if (ctx && ctx.isAdmin) {
+      el.title = "Dashboard view: " + name + " (click ▼ to switch)";
+    } else if (ctx) {
+      var tip = "Your location: " + name;
+      if (ctx.locationId) tip += " (" + ctx.locationId + ")";
+      el.title = tip;
+    } else {
+      el.title = "Your location";
+    }
+  }
+
+  /* ── role badge ─────────────────────────────────────────────── */
+  function updateRoleBadge() {
+    var el = document.getElementById("roleLabel");
+    if (!el) {
+      logWarn("updateRoleBadge: #roleLabel not found in DOM");
+      return;
+    }
+    el.classList.remove("is-loading");
+    var role = ctx ? String(ctx.role || "User") : "User";
+    log("updateRoleBadge →", role, "| isAdmin:", !!(ctx && ctx.isAdmin));
+    /* Capitalise first letter only, rest lower */
+    el.textContent = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+    /* Highlight admin badge distinctively */
+    if (ctx && ctx.isAdmin) {
+      el.style.background  = "rgba(201,168,76,0.22)";
+      el.style.borderColor = "rgba(201,168,76,0.65)";
+      el.style.color       = "#C9A84C";
+    } else {
+      el.style.background  = "";
+      el.style.borderColor = "";
+      el.style.color       = "";
+    }
+  }
+
+  var initPending = false;
+  var initCallbacks = [];
+
+  function finishInit(result) {
+    initPending = false;
+    var cbs = initCallbacks.slice();
+    initCallbacks = [];
+    try {
+      window.dispatchEvent(new CustomEvent("ops-location-ready", { detail: { context: result } }));
+    } catch (e) {}
+    for (var i = 0; i < cbs.length; i++) {
+      try { cbs[i](result); } catch (errCb) { logError("init callback error:", errCb); }
+    }
+  }
+
+  function showHeaderLoading() {
+    var roleEl = document.getElementById("roleLabel");
+    var locEl = document.getElementById("locationLabel");
+    if (roleEl) { roleEl.textContent = "…"; roleEl.classList.add("is-loading"); }
+    if (locEl) { locEl.textContent = "📍 …"; locEl.classList.add("is-loading"); }
+  }
+
+  function clearHeaderLoadingFallback(roleText, locText) {
+    var roleEl = document.getElementById("roleLabel");
+    if (roleEl) {
+      roleEl.classList.remove("is-loading");
+      roleEl.textContent = roleText || "User";
+      roleEl.style.background = "";
+      roleEl.style.borderColor = "";
+      roleEl.style.color = "";
+    }
+    var locEl = document.getElementById("locationLabel");
+    if (locEl) {
+      locEl.classList.remove("is-loading");
+      locEl.textContent = "📍 " + (locText || "—");
+    }
+    var wrap = document.getElementById("locControl");
+    if (wrap) { wrap.innerHTML = ""; wrap.style.display = "none"; }
+  }
+
+  /* ── location: badge for everyone; admin view switcher in locControl ── */
+  function render() {
+    updateLocationBadge();
+    var wrap = document.getElementById("locControl");
+    if (!wrap || !ctx) return;
+    wrap.innerHTML = "";
+
+    if (!ctx.isAdmin) {
+      wrap.style.display = "none";
+      wrap.setAttribute("aria-hidden", "true");
+      return;
+    }
+
+    wrap.style.display = "";
+    wrap.setAttribute("aria-hidden", "false");
+
+    if (ctx.isAdmin) {
+      var viewLoc   = ctx.viewLocation || "";
+      var viewIsAll = isAll(viewLoc);
+
+      var btn = document.createElement("button");
+      btn.type      = "button";
+      btn.id        = "appLocPill";
+      btn.className = "app-loc-pill";
+      btn.style.padding = "4px 10px";
+      btn.setAttribute("aria-haspopup","listbox");
+      btn.setAttribute("aria-expanded","false");
+      btn.title     = "Switch location view";
+      btn.innerHTML = '<span class="loc-chevron" style="font-size:10px">▼</span>';
+
+      /* Dropdown */
+      var dd = document.createElement("div");
+      dd.id        = "appLocDropdown";
+      dd.className = "app-loc-dropdown";
+      dd.setAttribute("role","listbox");
+      dd.innerHTML = '<div class="app-loc-dd-header"><span>📍</span> Switch Location</div>';
+
+      (ctx.adminOptions || []).forEach(function(opt, idx) {
+        /* Divider between "All" and the real locations */
+        if (idx === 1) {
+          var dv = document.createElement("div"); dv.className = "app-loc-divider"; dd.appendChild(dv);
+        }
+
+        var optIsAll  = isAll(opt.value);
+        var isActive  = optIsAll ? viewIsAll : opt.value === viewLoc;
+
+        var badge = optIsAll
+          ? '<span class="app-loc-opt-badge all-badge">ALL</span>'
+          : (opt.id ? '<span class="app-loc-opt-badge">'+opt.id+'</span>' : '');
+
+        var name = opt.name || (optIsAll ? "All Locations"
+          : (opt.label ? opt.label.replace(/^LOC\d+\s*[·•·]\s*/i,"") : opt.value));
+
+        var metaParts = "";
+        if (optIsAll) {
+          metaParts = '<span>Combined view across all locations</span>';
+        } else {
+          if (opt.manager) metaParts += '<span>👤 '+opt.manager+'</span>';
+          if (opt.phone)   metaParts += '<span>📞 '+opt.phone+'</span>';
+        }
+
+        var item = document.createElement("button");
+        item.type      = "button";
+        item.className = "app-loc-option" + (isActive ? " active" : "");
+        item.setAttribute("role","option");
+        item.setAttribute("aria-selected", isActive ? "true" : "false");
+        item.innerHTML =
+          '<div class="app-loc-opt-row">' +
+            badge +
+            '<span class="app-loc-opt-name">'+name+'</span>' +
+            (isActive ? '<span class="app-loc-opt-check">✓</span>' : '') +
+          '</div>' +
+          (metaParts ? '<div class="app-loc-opt-meta">'+metaParts+'</div>' : '');
+
+        item.addEventListener("click", function(){
+          ctx.viewLocation = optIsAll ? "" : opt.value;
+          ctx.viewLabel    = optIsAll ? "All Locations" : labelOf(opt.value);
+          saveView(ctx.viewLocation);
+          updateLocationBadge();
+          render();
+          closeDD();
+          fireChanged();
+        });
+        dd.appendChild(item);
+      });
+
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        ddOpen = !ddOpen;
+        dd.classList.toggle("is-open", ddOpen);
+        btn.classList.toggle("dd-open", ddOpen);
+        btn.setAttribute("aria-expanded", ddOpen ? "true" : "false");
+      });
+
+      wrap.appendChild(btn);
+      wrap.appendChild(dd);
+    }
+  }
+
+  /* ── applyField: fill / lock a location <select> in forms ───── */
+  function applyField(selectEl, options) {
+    if (!selectEl) return;
+    options = options || {};
+    var locs       = options.Location || options.locations || [];
+    var locked     = !!options.locationLocked;
+    var defaultLoc = options.defaultLocation || (ctx && ctx.location) || "";
+
+    selectEl.innerHTML = "";
+
+    if (locked && defaultLoc) {
+      var o = document.createElement("option");
+      o.value = defaultLoc; o.textContent = defaultLoc; o.selected = true;
+      selectEl.appendChild(o);
+      selectEl.value = defaultLoc;
+      selectEl.disabled = true;
+      selectEl.classList.add("location-locked");
+      return;
+    }
+
+    selectEl.disabled = false;
+    selectEl.classList.remove("location-locked");
+    var emp = document.createElement("option"); emp.value=""; emp.textContent="Select location";
+    selectEl.appendChild(emp);
+    locs.forEach(function(v){
+      var op = document.createElement("option");
+      op.value = v; op.textContent = v;
+      if (defaultLoc && v===defaultLoc) op.selected = true;
+      selectEl.appendChild(op);
+    });
+    if (defaultLoc) selectEl.value = defaultLoc;
+  }
+
+  /* ── close dropdown on outside click ────────────────────────── */
+  document.addEventListener("click", closeDD);
+
+  function scriptReady() {
+    return !!(window.google && google.script && google.script.run);
+  }
+
+  function fetchContext(cb, attempt) {
+    attempt = attempt || 0;
+    var token = getToken();
+    log("fetchContext attempt", attempt, "| token:", tokenHint(token), "| scriptReady:", scriptReady());
+
+    if (!token) {
+      logError("No auth token — check Login redirect and localStorage.opsAuthToken");
+      clearHeaderLoadingFallback("Guest", "Sign in");
+      finishInit(null);
+      return;
+    }
+    if (!scriptReady()) {
+      if (attempt < 40) {
+        if (attempt === 0) logWarn("google.script.run not ready yet, retrying…");
+        setTimeout(function() { fetchContext(cb, attempt + 1); }, 50);
+        return;
+      }
+      logError("google.script.run still unavailable after retries — open deployed /exec URL");
+      clearHeaderLoadingFallback("User", "Offline");
+      finishInit(null);
+      return;
+    }
+
+    var sv = storedView();
+    log("Calling backend getAppContext | storedView:", sv, "| viewParam:", sv === null ? "(empty→server)" : sv);
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        log("getAppContext SUCCESS — raw response:", data);
+        log("getAppContext summary:", summarizeContext(data));
+        ctx = data || null;
+        if (!ctx) {
+          logError("Backend returned null/empty context");
+        }
+        if (ctx && ctx.isAdmin) {
+          if (!hasStored()) {
+            var def = ctx.defaultAdminLocation || ctx.defaultAdminLocationId || "";
+            if (!def && ctx.adminOptions && ctx.adminOptions.length) {
+              for (var i = 0; i < ctx.adminOptions.length; i++) {
+                if (ctx.adminOptions[i].id === "LOC004") {
+                  def = ctx.adminOptions[i].value;
+                  break;
+                }
+              }
+            }
+            ctx.viewLocation = def;
+            ctx.viewLabel = def ? labelOf(def) : (ctx.viewLabel || "All Locations");
+            saveView(ctx.viewLocation);
+          } else {
+            ctx.viewLocation = isAll(sv) ? "" : sv;
+            ctx.viewLabel = isAll(sv) ? "All Locations" : labelOf(sv);
+          }
+        }
+        updateRoleBadge();
+        updateLocationBadge();
+        render();
+        var roleEl = document.getElementById("roleLabel");
+        var locEl = document.getElementById("locationLabel");
+        log("Header after load — role:", roleEl ? roleEl.textContent : "(missing)",
+            "| location:", locEl ? locEl.textContent : "(missing)");
+        finishInit(ctx);
+
+        if (OPS_DEBUG && google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler(function(dbg) {
+              log("debugAppContext (server) —", dbg);
+            })
+            .withFailureHandler(function(e) {
+              logError("debugAppContext failed:", e);
+            })
+            .debugAppContext(token, sv === null ? "" : sv);
+        }
+      })
+      .withFailureHandler(function(err) {
+        ctx = null;
+        var msg = err && err.message ? err.message : String(err || "unknown error");
+        logError("getAppContext FAILED:", msg, err);
+        if (String(msg).toLowerCase().indexOf("unauthorized") >= 0) {
+          logError("Session invalid — log in again; token was:", tokenHint(token));
+          clearHeaderLoadingFallback("Session expired", "—");
+        } else {
+          clearHeaderLoadingFallback("User", "—");
+        }
+        finishInit(null);
+
+        if (google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler(function(dbg) {
+              log("debugAppContext after failure —", dbg);
+            })
+            .withFailureHandler(function(e2) {
+              logError("debugAppContext after failure also failed:", e2);
+            })
+            .debugAppContext(token, sv === null ? "" : sv);
+        }
+      })
+      .getAppContext(token, sv === null ? "" : sv);
+  }
+
+  /* ── public API ─────────────────────────────────────────────── */
+  var AppLocation = {
+    init: function(cb) {
+      log("AppLocation.init() | hasCtx:", !!ctx, "| initPending:", initPending,
+          "| DOM roleLabel:", !!document.getElementById("roleLabel"),
+          "| DOM locationLabel:", !!document.getElementById("locationLabel"));
+
+      if (ctx) {
+        log("Using cached context:", summarizeContext(ctx));
+        updateRoleBadge();
+        updateLocationBadge();
+        render();
+        if (cb) cb(ctx);
+        return;
+      }
+      if (initPending) {
+        log("Init already in progress — queue callback");
+        if (cb) initCallbacks.push(cb);
+        return;
+      }
+
+      log("Starting header load (showing … until backend responds)");
+      showHeaderLoading();
+
+      initPending = true;
+      if (cb) initCallbacks.push(cb);
+      fetchContext(function() { /* finishInit handles callbacks */ });
+    },
+
+    refresh: function(cb) { ctx = null; initPending = false; initCallbacks = []; this.init(cb); },
+
+    getContext:      function() { return ctx; },
+    isAdmin:         function() { return !!(ctx && ctx.isAdmin); },
+    isLocked:        function() { return !!(ctx && ctx.locationLocked); },
+    getUserLocation: function() { return ctx ? (ctx.location || "") : ""; },
+
+    getViewLocation: function() {
+      if (!ctx) return "";
+      if (ctx.isAdmin) {
+        var s = storedView();
+        return s === null ? (ctx.defaultAdminLocation || "") : (isAll(s) ? "" : s);
+      }
+      return ctx.location || "";
+    },
+
+    getViewLabel: function() {
+      if (!ctx) return "";
+      return ctx.isAdmin
+        ? (ctx.viewLabel || "All Locations")
+        : (ctx.locationLabel || ctx.location || "");
+    },
+
+    applyField: applyField,
+
+    withDropdownOptions: function(serverOpts) {
+      var opts = serverOpts || {};
+      if (ctx && ctx.locationLocked) {
+        opts.locationLocked  = true;
+        opts.defaultLocation = ctx.location;
+        opts.Location        = [ctx.location];
+      }
+      return opts;
+    }
+  };
+
+  window.AppLocation = AppLocation;
+
+  /* NOTE: Auto-boot removed.
+     AppChrome.html calls AppLocation.init() explicitly from its own
+     <script> block, which runs after #roleLabel and #locControl exist in the DOM. */
+})();
+</script>
+
+<script>
+(function() {
+  function syncTokenFromUrl() {
+    var params = new URLSearchParams(window.location.search);
+    var token = params.get('token');
+    if (token) {
+      try { localStorage.setItem('opsAuthToken', token); } catch (e) {}
+    }
+  }
+
+  function getAuthToken() {
+    syncTokenFromUrl();
+    return localStorage.getItem('opsAuthToken') || '';
+  }
+
+  function redirectToApp(url) {
+    if (!url) return;
+    try {
+      if (window.top && window.top !== window.self) {
+        window.top.location.replace(url);
+        return;
+      }
+    } catch (e) {}
+    try {
+      var link = document.createElement('a');
+      link.href = url;
+      link.target = '_top';
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return;
+    } catch (e2) {}
+    window.location.replace(url);
+  }
+
+  window.appNavigate = function(targetPage, tab) {
+    var token = getAuthToken();
+    var label = targetPage === 'login' ? 'Signing out…' : 'Loading…';
+    if (window.AppLoader) {
+      window.AppLoader.show(label);
+    }
+    if (!token) {
+      if (window.google && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(url) { redirectToApp(url); })
+          .withFailureHandler(function() { if (window.AppLoader) window.AppLoader.hide(); })
+          .getLoginUrl('');
+      } else {
+        if (window.AppLoader) window.AppLoader.hide();
+        redirectToApp('?page=login');
+      }
+      return;
+    }
+    if (!(window.google && google.script && google.script.run)) {
+      if (window.AppLoader) window.AppLoader.hide();
+      redirectToApp('?page=' + encodeURIComponent(targetPage || 'dashboard'));
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(url) {
+        if (tab) {
+          url += (url.indexOf('?') >= 0 ? '&' : '?') + 'tab=' + encodeURIComponent(tab);
+        }
+        redirectToApp(url);
+      })
+      .withFailureHandler(function() {
+        if (window.AppLoader) window.AppLoader.hide();
+        redirectToApp(window.location.href.split('?')[0] + '?page=' + (targetPage || 'dashboard'));
+      })
+      .buildAppPageUrl(targetPage || 'dashboard', token, '', tab || '');
+  };
+
+  function setActiveNav(tab) {
+    if (tab === 'medical') tab = 'health';
+    var active = tab || 'dashboard';
+    document.querySelectorAll('.app-main-nav .nav-btn').forEach(function(btn) {
+      var btnTab = btn.getAttribute('data-tab') || '';
+      btn.classList.toggle('active', btnTab === active);
+    });
+  }
+
+  document.querySelectorAll('.app-main-nav .nav-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var tab  = btn.getAttribute('data-tab')  || 'dashboard';
+      var page = btn.getAttribute('data-nav')  || 'dashboard';
+      var currentPage = (window.__APP_PAGE__ || '').toLowerCase();
+      if (page === 'dashboard' && currentPage === 'dashboard' && typeof window.showPage === 'function') {
+        window.showPage(tab === 'medical' ? 'health' : tab);
+        setActiveNav(tab);
+        return;
+      }
+      window.appNavigate(page, tab);
+    });
+  });
+
+  syncTokenFromUrl();
+  var bootTab = (window.__APP_TAB__ || new URLSearchParams(window.location.search).get('tab') || 'dashboard');
+  setActiveNav(bootTab);
+
+  var liveDate = document.getElementById('liveDate');
+  if (liveDate) {
+    var now = new Date();
+    liveDate.textContent = now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  var logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function() {
+      if (logoutBtn.disabled) return;
+      var token = getAuthToken();
+      logoutBtn.disabled = true;
+      logoutBtn.textContent = '…';
+      if (window.AppLoader) window.AppLoader.show('Signing out…');
+      function finishLogout() {
+        try { localStorage.removeItem('opsAuthToken'); } catch (e) {}
+        window.appNavigate('login', '');
+      }
+      if (window.google && google.script && google.script.run && token) {
+        google.script.run
+          .withSuccessHandler(finishLogout)
+          .withFailureHandler(function() {
+            logoutBtn.disabled = false;
+            logoutBtn.textContent = 'Logout';
+            if (window.AppLoader) window.AppLoader.hide();
+            finishLogout();
+          })
+          .logoutUser(token);
+        return;
+      }
+      finishLogout();
+    });
+  }
+
+  function bootAppLocation() {
+    console.log("[KingsOps Chrome] bootAppLocation | AppLocation:", !!window.AppLocation,
+      "| token in URL:", !!new URLSearchParams(window.location.search).get("token"),
+      "| token in localStorage:", !!localStorage.getItem("opsAuthToken"));
+    if (window.AppLocation) {
+      window.AppLocation.init();
+    } else {
+      console.error("[KingsOps Chrome] AppLocation failed to load — redeploy the latest AppChrome.html (embedded script).");
+    }
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootAppLocation);
+  } else {
+    bootAppLocation();
+  }
+})();
+</script>

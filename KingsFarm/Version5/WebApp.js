@@ -2,7 +2,20 @@
 // KINGS EQUESTRIAN — NEW SYSTEM
 // File: 6_WebApp.gs
 // Web app entry point + rider portal backend
+// Deploy → Manage deployments → Edit → New version
 // ============================================================
+
+/**
+ * Live UI version from server code (always fresh via google.script.run).
+ * Cached HTML may still show an older page — clients use this to detect that.
+ */
+function getAppUiVersion() {
+  return {
+    version: String((typeof CONFIG !== 'undefined' && CONFIG.APP_UI_VERSION) || ''),
+    label: String((typeof CONFIG !== 'undefined' && CONFIG.APP_UI_VERSION) || ''),
+    serverTime: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss')
+  };
+}
 
 function doGet(e) {
   const app = (e && e.parameter && e.parameter.app) ? String(e.parameter.app) : 'attendance';

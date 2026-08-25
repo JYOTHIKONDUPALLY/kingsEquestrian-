@@ -277,8 +277,9 @@ function resetUserPassword(userIdOrEmail) {
 
   for (let i = 1; i < users.length; i++) {
     const rowEmail = (users[i][USERS_COLS.EMAIL] || "").toString().trim().toLowerCase();
+    const rowBackupEmail = (users[i][USERS_COLS.BACKUP_EMAIL] || "").toString().trim().toLowerCase();
     const rowUserId = (users[i][USERS_COLS.USER_ID] || "").toString().trim().toLowerCase();
-    if (rowEmail === value || rowUserId === value) {
+    if (rowEmail === value || rowBackupEmail === value || rowUserId === value) {
       const regNo = (users[i][USERS_COLS.EMP_REG_NO] || "").toString().trim();
       let aadhar = "1234";
       for (let j = 1; j < employees.length; j++) {
@@ -409,19 +410,30 @@ function loginUser(userIdOrEmail, password) {
 
     const identifier = (userIdOrEmail || "").toString().toLowerCase().trim();
     const data = sheet.getDataRange().getValues();
-    const hash = hashPassword(password);
+    const rawPassword = (password || "").toString();
+    const trimmedPassword = rawPassword.trim();
+    const hash = hashPassword(rawPassword);
+    const trimmedHash = hashPassword(trimmedPassword);
 
     for (let i = 1; i < data.length; i++) {
       const userEmail = (data[i][USERS_COLS.EMAIL] || "").toString().toLowerCase().trim();
+      const backupEmail = (data[i][USERS_COLS.BACKUP_EMAIL] || "").toString().toLowerCase().trim();
       const userId = (data[i][USERS_COLS.USER_ID] || "").toString().toLowerCase().trim();
       const isActive = ((data[i][USERS_COLS.IS_ACTIVE] || "Active").toString().trim().toLowerCase() !== "inactive");
-      if (userEmail === identifier || userId === identifier) {
+      if (userEmail === identifier || backupEmail === identifier || userId === identifier) {
         if (!isActive) {
-          logAction("LOGIN_BLOCKED", userEmail || userIdOrEmail, "Inactive account attempted login");
+          logAction("LOGIN_BLOCKED", userEmail || backupEmail || userIdOrEmail, "Inactive account attempted login");
           return { status: "INVALID", message: "This account is inactive. Please contact admin." };
         }
 
-        if (data[i][USERS_COLS.PASSWORD_HASH] === hash) {
+        const storedPassword = (data[i][USERS_COLS.PASSWORD_HASH] || "").toString().trim();
+        const isHashMatch = (storedPassword === hash) || (storedPassword === trimmedHash);
+        const isLegacyPlainTextMatch = (storedPassword === rawPassword) || (storedPassword === trimmedPassword);
+        if (isHashMatch || isLegacyPlainTextMatch) {
+          if (isLegacyPlainTextMatch) {
+            const normalizedPasswordForHash = (storedPassword === rawPassword) ? rawPassword : trimmedPassword;
+            sheet.getRange(i + 1, USERS_COLS.PASSWORD_HASH + 1).setValue(hashPassword(normalizedPasswordForHash));
+          }
           const email = data[i][USERS_COLS.EMAIL] || userIdOrEmail;
           const role = normalizeRole(data[i][USERS_COLS.ROLE] || "user");
           const userName = data[i][USERS_COLS.NAME] || email;
@@ -433,9 +445,9 @@ function loginUser(userIdOrEmail, password) {
             return { status: "2FA_REQUIRED", role: role, email: email, name: userName, userId: resolvedUserId };
           }
 
-          const sessionToken = generateSessionToken(email);
+          const sessionToken = generateSessionToken(email, resolvedUserId);
           sheet.getRange(i + 1, USERS_COLS.LAST_LOGIN + 1).setValue(new Date());
-          logAction("LOGIN_SUCCESS", email, "Secure login via user-specific credentials");
+          logAction("LOGIN_SUCCESS", email, userId);
 
           return {
             status: "SUCCESS",
@@ -447,7 +459,7 @@ function loginUser(userIdOrEmail, password) {
           };
         }
 
-        logAction("LOGIN_FAILED", userEmail || userIdOrEmail, "Invalid password");
+        logAction("LOGIN_FAILED", userEmail || backupEmail || userIdOrEmail, "Invalid password");
         return { status: "INVALID", message: "Invalid user ID/email or password" };
       }
     }
@@ -473,9 +485,11 @@ function generateSecret(email) {
   return secret;
 }
 
-function generateSessionToken(email) {
-  const token = Utilities.base64Encode(email + "|" + Date.now() + "|" + Utilities.getUuid());
-  PropertiesService.getScriptProperties().setProperty("session_" + email, JSON.stringify({
+function generateSessionToken(email, userId) {
+  // Use email if available, otherwise use userId as the session key
+  const sessionKey = (email && email.trim()) ? email : (userId || "");
+  const token = Utilities.base64Encode(sessionKey + "|" + Date.now() + "|" + Utilities.getUuid());
+  PropertiesService.getScriptProperties().setProperty("session_" + sessionKey, JSON.stringify({
     token: token,
     createdAt: Date.now(),
     expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
@@ -483,12 +497,14 @@ function generateSessionToken(email) {
   return token;
 }
 
-function verifySessionToken(email, token) {
-  const sessionStr = PropertiesService.getScriptProperties().getProperty("session_" + email);
+function verifySessionToken(email, sessionToken, userId) {
+  // Try email first, then fall back to userId
+  const sessionKey = (email && email.trim()) ? email : (userId || "");
+  const sessionStr = PropertiesService.getScriptProperties().getProperty("session_" + sessionKey);
   if (!sessionStr) return false;
   
   const session = JSON.parse(sessionStr);
-  if (session.token !== token) return false;
+  if (session.token !== sessionToken) return false;
   if (Date.now() > session.expiresAt) return false;
   
   return true;
@@ -518,7 +534,7 @@ function sendOTP(email) {
   }
 }
 
-function verifyOTP(email, otp) {
+function verifyOTP(email, otp, userId) {
   const otpStr = PropertiesService.getScriptProperties().getProperty("otp_" + email);
   if (!otpStr) {
     return { status: "INVALID", message: "No OTP found. Request a new one." };
@@ -544,7 +560,7 @@ function verifyOTP(email, otp) {
   
   // OTP verified successfully
   PropertiesService.getScriptProperties().deleteProperty("otp_" + email);
-  const sessionToken = generateSessionToken(email);
+  const sessionToken = generateSessionToken(email, userId);
   logAction("LOGIN_SUCCESS", email, "2FA verified");
   
   return { 
@@ -566,20 +582,26 @@ function getBackupEmail(email) {
   return null;
 }
 
-function getCurrentUser(email, sessionToken) {
-  if (!verifySessionToken(email, sessionToken)) {
+function getCurrentUser(email, sessionToken, userId) {
+  if (!verifySessionToken(email, sessionToken, userId)) {
     return { status: "UNAUTHORIZED" };
   }
   
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_CONFIG.USERS);
   const data = sheet.getDataRange().getValues();
   
+  // Try to find by email first, then by userId
   for (let i = 1; i < data.length; i++) {
-    if ((data[i][USERS_COLS.EMAIL] || "").toString().toLowerCase().trim() === email.toLowerCase().trim()) {
+    const rowEmail = (data[i][USERS_COLS.EMAIL] || "").toString().toLowerCase().trim();
+    const rowUserId = (data[i][USERS_COLS.USER_ID] || "").toString().toLowerCase().trim();
+    
+    // Match by email or userId
+    if ((email && rowEmail === email.toLowerCase().trim()) || 
+        (userId && rowUserId === userId.toLowerCase().trim())) {
       return {
         status: "SUCCESS",
-        email: email,
-        name: data[i][USERS_COLS.NAME] || email,
+        email: data[i][USERS_COLS.EMAIL] || email || "",
+        name: data[i][USERS_COLS.NAME] || email || "",
         role: normalizeRole(data[i][USERS_COLS.ROLE] || "user"),
         userId: data[i][USERS_COLS.USER_ID] || "",
         employeeRegNo: data[i][USERS_COLS.EMP_REG_NO] || "",
@@ -591,8 +613,8 @@ function getCurrentUser(email, sessionToken) {
   return { status: "UNAUTHORIZED" };
 }
 
-function authorizeSessionUser(email, sessionToken, allowedRoles) {
-  const user = getCurrentUser(email || "", sessionToken || "");
+function authorizeSessionUser(email, sessionToken, allowedRoles, userId) {
+  const user = getCurrentUser(email || "", sessionToken || "", userId || "");
   if (!user || user.status !== "SUCCESS") {
     throw new Error("Unauthorized. Please sign in again.");
   }
@@ -876,9 +898,51 @@ function getPayeeBankDetails(payeeName, payeeType) {
 // ─────────────────────────────────────────────────────────────
 // SUBMIT REQUEST
 // ─────────────────────────────────────────────────────────────
+function nextRequestId_(sh, year) {
+  const prefix = "KE-EXP-" + year + "-";
+  const used = {};
+  let maxNum = 0;
+  const values = sh.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    const id = (values[i][REQ_COLS.ID] || "").toString().trim();
+    if (!id) continue;
+    used[id] = true;
+    if (id.indexOf(prefix) === 0) {
+      const n = parseInt(id.slice(prefix.length), 10);
+      if (!isNaN(n) && n > maxNum) maxNum = n;
+    }
+  }
+
+  const propKey = "REQ_SEQ_" + year;
+  const props = PropertiesService.getScriptProperties();
+  const propNum = parseInt(props.getProperty(propKey) || "0", 10);
+  if (!isNaN(propNum) && propNum > maxNum) maxNum = propNum;
+
+  let next = maxNum + 1;
+  let reqId = prefix + String(next).padStart(4, "0");
+  while (used[reqId]) {
+    next++;
+    reqId = prefix + String(next).padStart(4, "0");
+  }
+  props.setProperty(propKey, String(next));
+  return reqId;
+}
+
+function findRequestRowById_(sh, reqId) {
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return -1;
+  const ids = sh.getRange(2, REQ_COLS.ID + 1, lastRow - 1, 1).getDisplayValues();
+  for (let i = ids.length - 1; i >= 0; i--) {
+    if ((ids[i][0] || "").toString().trim() === reqId) return i + 2;
+  }
+  return -1;
+}
+
 function submitRequest(formData) {
+  const lock = LockService.getScriptLock();
   try {
-    const authUser = getCurrentUser(formData.email || "", formData.sessionToken || "");
+    lock.waitLock(30000);
+    const authUser = getCurrentUser(formData.email || "", formData.sessionToken || "", formData.userId || "");
     if (!authUser || authUser.status !== "SUCCESS") {
       throw new Error("Unauthorized. Please sign in again.");
     }
@@ -886,14 +950,9 @@ function submitRequest(formData) {
     const ss  = SpreadsheetApp.getActiveSpreadsheet();
     const sh  = ss.getSheetByName(SHEET_CONFIG.REQUESTS);
     const now = new Date();
-
-    const lastRow = sh.getLastRow();
-    const reqId   = "KE-EXP-" + now.getFullYear() + "-" + String(lastRow).padStart(4, "0");
+    const reqId = nextRequestId_(sh, now.getFullYear());
 
     let invoiceUrl = "";
-    if (formData.invoiceBase64 && formData.invoiceFileName) {
-      invoiceUrl = saveInvoiceToDrive(formData.invoiceBase64, formData.invoiceFileName, reqId);
-    }
 
     const row = new Array(21).fill("");
     row[REQ_COLS.ID]                    = reqId;
@@ -911,7 +970,7 @@ function submitRequest(formData) {
     row[REQ_COLS.PAYEE_TYPE]            = formData.payeeType     || "";
     row[REQ_COLS.UPI]                   = formData.upiId         || "";
     row[REQ_COLS.REF_ID]                = formData.refId         || "";
-    row[REQ_COLS.INVOICE_URL]           = invoiceUrl;
+    row[REQ_COLS.INVOICE_URL]           = "";
     row[REQ_COLS.ADVANCE_REASON]        = formData.advanceReason || "";
     row[REQ_COLS.EXPECTED_INVOICE_DATE] = formData.expectedInvoiceDate
                                             ? new Date(formData.expectedInvoiceDate) : "";
@@ -920,26 +979,51 @@ function submitRequest(formData) {
     row[REQ_COLS.LOCATION]              = formData.location      || "";
 
     sh.appendRow(row);
+    SpreadsheetApp.flush();
+    lock.releaseLock();
+
+    if (formData.invoiceBase64 && formData.invoiceFileName) {
+      invoiceUrl = saveInvoiceToDrive(formData.invoiceBase64, formData.invoiceFileName, reqId);
+      const savedRow = findRequestRowById_(sh, reqId);
+      if (!invoiceUrl || invoiceUrl.toString().indexOf("Upload failed:") === 0) {
+        if (savedRow > 1) sh.deleteRow(savedRow);
+        throw new Error(invoiceUrl || "Invoice upload failed. Please try a smaller file.");
+      }
+      if (savedRow > 1) sh.getRange(savedRow, REQ_COLS.INVOICE_URL + 1).setValue(invoiceUrl);
+    }
+
     logAction("REQUEST_SUBMITTED", authUser.email || authUser.userId || "", "Request " + reqId + " submitted by authenticated user " + (authUser.name || ""));
     return { success: true, reqId };
   } catch (err) {
     return { success: false, error: err.message };
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
   }
 }
 
 function saveInvoiceToDrive(base64Data, fileName, reqId) {
   try {
-    const folder = getOrCreateFolder("Kings Equestrian Invoices/" + reqId);
-    const blob   = Utilities.newBlob(
+    // Build the file first so we never create an empty request folder on decode/size failure.
+    const safeName = (fileName || "invoice").toString().replace(/[\\/:*?"<>|]/g, "_");
+    const blob = Utilities.newBlob(
       Utilities.base64Decode(base64Data),
-      getMimeType(fileName),
-      fileName
+      getMimeType(safeName),
+      reqId + "_" + safeName
     );
+
+    const folder = getOrCreateFolder("Kings Equestrian Invoices");
     const file = folder.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    // Public sharing is a separate Drive quota from storage. If it fails, keep the file.
+    try {
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch (shareErr) {
+      logAction("INVOICE_SHARE_LIMITED", reqId, shareErr.message);
+    }
+
     return file.getUrl();
   } catch (e) {
-    return "Upload failed: " + e.message;
+    throw new Error("Upload failed: " + e.message);
   }
 }
 
@@ -962,17 +1046,17 @@ function getOrCreateFolder(path) {
 // ─────────────────────────────────────────────────────────────
 // ADMIN: APPROVE / REJECT
 // ─────────────────────────────────────────────────────────────
-function approveRequest(reqId, remarks, email, sessionToken) {
-  return changeRequestStatus(reqId, "Approved", remarks, email, sessionToken);
+function approveRequest(reqId, remarks, email, sessionToken, userId) {
+  return changeRequestStatus(reqId, "Approved", remarks, email, sessionToken, userId);
 }
 
-function rejectRequest(reqId, remarks, email, sessionToken) {
-  return changeRequestStatus(reqId, "Rejected", remarks, email, sessionToken);
+function rejectRequest(reqId, remarks, email, sessionToken, userId) {
+  return changeRequestStatus(reqId, "Rejected", remarks, email, sessionToken, userId);
 }
 
-function changeRequestStatus(reqId, status, remarks, email, sessionToken) {
+function changeRequestStatus(reqId, status, remarks, email, sessionToken, userId) {
   try {
-    const user = authorizeSessionUser(email, sessionToken, ["admin"]);
+    const user = authorizeSessionUser(email, sessionToken, ["admin"], userId);
 
     const ss   = SpreadsheetApp.getActiveSpreadsheet();
     const sh   = ss.getSheetByName(SHEET_CONFIG.REQUESTS);
@@ -1000,9 +1084,9 @@ function changeRequestStatus(reqId, status, remarks, email, sessionToken) {
 // ─────────────────────────────────────────────────────────────
 // ACCOUNTS: SETTLE PAYMENT  (UPDATED — records paymentAmount + mode)
 // ─────────────────────────────────────────────────────────────
-function settlePayment(reqId, utr, paymentAmount, paymentDate, mode, remarks, email, sessionToken) {
+function settlePayment(reqId, utr, paymentAmount, paymentDate, mode, remarks, email, sessionToken, userId) {
   try {
-    const user = authorizeSessionUser(email, sessionToken, ["accounts", "admin"]);
+    const user = authorizeSessionUser(email, sessionToken, ["accounts", "admin"], userId);
 
     const ss   = SpreadsheetApp.getActiveSpreadsheet();
     const sh   = ss.getSheetByName(SHEET_CONFIG.REQUESTS);
@@ -1102,7 +1186,7 @@ function getDashboardSummary() {
 
 
 function generateHash() {
-  const password = "emp@123KG"; // change this
+  const password = "Accounts@124"; // change this
   const hash = Utilities.base64Encode(
     Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password)
   );

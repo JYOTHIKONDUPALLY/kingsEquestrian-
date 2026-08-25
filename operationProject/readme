@@ -1,0 +1,692 @@
+# Kings Equestrian Operations — Web App Guide
+
+Spreadsheet: **Kings Equestrian Operations Master.xlsx** (Google Sheets when deployed).  
+Code: `code.js` + HTML forms. Deploy via Google Apps Script (copy files, new deployment, hard refresh).
+
+Also see: `SHEETS_SETUP.md` for sheet column quick reference.
+
+---
+
+## 1. Spreadsheet tabs (data model)
+
+| Tab | Role |
+|-----|------|
+| **Users** | Login: Email, Password, Role (`Admin` / `Trainer` / `Groom`), **Name** (must match Trainers/Grooms name for routine filtering), Location |
+| **Locations** | Location_ID, Location_Name (e.g. Farm, LOC004) |
+| **Horses** | Horse_ID, Horse_Name, Breed, Age, Location, Owner, Status, Gender |
+| **HorseProfile** | Trainer, Groom, Weight, Facility Multiplier, Lease, Present medication, standard feed/water (pre-fill Daily Routine) |
+| **Trainers** | Trainer_Name, Specialization, Location, Phone, Experience_Years, Status |
+| **Grooms** | Groom_Name, Location, Phone, Shift, Status |
+| **Raw Data** | Every stock movement: Date, Location, Item, Entry Type (`Opening` / `Added` / `Consumption`), Quantity |
+| **Daily Inventory** | Aggregated per location+item+date: Opening, Added, Consumption, **Closing** |
+| **Inventory Items** | Item list + optional min/reorder levels |
+| **DailyRoutineLog** | One row per horse per save: activities, feed slots, water, totals |
+| **inventory_transaction** | Audit: Timestamp, Location, Item, Quantity, Type, Reference |
+| **HorseHealthData** | Daily health checks |
+| **MedicalHistory** | Medical incidents / treatments |
+| **VaccinationData** | Vaccines, dates, next due |
+| **ShoeingData** | Farrier visits, next shoeing due |
+| **ActivityData** | Legacy activity log (optional) |
+
+**Auto-created on first routine save:** HorseProfile, DailyRoutineLog, inventory_transaction (if missing).
+
+---
+
+## 2. Deploy & login
+
+1. Apps Script project bound to the master spreadsheet.  
+2. Add all `form-*.html`, `Dashboard.html`, `AppChrome.html`, `code.js`.  
+   - **AppLoader** is inlined in **`AppChrome.html`** (no separate file).  
+   - **AppViewport** (`google.script.host.setWidth` / `setHeight`) is **inlined in `AppChrome.html`**; login page has the same script inlined.  
+3. Deploy → Web app → execute as you, access by link.  
+4. Open the **deployed web app URL** (`script.google.com/macros/s/.../exec`), not only the Apps Script editor preview iframe (preview often adds side margins).  
+5. Login with **Users** sheet credentials.  
+6. **Admin:** can switch location in header; default view often Farm (LOC004).  
+7. **Trainer / Groom:** fixed location; Daily Routine shows only horses where **HorseProfile.Trainer** or **HorseProfile.Groom** = **Users.Name**.
+
+### Mobile / iframe full width
+
+The app sets `html.app-fullwidth` when loaded inside Google’s iframe, on `script.google.com` / `googleusercontent.com`, or on screens under 1200px wide. That removes the old `max-width: 720px` centering that caused empty space on the left and right. On large desktop browsers only (≥1200px, top-level window), content may center in a 1100px column for readability.
+
+On screens **768px and below**, the four dashboard summary cards stack **one per row** (full width), with larger text (labels ~13px, main numbers ~36px, card lines ~15px) for easier reading on phones.
+
+**GAS iframe scaling:** **`AppChrome.html`** (and **`code.js`** `addMetaTag` viewport) does three things on phones:
+1. `google.script.host.setWidth(realPhoneWidth)` — uses `visualViewport` / short side of `screen`, not the ~760px iframe `innerWidth`.
+2. **CSS `zoom` fallback** — if the iframe stays wide, scales the page to fit (~360px) so text is readable.
+3. `setHeight(content height)` — iframe height matches content (removes large empty gap at the bottom).  
+Also sets `html.app-mobile` with **18px** base font and larger dashboard card text. Redeploy **`code.js`**, **`AppChrome.html`**, and **`Dashboard.html`**.
+
+---
+
+## 3. Dashboard — each widget
+
+Backend entry: `getDashboardData(token, viewLocation)` → `buildDashboardPayload_()` → `filterDashboardPayload_(location)`.
+
+### 3.1 Location bar (Admin)
+
+- **Shows:** Chips for All + each location from **Locations**.  
+- **Data:** `getLocationsList_()`.  
+- **Effect:** Re-fetches dashboard with `viewLocation`; all counts/lists filter to that site.
+
+### 3.2 Dashboard — four summary boxes (2×2 grid)
+
+The home dashboard shows **four stat-style square cards** (same visual style as the horse count card). All values respect the selected **location** filter.
+
+#### Box 1 — Horses
+
+| Display | Source | Calculation |
+|---------|--------|-------------|
+| **Large number** — total horses | **Horses** | Count at this location |
+| **Small text** — `Healthy: X · Rehab: Y` | **HorseHealthData** + horse status | Healthy = `🟢 Healthy`; Rehab = rehabilitation status on horse/profile |
+
+**Example:** `3` with subtext `Healthy: 2 · Rehab: 1`
+
+#### Box 2 — Staff
+
+| Line | Source |
+|------|--------|
+| `Trainers: Active N · Leave M` | **Trainers** (`getStaffStatusCounts_`) |
+| `Grooms: Active N · Leave M` | **Grooms** |
+| `Name: K horses` (per trainer) | **HorseProfile** → Trainer column |
+| `Name: K horses` (per groom) | **HorseProfile** → Groom column |
+
+**Example:**
+
+```
+Trainers: Active 2 · Leave 1
+Grooms: Active 3 · Leave 0
+Raj: 2 horses
+Priya: 1 horses
+```
+
+#### Box 3 — Stock Alerts
+
+| Line | Source | Formula / logic |
+|------|--------|-----------------|
+| Feed (Mixed): *N days stock* | **Daily Inventory** | `floor(Closing ÷ Consumption)` for item name matching Feed (Mixed) |
+| Barley: *N days stock* | Same | Match `Barley` |
+| Dry grass: *N days stock* | Same | Match `Dry Grass` |
+| Shoeing: Due in *N days* | **ShoeingData** | Nearest upcoming shoeing for horses at this location |
+
+Shows `—` when no row or zero consumption. Item names in Raw Data / routine must match: `Feed (Mixed)`, `Barley`, `Dry Grass`, etc.
+
+**Example:**
+
+```
+Feed (Mixed): 20 days stock
+Barley: 15 days stock
+Dry grass: 65 days stock
+Shoeing: Due in 7 days
+```
+
+#### Box 4 — Health
+
+| Line | Source | Logic |
+|------|--------|--------|
+| Vet check: Due in *N days* | **VaccinationData** | Nearest upcoming vaccine for location horses |
+| De-worming: Due in *N days* | **VaccinationData** | Nearest row where vaccine matches /deworm/i |
+
+**Example:**
+
+```
+Vet check: Due in 15 days
+De-worming: Due in 60 days
+```
+
+If schedule data uses horse names not at this location (e.g. Zara on sheet but only Umber at Farm), lines show `—` until names align.
+
+### 3.3 Alerts
+
+Merged list (max ~5+5+3):
+
+- **Shoeing** overdue / due soon (`getShoeingStatus`, alert ≠ OK)  
+- **Vaccination** overdue / due soon (`getVaccinationStatus`)  
+- **Stock** High consumption / Check status on **Daily Inventory** rows  
+
+### 3.4 Horses tab (list)
+
+- **Source:** `getHorsesList_` from **Horses** + health badge from latest **HorseHealthData**.  
+- Filtered by selected location.
+
+### 3.5 Staff tab (lists)
+
+- **Trainers** / **Grooms** from respective sheets, location-filtered.  
+- Buttons: **+ Add New Trainer**, **+ Add New Groom** → master forms.
+
+### 3.6 Quick Entry & Forms tab
+
+Links open forms via `buildAppPageUrl` (see Section 4).
+
+---
+
+## 4. Forms — files, fields, and what gets written
+
+All submits go through `submitFormData(formKey, payload, token)` in `code.js`. Location is enforced from the user session unless Admin picks another allowed site.
+
+| Form key | HTML file | On submit — sheets & rows |
+|----------|-----------|---------------------------|
+| **routine** / **activity** | `form-daily-routine.html` | **DailyRoutineLog** (1 row per horse with data); **Raw Data** (Entry Type `Consumption` per feed item total); **inventory_transaction** (`CONSUMPTION`); **Daily Inventory** updated incrementally via `updateDailyInventoryForConsumption_` (does **not** run full `generateInventory` on dashboard load) |
+| **stock** | `form-daily-stock-entry.html` | **Raw Data** (Opening / Added / adjustment per headers); optional incremental **Daily Inventory** for that item+location+date |
+| **health** | `form-health-medical.html` (health tab) | **HorseHealthData** — append row matching sheet headers |
+| **medical** | `form-health-medical.html` (medical tab) | **MedicalHistory** — append row |
+| **vaccination** | `form-vaccination.html` | **VaccinationData** — append row |
+| **shoeing** | `form-shoeing-record.html` | **ShoeingData** — append row |
+| **horse** | `form-add-horse.html` | **Horses** (new Horse_ID auto P001-style); **HorseProfile** (trainer, groom, defaults) |
+| **trainer** | `form-add-trainer.html` | **Trainers** — rejects duplicate Trainer_Name |
+| **groom** | `form-add-groom.html` | **Grooms** — Groom_Name, Location, Phone, Shift, Status; rejects duplicate name |
+
+**Not wired to submitFormData:** `form-health-check.html`, `form-horse-activity.html`, `form-medical-record.html` (use Dashboard links to the wired forms instead).
+
+### 4.1 Daily Routine (main operations form) — detail
+
+**Loads from:** HorseProfile + Horses for location; 7AM feed pre-fill uses **Standard × Facility Multiplier × Weight ÷ 100** (kg); water defaults in **liters (L)**.
+
+**Activity dropdowns:** Flatwork, Pole work, Lunging, Dressage, Jumping (+ Training, Exercise, Rest, Grooming, Turnout).
+
+**Columns:** Horse name, **Present medication** (editable; syncs to HorseProfile on save), Activity 1/2, feed **(kg)** per slot, water **(L)**.
+
+**Saves per horse row:**
+
+1. **DailyRoutineLog** — Date, Location, Horse_ID, Horse_Name, Activity1/2, feed columns (7AM, 1PM, 6PM, Extra) for Wet Grass, Dry Grass, Feed (Mixed), Barley, Oats, water slots, totals, Present_Medication, Trainer, Groom, Logged_By.  
+2. Sums feed totals across all horses → **consumption** map.  
+3. **Raw Data** — one row per item: `{ Date, Location, Item, Entry Type: Consumption, Quantity }`.  
+4. **inventory_transaction** — audit line per item.  
+5. **Daily Inventory** — bumps Consumption and recalculates Closing for that date/location/item.
+
+**Example consumption after one day at Farm (2 horses, 1 kg Barley each):**
+
+```
+Raw Data: 2026-05-21 | Farm | Barley | Consumption | 2
+Daily Inventory: Farm | Barley | Consumption += 2 | Closing = Opening + Added - Consumption
+```
+
+**Access:** Trainers/grooms only see/edit horses assigned to them in HorseProfile.
+
+### 4.2 Daily Stock Entry
+
+**Purpose:** Record deliveries, opening stock, or manual adjustments.
+
+**Writes:** **Raw Data** only (headers must include Date, Location, Item, Entry Type, Quantity).
+
+**Example:**
+
+```
+2026-05-20 | Farm | Dry Grass | Opening | 100
+2026-05-21 | Farm | Barley | Added | 50
+```
+
+Run `generateInventory()` manually or via daily 9 AM trigger to rebuild **Daily Inventory** from all Raw Data if numbers look wrong.
+
+### 4.3 Add Horse / Edit Horse
+
+**Fields:** Name, Breed, Age, Location, Owner, Gender, Status, Trainer, Groom, **Weight (kg)**, **Facility Multiplier**, **Lease** (rider name + date), **Present medication**, standard feed/water defaults (kg / L).
+
+**Edit:** Dashboard → **Horses** tab → **Edit** on a horse card opens `form-add-horse` with `?horseId=…` (update mode).
+
+**Feed default formula (Daily Routine 7AM pre-fill):**  
+`Final feed (kg) = Standard Qty × Facility Multiplier × Horse Weight ÷ 100`
+
+**Writes:**
+
+- **Horses:** Horse_Name, Horse_ID (generated), Location, Weight, Lease, …  
+- **HorseProfile:** assignments, weight, multiplier, medication, standard defaults for routine pre-fill.
+
+**Daily Routine** also logs **Present_Medication** per entry and syncs it back to **HorseProfile** when saved.
+
+### 4.4 Add Trainer / Add Groom
+
+**Trainer → Trainers:** Trainer_Name, Specialization, Location, Phone, Experience_Years.
+
+**Groom → Grooms:** Groom_Name, Location, Phone, Shift (Morning/Evening/Full Day), Status (Active/Leave/Inactive).
+
+**Dashboard:** Forms → Master Data → Add New Groom (or Staff tab → + Add New Groom).
+
+---
+
+## 5. Inventory pipeline (how numbers flow)
+
+```
+Opening / Added  ──►  Raw Data  ──►  generateInventory() or incremental update
+                              ──►  Daily Inventory (Opening, Added, Consumption, Closing)
+
+Daily Routine save  ──►  Raw Data (Consumption)  ──►  updateDailyInventoryForConsumption_()
+```
+
+**Closing formula (per location + item + date):**  
+`Closing = Opening + Added - Consumption` (aggregated in `scanRawInventoryAggregates_` / incremental updater).
+
+**Stock days widget:** `floor(Closing / Consumption)` using the latest Daily Inventory row per item+location.
+
+---
+
+## 6. Roles & troubleshooting
+
+| Issue | Cause | Fix |
+|-------|--------|-----|
+| Dashboard all zeros / timeout | Full sheet scans | Deploy latest `code.js` (bounded reads, no `generateInventory` on dashboard load) |
+| Farm stock "0 items" | Wrong column names or row cap | Ensure Daily Inventory has Item, Location, Closing, Consumption; redeploy |
+| Health Schedule empty at Farm | Vaccination/Shoeing horse names ≠ Horses at Farm | Add rows for `Umber` or move horse data to match |
+| Trainer sees no horses | Users.Name ≠ HorseProfile.Trainer | Align spelling in **Users** and **HorseProfile** |
+| Consumption not reducing stock | Item label mismatch | Use exact labels: Wet Grass, Dry Grass, Feed (Mixed), Barley, Oats |
+
+**Users.Name** must match **Trainers.Trainer_Name** or **Grooms.Groom_Name** for assignment filtering.
+
+---
+
+## 7. Example data snapshot (reference)
+
+From master workbook samples (your live sheet may differ):
+
+- **Farm horse:** P005 Umber  
+- **Shoeing/Vaccination samples:** often Zara, Sultan, Raja — link to correct location or horse name for widgets to show at Farm  
+- **Admin user:** role Admin, can pick location in header  
+
+---
+
+## 8. Maintenance triggers
+
+`setupTriggers()` in `code.js`:
+
+- **9 AM daily:** `generateInventory()` — full rebuild Daily Inventory from Raw Data  
+- **8 PM daily:** `dailyEmailReport()`  
+
+Use **Deploy → Test deployments → Hard refresh** after code changes.
+
+---
+
+# Legacy product notes (original readme)
+
+Horse activity (Improvements required for ease of usage and operation)
+
+All horses for location to be listed on left (first column) and add serial or identification #
+
+Data to be filled should be in columns (Activity) and duration
+
+Ability to add multiple activities (Max:2)
+
+To be added as columns (Important)
+Wet grass (Per serving: Kg)
+Dry grass (Per serving: Kg)
+Feed (Mixed) (Per serving: Kg)
+Barley (kg)
+Oats(Kg)
+Time stamps (4 times : Example 7 am, 1pm, 6pm)
+
+Consumption per day to displayed automatically based on no of clicks
+
+Water (no of liters per serving)
+Time stamps (4 times , 7 am, 1pm, 6pm)
+Water consumed per day to be displayed automatically
+This is important page/form in entire operation where trainer or groom adds details for every horse 
+
+This becomes as basis for our consumption. All details to be recorded in a seoerate excel sheet per date. Overall stock quantities in the location should automatically reduce from available stock based on everyday consumption
+
+We should also predict in Dash board stock availability (No of days: based on current day consumption)
+Final Recommended Structure
+
+The best approach is to maintain:
+
+1. Horse Profile Master
+
+(static + configurable defaults)
+
+AND
+
+2. Daily Routine Log
+
+(actual daily operations)
+
+This gives:
+	•	operational simplicity
+	•	nutrition accuracy
+	•	trainer flexibility
+	•	audit tracking
+	•	automated reporting
+
+for a professional setup like Kings Equestrian Foundation.
+1. HORSE PROFILE MASTER
+
+Purpose
+
+Stores:
+	•	horse identity
+	•	assignments
+	•	default nutrition plan
+	•	default water plan
+	•	default serving schedule
+
+This auto-populates the daily log.
+
+⸻
+
+Important Design Principle
+
+Feed and Water MUST be monitored separately.
+
+Because:
+	•	feed schedule ≠ water schedule
+	•	water frequency is often higher
+	•	health analysis differs
+
+⸻
+
+2. DAILY ROUTINE LOG
+
+Purpose
+
+Captures:
+	•	actual activities
+	•	actual quantities served
+	•	actual timings
+	•	deviations from default plan
+
+⸻
+Feed Type
+Default Qty
+7 AM
+1 PM
+6 PM
+Extra
+Total
+System Should Automatically Load:
+
+✅ horse list
+✅ trainer
+✅ groom
+✅ feed defaults
+✅ water defaults
+✅ serving times
+✅ location
+
+[4:43 AM, 5/19/2026] Varma Sir: Ability to change results by trainer Qty or Time
+[4:45 AM, 5/19/2026] Varma Sir: Summary : Horse profile is one time. Only update as needed based on on horse health condition 
+
+Daily activity and feed log is 90 percent of operations activity
+
+
+Dash board improvements
+All locations ( Should list all locations and admin can chose location if it is admin access and rest have defaults)
+
+All data should be defaulted per location 
+
+First box 
+Total Horses
+Healthy
+Rehabilation
+
+Second box
+Trainers : Active, leave
+Grooms : Active, leave
+No of horses per trainer
+No of horses per groom
+
+Third box
+Stock Alerts:
+Feed (Mixed): 20 days stock
+Barley :15 days
+Dry grass:65 days
+Shoeing : Due in 7 days
+
+Fourth box
+Health
+Vet check : Due in 15 days
+De worming: Due in 60 days
+
+reffer the excel sheet for sample data 
+MASTER STABLE MANAGEMENT ERP BLUEPRINT
+Unified master blueprint compiled from the complete Stable ERP planning discussions. Includes horse management, staff management, feeding workflows, inventory systems, medicine management, tack inventory, rider gear, procurement, automation scripts, dashboard design, reporting architecture, formulas, workflows, sample data, Google Apps Script automation, and operational logic.
+1. SYSTEM OBJECTIVES
+Centralized multi-facility stable ERP
+Horse profile & health management
+Trainer/groom/farrier management
+Daily horse feed & water logs
+Automatic inventory depletion
+Medicine stock management
+Horse tack & rider gear inventory
+Horse shoe inventory tracking
+Monthly horse expense reporting
+Facility expense management
+Live dashboard & alerts
+Reorder notifications
+Google Forms + Apps Script automation
+2. INITIAL DASHBOARD WIDGETS
+Horses Fed Today
+Pending Feedings
+Low Stock Alerts
+Medicine Expiry Alerts
+Current Inventory Value
+Trainer Horse Count
+Groom Horse Count
+Staff On Leave
+Monthly Facility Expense
+Horse Health Alerts
+3. REQUIRED MODULES
+Horse Management
+Staff Management
+Feed Management
+Inventory Management
+Medicine Management
+Horse Tack Inventory
+Rider Gear Inventory
+Procurement
+Expense Management
+Reporting & Analytics
+4. CORE DATABASE TABLES
+horse_master
+horse_id, horse_name, breed, weight_kg, facility_id, trainer_id, groom_id, acquisition_cost, workload_type
+staff_master
+staff_id, staff_name, role, facility_id, joining_date, status, aadhar_number, mobile_number
+inventory_stock
+stock_id, item_name, category, current_stock, reorder_level, rate, facility_id
+daily_feed_detail
+horse_id, service_no, item_name, actual_qty, feed_time
+medicine_master
+medicine_id, medicine_name, expiry_date, current_stock
+equipment_master
+equipment_id, equipment_type, assigned_horse
+5. SAMPLE TABLE VALUES
+Table	Field	Sample Value	Purpose
+horse_master	horse_name	Thunder	Horse profile
+staff_master	status	On Leave	Staff tracking
+inventory_stock	current_stock	320	Inventory quantity
+medicine_master	expiry_date	2026-12-12	Expiry alert
+6. FEED CALCULATION LOGIC
+Final Feed Qty = Standard Qty × Facility Multiplier × Horse Weight ÷ 100
+Example:
+Oats Standard = 0.20
+Facility Multiplier = 1.20
+Horse Weight = 500
+Result = 1.2 kg/day
+7. DAILY WORKFLOW
+1.Create horse profiles
+2.Assign trainers & grooms
+3.Configure feed standards
+4.Configure facility overrides
+5.Capture daily feed logs via Google Forms
+6.Automatically reduce inventory
+7.Generate reorder alerts
+8.Capture medicine usage
+9.Generate daily/monthly reports
+8. REPORTS
+Daily Feed Report
+Horse-wise Feed Consumption
+Facility-wise Consumption
+Current Inventory Report
+Low Stock Report
+Medicine Expiry Report
+Monthly Horse Expense Report
+Facility Expense Report
+Horse Tack Inventory Report
+Rider Gear Inventory Report
+Horse Shoe Inventory Report
+Trainer Horse Allocation Report
+Groom Horse Allocation Report
+Staff Leave Report
+9. COMPLETE GOOGLE APPS SCRIPTS
+onFormSubmit()
+
+function onFormSubmit(e) {
+
+  const formData = e.namedValues;
+
+  reduceInventory("Oats",
+    parseFloat(formData["Oats Qty"][0]));
+
+  reduceInventory("Barley",
+    parseFloat(formData["Barley Qty"][0]));
+
+  generateReorderAlert();
+
+  updateDashboard();
+
+}
+
+reduceInventory()
+
+function reduceInventory(itemName, qty) {
+
+  const ss =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  const stockSheet =
+    ss.getSheetByName("inventory_stock");
+
+  const data =
+    stockSheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+
+    if (data[i][1] == itemName) {
+
+      let currentStock =
+        parseFloat(data[i][2]);
+
+      let newStock =
+        currentStock - qty;
+
+      stockSheet
+        .getRange(i + 1, 3)
+        .setValue(newStock);
+
+      createInventoryTransaction(
+        itemName,
+        qty
+      );
+
+      break;
+
+    }
+  }
+}
+
+createInventoryTransaction()
+
+function createInventoryTransaction(itemName, qty) {
+
+  const ss =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  const txnSheet =
+    ss.getSheetByName("inventory_transaction");
+
+  txnSheet.appendRow([
+    new Date(),
+    itemName,
+    qty,
+    "CONSUMPTION"
+  ]);
+
+}
+
+generateReorderAlert()
+
+function generateReorderAlert() {
+
+  const ss =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  const stockSheet =
+    ss.getSheetByName("inventory_stock");
+
+  const data =
+    stockSheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+
+    const item = data[i][1];
+
+    const stock = data[i][2];
+
+    const reorder = data[i][3];
+
+    if (stock <= reorder) {
+
+      MailApp.sendEmail(
+        "manager@stable.com",
+        "LOW STOCK ALERT",
+        item + " stock is low"
+      );
+
+    }
+  }
+}
+
+calculateDaysWorked()
+
+function calculateDaysWorked(joinDate) {
+
+  const today = new Date();
+
+  const joining = new Date(joinDate);
+
+  const diffTime =
+    Math.abs(today - joining);
+
+  const diffDays =
+    Math.ceil(diffTime /
+      (1000 * 60 * 60 * 24));
+
+  return diffDays;
+
+}
+
+updateStaffStatus()
+
+function updateStaffStatus(staffId, status) {
+
+  const ss =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  const sheet =
+    ss.getSheetByName("staff_master");
+
+  const data =
+    sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+
+    if (data[i][0] == staffId) {
+
+      sheet
+        .getRange(i + 1, 6)
+        .setValue(status);
+
+      break;
+
+    }
+  }
+}
+
+10. CRITICAL BACKEND RULES
+Inventory updated only through transactions
+No direct stock edits
+All changes audit logged
+Role-based permissions mandatory
+Facility overrides configurable
+Horse overrides configurable
+Daily backups mandatory
+Reorder alerts automated
+
+
+
+refference chart: https://chatgpt.com/share/6a0c9b29-3424-8321-af22-2861e1fb8cd0

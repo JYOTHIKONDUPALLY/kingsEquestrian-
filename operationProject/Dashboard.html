@@ -1,0 +1,2306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Kings Equestrian Ops</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Full width inside Google Apps Script iframe / mobile web app */
+  html.app-fullwidth,
+  html.app-fullwidth body,
+  html.app-fullwidth .dashboard-shell {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #F5E6B8;
+    --gold-dark: #8B6914;
+    --dark: #1A1A2E;
+    --dark2: #16213E;
+    --card: #0F3460;
+    --card2: #1B2B4B;
+    --text: #F0EAD6;
+    --muted: #9BACC4;
+    --green: #4CAF82;
+    --red: #E05C5C;
+    --amber: #F0A500;
+    --blue: #4A9EE8;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--dark);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    overflow-x: hidden;
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .dashboard-shell {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header {
+    background: linear-gradient(135deg, var(--dark2) 0%, var(--card) 100%);
+    padding: 18px 16px 14px;
+    border-bottom: 1px solid rgba(201,168,76,0.3);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    color: var(--gold);
+    letter-spacing: 0.5px;
+  }
+
+  .logo span {
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--muted);
+    display: block;
+    font-weight: 400;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+
+  .role-badge {
+    background: rgba(201,168,76,0.15);
+    border: 1px solid rgba(201,168,76,0.4);
+    color: var(--gold);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .auth-actions { display:flex; align-items:center; gap:8px; }
+  .logout-btn {
+    background: transparent;
+    border: 1px solid rgba(224,92,92,0.45);
+    color: #ffb4b4;
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .date-bar {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .live-dot {
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .nav {
+    display: flex;
+    background: var(--dark2);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 8px;
+    gap: 2px;
+  }
+
+  .nav::-webkit-scrollbar { display: none; }
+
+  .nav-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 10px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .nav-btn .nav-icon { font-size: 14px; }
+
+  .nav-btn.active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+  }
+
+  .nav-btn:hover { color: var(--text); }
+
+  .content {
+    padding: 14px 16px 24px;
+    flex: 1;
+    width: 100%;
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .stat-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .stat-grid-2 { grid-template-columns: 1fr 1fr; }
+  .stat-grid-4 { grid-template-columns: 1fr 1fr; }
+  .dashboard-summary { margin-bottom: 18px; }
+  .stat-card-lines {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.55;
+    margin-top: 4px;
+  }
+  .stat-card-lines .stat-line {
+    margin-bottom: 6px;
+  }
+  .stat-card-lines .stat-line:last-child { margin-bottom: 0; }
+  .stat-card-lines .stat-line-muted {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .stat-card--staff .stat-card-lines { margin-top: 8px; }
+  .widget-block { margin-bottom: 18px; }
+  .widget-list { background: var(--card2); border: 1px solid rgba(255,255,255,0.07); border-radius: var(--radius-sm); padding: 8px 0; }
+  .widget-list .inv-row { margin-bottom: 0; border-radius: 0; border: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .widget-mini-list { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  .empty-hint { padding: 12px 14px; color: var(--muted); font-size: 12px; margin: 0; }
+
+  .stat-card {
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--radius);
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent, var(--gold));
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-sub {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .stat-icon {
+    position: absolute;
+    right: 12px;
+    top: 14px;
+    font-size: 18px;
+    opacity: 0.3;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 18px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(201,168,76,0.2);
+  }
+
+  .horse-card {
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .horse-card:hover { border-color: rgba(201,168,76,0.3); }
+
+  .horse-avatar {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.2);
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .horse-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .horse-name { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+  .horse-meta { font-size: 12px; color: var(--muted); }
+
+  .horse-status {
+    margin-left: auto;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-green { background: rgba(76,175,130,0.15); color: var(--green); border: 1px solid rgba(76,175,130,0.3); }
+  .badge-amber { background: rgba(240,165,0,0.15); color: var(--amber); border: 1px solid rgba(240,165,0,0.3); }
+  .badge-red { background: rgba(224,92,92,0.15); color: var(--red); border: 1px solid rgba(224,92,92,0.3); }
+  .badge-blue { background: rgba(74,158,232,0.15); color: var(--blue); border: 1px solid rgba(74,158,232,0.3); }
+
+  .alert-card {
+    background: rgba(224,92,92,0.08);
+    border: 1px solid rgba(224,92,92,0.25);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .alert-text { font-size: 13px; line-height: 1.4; }
+  .alert-title { font-weight: 600; margin-bottom: 2px; }
+  .alert-sub { color: var(--muted); font-size: 12px; }
+
+  .info-card {
+    background: rgba(74,158,232,0.08);
+    border: 1px solid rgba(74,158,232,0.2);
+    border-radius: var(--radius-sm);
+  }
+
+  .form-link-card {
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+
+  .form-link-card:hover {
+    border-color: rgba(201,168,76,0.35);
+    background: rgba(201,168,76,0.05);
+  }
+
+  .form-icon {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .form-details { flex: 1 }
+  .form-title { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .form-desc { font-size: 12px; color: var(--muted); }
+  .form-arrow { color: var(--muted); font-size: 16px; }
+
+  .inv-row {
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .inv-name { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+  .inv-loc { font-size: 11px; color: var(--muted); }
+  .inv-qty { text-align: right; }
+  .inv-num { font-size: 18px; font-weight: 600; }
+  .inv-unit { font-size: 11px; color: var(--muted); }
+
+  .progress-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--fill-color, var(--green));
+    transition: width 0.6s ease;
+  }
+
+  .health-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .health-metric {
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+  }
+
+  .health-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
+  .health-value { font-size: 16px; font-weight: 600; }
+
+  .timeline-item {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+    position: relative;
+  }
+
+  .timeline-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--gold);
+    margin-top: 4px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .timeline-line {
+    position: absolute;
+    left: 4px; top: 14px;
+    width: 1px;
+    height: calc(100% + 4px);
+    background: rgba(201,168,76,0.2);
+  }
+
+  .timeline-content { flex: 1; }
+  .timeline-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .timeline-meta { font-size: 11px; color: var(--muted); }
+
+  .btn-primary {
+    background: var(--gold);
+    color: var(--dark);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 11px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    letter-spacing: 0.5px;
+    transition: opacity 0.2s;
+    margin-top: 12px;
+  }
+
+  .btn-primary:hover { opacity: 0.88; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid rgba(201,168,76,0.4);
+    border-radius: var(--radius-sm);
+    padding: 9px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+  }
+
+  .btn-outline:hover { background: rgba(201,168,76,0.1); }
+
+  .shoeing-card {
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+
+  .shoeing-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .shoeing-name { font-size: 15px; font-weight: 600; }
+  .shoeing-type { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .shoeing-dates { display: flex; gap: 14px; }
+  .shoeing-date-item { flex: 1; }
+  .shoeing-date-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 3px; }
+  .shoeing-date-val { font-size: 13px; font-weight: 500; }
+
+  .staff-card {
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .staff-avatar {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .staff-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 50%;
+  }
+
+  .staff-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .staff-role { font-size: 12px; color: var(--muted); }
+  .staff-loc { font-size: 11px; color: var(--blue); margin-top: 3px; }
+
+  .chart-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .chart-bar-label { font-size: 12px; color: var(--muted); width: 70px; flex-shrink: 0; text-align: right; }
+  .chart-bar-track { flex: 1; height: 20px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+  .chart-bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 600; color: var(--dark); transition: width 0.8s ease; }
+  .chart-bar-count { font-size: 12px; color: var(--muted); width: 28px; flex-shrink: 0; }
+
+  .report-period-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .report-period-btn {
+    border: 1px solid var(--border);
+    background: var(--card2);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .report-period-btn.active {
+    background: rgba(201,168,76,0.2);
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+  .report-alert {
+    background: rgba(224,92,92,0.08);
+    border: 1px solid rgba(224,92,92,0.25);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .report-alert.warn {
+    background: rgba(240,165,0,0.08);
+    border-color: rgba(240,165,0,0.25);
+  }
+  .report-horse-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .report-horse-table th, .report-horse-table td {
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 8px 6px;
+    text-align: left;
+  }
+  .report-horse-table th {
+    color: var(--gold);
+    font-size: 11px;
+    background: rgba(255,255,255,0.03);
+  }
+  .report-formula {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .vaccn-row {
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .vaccn-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .vaccn-horse { font-size: 11px; color: var(--muted); }
+  .vaccn-due { text-align: right; font-size: 12px; }
+  .vaccn-due-label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 2px; }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--gold);
+    margin: 3px 3px 3px 0;
+    font-weight: 500;
+  }
+
+  .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 14px 0; }
+
+  .quick-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .quick-btn {
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: block;
+  }
+
+  .quick-btn:hover { border-color: rgba(201,168,76,0.3); background: rgba(201,168,76,0.05); }
+  .quick-btn-icon { font-size: 22px; display: block; margin-bottom: 5px; }
+  .quick-btn-label { font-size: 11px; color: var(--muted); font-weight: 500; }
+
+  .location-tab {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .loc-chip {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .loc-chip.active {
+    background: rgba(201,168,76,0.15);
+    border-color: rgba(201,168,76,0.4);
+    color: var(--gold);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--muted);
+  }
+
+  .empty-state .icon { font-size: 36px; margin-bottom: 10px; display: block; opacity: 0.4; }
+  .empty-state p { font-size: 13px; line-height: 1.5; }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 13px;
+  }
+
+  .info-row:last-child { border-bottom: none; }
+  .info-key { color: var(--muted); }
+  .info-val { font-weight: 500; }
+
+  .notice {
+    background: rgba(201,168,76,0.08);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--gold);
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+
+  .action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  /* Desktop only: optional centered column (never on phone / iframe) */
+  @media (min-width: 1200px) {
+    html:not(.app-fullwidth) body {
+      max-width: 1100px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .content { padding: 24px 32px 40px; }
+    .stat-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .dashboard-summary.stat-grid-4 { grid-template-columns: 1fr 1fr; gap: 16px; }
+    .stat-value { font-size: 28px; }
+    .horse-card, .staff-card, .form-link-card { padding: 16px; }
+    .quick-actions { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .section-title { font-size: 15px; }
+  }
+
+  /* Mobile: larger text, summary cards one per row (media + app-mobile for GAS iframe) */
+  @media (max-width: 768px) {
+    body { font-size: 16px; }
+    .content { padding: 14px 14px 28px; }
+    .dashboard-summary.stat-grid-4,
+    .dashboard-summary.stat-grid { grid-template-columns: 1fr; gap: 12px; }
+    .stat-card { padding: 16px 18px; min-height: auto; }
+    .stat-label { font-size: 13px; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .stat-value { font-size: 36px; margin-bottom: 6px; }
+    .stat-sub { font-size: 15px; line-height: 1.45; }
+    .stat-icon { font-size: 22px; right: 14px; top: 16px; }
+    .stat-card-lines { font-size: 15px; line-height: 1.65; margin-top: 6px; }
+    .stat-card-lines .stat-line { margin-bottom: 8px; }
+    .stat-card-lines .stat-line-muted { font-size: 14px; }
+    .section-title { font-size: 15px; margin: 20px 0 12px; }
+    .empty-hint { font-size: 14px; padding: 14px 16px; }
+    .empty-state { font-size: 15px; padding: 28px 16px; }
+    .empty-state p { font-size: 15px; }
+    .alert-text { font-size: 15px; }
+    .alert-sub { font-size: 14px; }
+    .alert-icon { font-size: 18px; }
+    .quick-actions { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .quick-btn { padding: 14px 10px; }
+    .quick-btn-icon { font-size: 26px; margin-bottom: 6px; }
+    .quick-btn-label { font-size: 13px; }
+    .horse-name { font-size: 16px; }
+    .horse-meta { font-size: 14px; }
+    .staff-name { font-size: 16px; }
+    .staff-role { font-size: 14px; }
+    .staff-loc { font-size: 13px; }
+    .inv-name { font-size: 15px; }
+    .inv-num { font-size: 20px; }
+    .form-title { font-size: 16px; }
+    .form-desc { font-size: 14px; }
+    .notice { font-size: 14px; }
+    .badge { font-size: 11px; padding: 4px 10px; }
+  }
+
+  html.app-mobile body,
+  html.app-scaled body { font-size: 18px; }
+  html.app-mobile .content { padding: 14px 14px 28px; }
+  html.app-mobile .dashboard-summary.stat-grid-4,
+  html.app-mobile .dashboard-summary.stat-grid { grid-template-columns: 1fr !important; gap: 14px; }
+  html.app-mobile .stat-card { padding: 18px 20px; }
+  html.app-mobile .stat-label { font-size: 14px; letter-spacing: 0.4px; margin-bottom: 10px; }
+  html.app-mobile .stat-value { font-size: 42px; margin-bottom: 8px; }
+  html.app-mobile .stat-sub { font-size: 17px; line-height: 1.5; }
+  html.app-mobile .stat-icon { font-size: 24px; right: 16px; top: 18px; }
+  html.app-mobile .stat-card-lines { font-size: 17px; line-height: 1.7; }
+  html.app-mobile .stat-card-lines .stat-line { margin-bottom: 10px; }
+  html.app-mobile .stat-card-lines .stat-line-muted { font-size: 16px; }
+  html.app-mobile .section-title { font-size: 17px; margin: 22px 0 14px; }
+  html.app-mobile .empty-hint { font-size: 16px; }
+  html.app-mobile .empty-state p { font-size: 17px; }
+  html.app-mobile .alert-text { font-size: 17px; }
+  html.app-mobile .alert-sub { font-size: 16px; }
+  html.app-mobile .alert-icon { font-size: 20px; }
+  html.app-mobile .quick-btn { padding: 16px 12px; }
+  html.app-mobile .quick-btn-label { font-size: 15px; }
+  html.app-mobile .quick-btn-icon { font-size: 28px; }
+  html.app-mobile .horse-name { font-size: 18px; }
+  html.app-mobile .horse-meta { font-size: 16px; }
+  html.app-mobile .staff-name { font-size: 18px; }
+  html.app-mobile .staff-role { font-size: 16px; }
+  html.app-mobile .form-title { font-size: 18px; }
+  html.app-mobile .form-desc { font-size: 16px; }
+  html.app-mobile .notice { font-size: 16px; }
+
+  @media (max-width: 480px) {
+    .header { padding: 14px 12px 12px; }
+    .quick-actions { grid-template-columns: 1fr; }
+    .action-grid { grid-template-columns: 1fr; }
+    .stat-grid-3, .stat-grid-2 { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 360px) {
+    .quick-actions,
+    .health-row {
+      grid-template-columns: 1fr;
+    }
+    .chart-bar-label { width: 56px; font-size: 12px; }
+  }
+
+  #bootError {
+    display: none;
+    margin: 12px 14px 0;
+    padding: 12px 14px;
+    background: rgba(224, 92, 92, 0.15);
+    border: 1px solid rgba(224, 92, 92, 0.4);
+    border-radius: 8px;
+    color: #ffb4b4;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div class="dashboard-shell">
+
+<div id="bootError" role="alert"></div>
+
+<script>
+  window.__APP_PAGE__ = '<?= appPage ?>';
+  window.__APP_TAB__ = '<?= appTab ?>';
+</script>
+<?!= include('AppChrome'); ?>
+
+<div class="content is-loading-data" id="mainContent">
+
+  <!-- DASHBOARD -->
+  <div id="page-dashboard" class="page active">
+    <div class="stat-grid stat-grid-4 dashboard-summary">
+      <div class="stat-card" style="--accent:#C9A84C">
+        <div class="stat-icon">🐎</div>
+        <div class="stat-label">Horses</div>
+        <div class="stat-value is-pending" id="statTotalHorses">0</div>
+        <div class="stat-sub" id="statHorsesSub">Healthy: 0 · Rehab: 0</div>
+      </div>
+      <div class="stat-card stat-card--staff" style="--accent:#4A9EE8">
+        <div class="stat-icon">👥</div>
+        <div class="stat-label">Staff</div>
+        <div id="boxStaff" class="stat-card-lines is-pending">
+          <div class="stat-line">Trainers: Active 0 · Leave 0</div>
+          <div class="stat-line">Grooms: Active 0 · Leave 0</div>
+        </div>
+      </div>
+      <div class="stat-card" style="--accent:#E67E22">
+        <div class="stat-icon">📦</div>
+        <div class="stat-label">Stock Alerts</div>
+        <div id="boxStockAlerts" class="stat-card-lines is-pending">
+          <div class="stat-line">Feed (Mixed): —</div>
+          <div class="stat-line">Barley: —</div>
+          <div class="stat-line">Dry grass: —</div>
+          <div class="stat-line">Shoeing: —</div>
+        </div>
+      </div>
+      <div class="stat-card" style="--accent:#9B59B6">
+        <div class="stat-icon">🏥</div>
+        <div class="stat-label">Health</div>
+        <div id="boxHealth" class="stat-card-lines is-pending">
+          <div class="stat-line">Vet check: —</div>
+          <div class="stat-line">De-worming: —</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Alerts</div>
+
+    <div id="alertsList"><div class="empty-state"><p>Loading alerts…</p></div></div>
+
+    <div class="section-title">Quick Entry</div>
+    <div class="quick-actions">
+      <a class="quick-btn" id="qlink-activity" href="#" onclick="openForm('routine')">
+        <span class="quick-btn-icon">🐎</span>
+        <span class="quick-btn-label">Daily Routine</span>
+      </a>
+      <a class="quick-btn" id="qlink-stock" href="#" onclick="openForm('stock')">
+        <span class="quick-btn-icon">📦</span>
+        <span class="quick-btn-label">Stock Entry</span>
+      </a>
+      <a class="quick-btn" id="qlink-health" href="#" onclick="openForm('health')">
+        <span class="quick-btn-icon">🏥</span>
+        <span class="quick-btn-label">Health Check</span>
+      </a>
+      <a class="quick-btn" id="qlink-vacc" href="#" onclick="openForm('vaccination')">
+        <span class="quick-btn-icon">💉</span>
+        <span class="quick-btn-label">Vaccination</span>
+      </a>
+    </div>
+
+    <div class="section-title" data-section="todayActivity">Today's Activity</div>
+    <div id="todayActivityList"><div class="empty-state"><p>Loading activity…</p></div></div>
+  </div>
+
+  <!-- HORSES -->
+  <div id="page-horses" class="page">
+    <div class="location-tab" id="locationChips"></div>
+    <div id="horsesList"></div>
+
+    <div class="notice">📌 Tap a horse card to view full profile. Connect this to your Google Sheet Horses tab for live data.</div>
+    <a class="btn-outline" style="width:100%;margin-top:4px" onclick="openForm('horse')">+ Add New Horse</a>
+    <a class="btn-outline" style="width:100%;margin-top:8px" onclick="openForm('routine')">+ Daily Routine Log</a>
+  </div>
+
+  <!-- INVENTORY -->
+  <div id="page-inventory" class="page">
+    <div class="section-title">Stock Levels</div>
+
+    <div class="notice">📌 Data pulls from your Daily Inventory Summary sheet. Click "Stock Entry" to log new data.</div>
+
+    <div id="inventoryList"></div>
+
+    <a class="btn-primary" style="display:block;text-align:center;text-decoration:none;font-weight:700" onclick="openForm('stock')">📦 Log Stock Entry</a>
+  </div>
+
+  <!-- HEALTH & MEDICAL -->
+  <div id="page-health" class="page">
+    <div class="notice">📌 Horse Health Checklist records (HorseHealthData) and medical records (MedicalHistory) for your location.</div>
+
+    <div class="section-title">Latest Health Checks</div>
+    <div id="healthList"></div>
+
+    <div class="section-title">Medical History</div>
+    <div id="medicalHistoryList"></div>
+
+    <div class="section-title">Upcoming Vaccinations</div>
+    <div class="notice" style="margin-bottom:10px">📌 Vaccination data from VaccinationData sheet.</div>
+    <div id="medicalVaccinationsList"></div>
+
+    <div class="action-grid" style="margin-top:14px">
+      <a class="btn-outline" style="text-align:center" onclick="openForm('health')">🏥 Health Check</a>
+      <a class="btn-outline" style="text-align:center" onclick="openForm('medical')">🩺 Medical Record</a>
+    </div>
+    <a class="btn-primary" style="display:block;text-align:center;text-decoration:none;font-weight:700;margin-top:8px" onclick="openForm('vaccination')">💉 Log Vaccination</a>
+  </div>
+
+  <!-- SHOEING -->
+  <div id="page-shoeing" class="page">
+    <div class="section-title">Shoeing Schedule</div>
+    <div class="notice">📌 Data from ShoeingData sheet. Farrier records tracked here automatically.</div>
+
+    <div id="shoeingList"></div>
+
+    <a class="btn-primary" style="display:block;text-align:center;text-decoration:none;font-weight:700" onclick="openForm('shoeing')">🦶 Log Shoeing</a>
+  </div>
+
+  <!-- STAFF -->
+  <div id="page-staff" class="page">
+    <div class="section-title">Trainers</div>
+    <div id="trainersList"></div>
+    <div class="section-title">Grooms</div>
+    <div id="groomsList"></div>
+
+    <a class="btn-outline" style="width:100%;margin-top:8px" onclick="openForm('trainer')">+ Add New Trainer</a>
+    <a class="btn-outline" style="width:100%;margin-top:8px" onclick="openForm('groom')">+ Add New Groom</a>
+
+    <!-- <div class="section-title">Role Access</div>
+    <div class="inv-row">
+      <div class="info-key">Admin</div>
+      <div class="info-val">Full Access · All Locations</div>
+    </div>
+    <div class="inv-row">
+      <div class="info-key">Trainer</div>
+      <div class="info-val">Activity + Health</div>
+    </div>
+    <div class="inv-row">
+      <div class="info-key">Groom</div>
+      <div class="info-val">Stock + Health Check</div>
+    </div> -->
+  </div>
+
+  <!-- FORMS -->
+  <div id="page-forms" class="page">
+    <div class="notice">📌 Use these built-in forms to capture operations data on mobile and desktop.</div>
+
+    <div class="section-title">Data Entry Forms</div>
+
+    <a class="form-link-card" id="form-stock" href="#">
+      <div class="form-icon" style="background:rgba(74,158,232,0.1)">📦</div>
+      <div class="form-details">
+        <div class="form-title">Stock Entry</div>
+        <div class="form-desc">Opening / Added / Closing quantities</div>
+      </div>
+      <span class="form-arrow">→</span>
+    </a>
+
+    <a class="form-link-card" id="form-activity" href="#" >
+      <div class="form-icon" style="background:rgba(201,168,76,0.1)">🐎</div>
+      <div class="form-details">
+        <div class="form-title">Daily Routine Log</div>
+        <div class="form-desc">Activity, feed & water per horse (main ops form)</div>
+      </div>
+      <span class="form-arrow">→</span>
+    </a>
+
+    <a class="form-link-card" id="form-health" href="#" >
+      <div class="form-icon" style="background:rgba(76,175,130,0.1)">🏥</div>
+      <div class="form-details">
+        <div class="form-title">Horse Health Checklist</div>
+        <div class="form-desc">Full paper-style checklist — saves to HorseHealthData</div>
+      </div>
+      <span class="form-arrow">→</span>
+    </a>
+
+    <a class="form-link-card" id="form-vaccination" href="#" >
+      <div class="form-icon" style="background:rgba(224,92,92,0.1)">💉</div>
+      <div class="form-details">
+        <div class="form-title">Vaccination</div>
+        <div class="form-desc">Vaccine, date given, next due date</div>
+      </div>
+      <span class="form-arrow">→</span>
+    </a>
+
+    <a class="form-link-card" id="form-shoeing" href="#" >
+      <div class="form-icon" style="background:rgba(240,165,0,0.1)">🦶</div>
+      <div class="form-details">
+        <div class="form-title">Shoeing / Farrier</div>
+        <div class="form-desc">Type, date, next due, farrier name</div>
+      </div>
+      <span class="form-arrow">→</span>
+    </a>
+
+    <div class="section-title">Master Data</div>
+
+    <a class="form-link-card" id="form-horse" href="#">
+      <div class="form-icon" style="background:rgba(201,168,76,0.15)">🐴</div>
+      <div class="form-details">
+        <div class="form-title">Add New Horse</div>
+        <div class="form-desc">Name, breed, location, owner, status</div>
+      </div>
+      <span class="form-arrow">→</span>
+    </a>
+
+    <a class="form-link-card" id="form-trainer" href="#">
+      <div class="form-icon" style="background:rgba(74,158,232,0.12)">👤</div>
+      <div class="form-details">
+        <div class="form-title">Add New Trainer</div>
+        <div class="form-desc">Name, location, specialization, phone</div>
+      </div>
+      <span class="form-arrow">→</span>
+    </a>
+
+    <a class="form-link-card" id="form-groom" href="#">
+      <div class="form-icon" style="background:rgba(76,175,130,0.12)">🧹</div>
+      <div class="form-details">
+        <div class="form-title">Add New Groom</div>
+        <div class="form-desc">Name, location, shift, phone, status</div>
+      </div>
+      <span class="form-arrow">→</span>
+    </a>
+
+    <div class="notice" style="margin-top:16px">⚙️ These form buttons are linked to local pages so your team can submit entries directly.</div>
+  </div>
+
+  <!-- REPORTS -->
+  <div id="page-reports" class="page">
+    <div class="section-title">Operations Reports</div>
+    <p class="notice" style="margin-top:0;margin-bottom:12px">Daily, weekly, and monthly stable analytics from Daily Routine Log, ActivityData, and inventory. Formulas follow the operations report spec.</p>
+
+    <div class="report-period-bar">
+      <button type="button" class="report-period-btn active" data-report-period="daily">Daily</button>
+      <button type="button" class="report-period-btn" data-report-period="weekly">Weekly</button>
+      <button type="button" class="report-period-btn" data-report-period="monthly">Monthly</button>
+      <button type="button" class="report-period-btn" id="reportRefreshBtn" style="margin-left:auto">↻ Refresh</button>
+      <button type="button" class="report-period-btn" id="reportEmailBtn">✉ Email Report</button>
+    </div>
+    <div id="reportPeriodMeta" class="notice" style="margin-bottom:14px">Select a period to load report.</div>
+
+    <div id="operationsReportBody">
+      <div class="empty-state"><p>Loading report…</p></div>
+    </div>
+
+    <div class="section-title" style="margin-top:20px">Activity Overview</div>
+    <div class="stat-grid" style="margin-bottom:14px">
+      <div class="stat-card" style="--accent:#4CAF82">
+        <div class="stat-label" id="reportSessionsLabel">Sessions This Week</div>
+        <div class="stat-value" id="reportSessions">0</div>
+        <div class="stat-sub" id="reportSessionsSub">Activity log</div>
+      </div>
+      <div class="stat-card" style="--accent:#4A9EE8">
+        <div class="stat-label">Avg Duration</div>
+        <div class="stat-value"><span id="reportAvgDuration">0</span><span style="font-size:14px">m</span></div>
+        <div class="stat-sub">Per session</div>
+      </div>
+    </div>
+
+    <div class="section-title">Activity by Type</div>
+    <div id="reportActivityMix"></div>
+
+    <div class="section-title">Health Summary</div>
+    <div id="reportHealthSummary"></div>
+
+    <div class="section-title">Inventory Consumption</div>
+    <div id="reportInventoryConsumption"></div>
+  </div>
+
+</div>
+
+</div>
+
+<script>
+  var OPS_DASH_DEBUG = true;
+
+  function dashLog() {
+    if (!OPS_DASH_DEBUG || typeof console === 'undefined' || !console.log) return;
+    var args = ['[KingsOps Dashboard]'].concat(Array.prototype.slice.call(arguments));
+    console.log.apply(console, args);
+  }
+
+  function dashWarn() {
+    if (typeof console === 'undefined' || !console.warn) return;
+    var args = ['[KingsOps Dashboard]'].concat(Array.prototype.slice.call(arguments));
+    console.warn.apply(console, args);
+  }
+
+  function dashError() {
+    if (typeof console === 'undefined' || !console.error) return;
+    var args = ['[KingsOps Dashboard]'].concat(Array.prototype.slice.call(arguments));
+    console.error.apply(console, args);
+  }
+
+  /** Always show a number; empty/null/NaN → 0 */
+  function num(v) {
+    if (v === null || v === undefined || v === '') return 0;
+    var n = Number(v);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function summarizeDashData(data) {
+    if (!data) return null;
+    return {
+      viewLocation: data.viewLocation,
+      viewLocationLabel: data.viewLocationLabel,
+      horses: (data.horses || []).length,
+      unfilteredHorses: data._unfilteredHorseCount,
+      trainers: (data.trainers || []).length,
+      grooms: (data.grooms || []).length,
+      alerts: (data.alerts || []).length,
+      todayActivity: (data.todayActivity || []).length,
+      inventory: (data.inventory || []).length,
+      health: (data.health || []).length,
+      stats: data.stats,
+      locationWarning: data._locationFilterWarning || '',
+      _loadError: data._loadError
+    };
+  }
+
+  function emptyDashboardZeros_(errMsg) {
+    return {
+      stats: {
+        totalHorses: 0, healthy: 0, rehabilitation: 0, watch: 0, staff: 0,
+        stockAlerts: 0, locationCount: 0, trainersActive: 0, trainersLeave: 0,
+        groomsActive: 0, groomsLeave: 0
+      },
+      widgets: { horses: { healthy: 0, rehabilitation: 0, watch: 0 }, trainers: { active: 0, leave: 0 }, grooms: { active: 0, leave: 0 }, stockDays: [], horsesPerTrainer: [], horsesPerGroom: [], healthDue: {} },
+      horses: [], trainers: [], grooms: [], locations: [], alerts: [],
+      todayActivity: [], inventory: [], health: [], vaccinations: [], medicalHistory: [], shoeing: [],
+      reports: { sessionsThisWeek: 0, avgDuration: 0, periodLabel: 'This Week', activityMix: {}, healthSummary: { healthy: 0, watch: 0, vetCare: 0 }, inventoryConsumption: {} },
+      viewLocation: '', viewLocationLabel: '',
+      _loadError: errMsg || ''
+    };
+  }
+
+  function syncTokenFromUrl() {
+    var params = new URLSearchParams(window.location.search);
+    var token = params.get('token');
+    if (token) {
+      try {
+        localStorage.setItem('opsAuthToken', token);
+      } catch (e) {}
+    }
+  }
+
+  function getAuthToken() {
+    syncTokenFromUrl();
+    return localStorage.getItem('opsAuthToken') || '';
+  }
+
+  function showBootError(message) {
+    var el = document.getElementById('bootError');
+    if (!el) return;
+    el.textContent = message;
+    el.style.display = 'block';
+  }
+
+  function setContentLoading(isLoading) {
+    var content = document.getElementById('mainContent');
+    if (content) {
+      content.classList.toggle('is-loading-data', !!isLoading);
+    }
+  }
+
+  function setStatsPending(isPending) {
+    var el = document.getElementById('statTotalHorses');
+    if (el) el.classList.toggle('is-pending', !!isPending);
+    ['boxStaff', 'boxStockAlerts', 'boxHealth'].forEach(function(id) {
+      var box = document.getElementById(id);
+      if (box) box.classList.toggle('is-pending', !!isPending);
+    });
+  }
+
+  function findStockDaysRow_(stockDays, nameKeys) {
+    var list = stockDays || [];
+    var ki, i;
+    for (i = 0; i < list.length; i++) {
+      var n = String(list[i].item || '').toLowerCase();
+      for (ki = 0; ki < nameKeys.length; ki++) {
+        if (n.indexOf(String(nameKeys[ki]).toLowerCase()) >= 0) return list[i];
+      }
+    }
+    return null;
+  }
+
+  function formatStockDaysLine_(label, stockDays, nameKeys) {
+    var row = findStockDaysRow_(stockDays, nameKeys);
+    if (!row || row.daysLeft == null || row.daysLeft === '') {
+      return label + ': —';
+    }
+    return label + ': ' + num(row.daysLeft) + ' days stock';
+  }
+
+  function showLoader(message) {
+    if (window.AppLoader) {
+      window.AppLoader.show(message || 'Loading…');
+    }
+  }
+
+  function hideLoader() {
+    if (window.AppLoader) {
+      window.AppLoader.hide();
+    }
+  }
+
+  function redirectToApp(url) {
+    if (!url) return;
+    try {
+      if (window.top && window.top !== window.self) {
+        window.top.location.replace(url);
+        return;
+      }
+    } catch (e) {}
+    try {
+      var link = document.createElement('a');
+      link.href = url;
+      link.target = '_top';
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return;
+    } catch (e2) {}
+    window.location.replace(url);
+  }
+
+  function clearAuthAndRedirect() {
+    showLoader('Redirecting to login…');
+    localStorage.removeItem('opsAuthToken');
+    if (window.google && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(redirectToApp)
+        .withFailureHandler(function() {
+          hideLoader();
+          redirectToApp(window.location.href.split('?')[0] + '?page=login');
+        })
+        .buildAppPageUrl('login', '');
+      return;
+    }
+    redirectToApp(window.location.href.split('?')[0] + '?page=login');
+  }
+
+  function requireAuth() {
+    var token = getAuthToken();
+    if (!token) {
+      showBootError('Session missing. Please log in again.');
+      setTimeout(clearAuthAndRedirect, 1500);
+      return '';
+    }
+    return token;
+  }
+
+  var FORM_PAGES = {
+    stock: "form-daily-stock-entry",
+    activity: "form-horse-activity",
+    health: "form-health-check",
+    healthcheck: "form-health-check",
+    routine: "form-daily-routine",
+    activity: "form-daily-routine",
+    vaccination: "form-vaccination",
+    shoeing: "form-shoeing-record",
+    medical: "form-health-medical",
+    horse: "form-add-horse",
+    trainer: "form-add-trainer",
+    groom: "form-add-groom"
+  };
+
+  var FORM_TAB_MODE = {
+    health: "health",
+    medical: "medical",
+    routine: "routine",
+    activity: "routine"
+  };
+
+  function initDashboardUi() {
+    var liveDate = document.getElementById('liveDate');
+    if (liveDate) {
+      var now = new Date();
+      liveDate.textContent = now.toLocaleDateString('en-IN', {weekday:'short', day:'numeric', month:'short', year:'numeric'});
+    }
+  }
+
+  var dashboardCache = { horses: [], locations: [] };
+  var activeHorseFilter = 'All';
+  var activeReportPeriod = 'daily';
+  var operationsReportCache = null;
+
+  function showPage(name) {
+    dashLog('showPage()', name);
+    if (name === 'medical') name = 'health';
+    var pageId = 'page-' + (name || 'dashboard');
+    var pageEl = document.getElementById(pageId);
+    if (!pageEl) return;
+    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+    pageEl.classList.add('active');
+    document.querySelectorAll('.app-main-nav .nav-btn').forEach(function(b) {
+      var tab = b.getAttribute('data-tab') || '';
+      b.classList.toggle('active', tab === (name || 'dashboard'));
+    });
+    try { history.replaceState(null, '', '?page=dashboard&tab=' + encodeURIComponent(name || 'dashboard')); } catch (e) {}
+    if (name === 'reports') {
+      loadOperationsReport(activeReportPeriod);
+    }
+  }
+  window.showPage = showPage;
+
+  function filterLoc(el) {
+    document.querySelectorAll('.loc-chip').forEach(function(c) { c.classList.remove('active'); });
+    el.classList.add('active');
+    activeHorseFilter = el.getAttribute('data-loc') || el.textContent || 'All';
+    renderHorsesList(dashboardCache.horses, dashboardCache.locations);
+  }
+
+  function staffInitials(name) {
+    var parts = String(name || '').trim().split(/\s+/);
+    if (!parts.length) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function horseStatusBadge(horse) {
+    var hs = (horse.healthStatus || horse.status || '').toString();
+    if (hs.indexOf('🔴') >= 0 || /vet|attention|care/i.test(hs)) {
+      return '<span class="badge badge-red">Vet Care</span>';
+    }
+    if (hs.indexOf('🟡') >= 0 || /watch/i.test(hs)) {
+      return '<span class="badge badge-amber">Watch</span>';
+    }
+    if (/active|healthy|ok/i.test(hs) || hs.indexOf('🟢') >= 0) {
+      return '<span class="badge badge-green">Healthy</span>';
+    }
+    if (horse.status) {
+      var s = horse.status.toLowerCase();
+      if (s.indexOf('inactive') >= 0) return '<span class="badge badge-red">' + text(horse.status) + '</span>';
+      return '<span class="badge badge-green">' + text(horse.status) + '</span>';
+    }
+    return '<span class="badge badge-green">Active</span>';
+  }
+
+  function renderLocationChips(locations) {
+    var el = document.getElementById('locationChips');
+    if (!el) return;
+    var viewLoc = (window.AppLocation && window.AppLocation.getViewLocation()) || '';
+    var isAdmin = window.AppLocation && window.AppLocation.isAdmin();
+    if (!isAdmin || viewLoc) {
+      el.style.display = 'none';
+      activeHorseFilter = viewLoc || (window.AppLocation && window.AppLocation.getUserLocation()) || 'All';
+      return;
+    }
+    el.style.display = '';
+    var chips = ['<div class="loc-chip' + (activeHorseFilter === 'All' ? ' active' : '') + '" data-loc="All" onclick="filterLoc(this)">All</div>'];
+    (locations || []).forEach(function(loc) {
+      var active = activeHorseFilter === loc ? ' active' : '';
+      chips.push('<div class="loc-chip' + active + '" data-loc="' + text(loc).replace(/"/g, '&quot;') + '" onclick="filterLoc(this)">' + text(loc) + '</div>');
+    });
+    el.innerHTML = chips.join('');
+  }
+
+  function escapeAttr(v) {
+    return String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
+  function profileAvatarFallback_(img) {
+    var fallbackHtml = img.getAttribute('data-fallback-html') || '🐴';
+    if (!img || img.dataset.fallbackDone === '1') {
+      if (img && img.parentNode) img.parentNode.innerHTML = fallbackHtml;
+      return;
+    }
+    var step = parseInt(img.dataset.fallbackStep || '0', 10);
+    var fileId = img.getAttribute('data-file-id') || '';
+    if (step === 0 && fileId) {
+      img.dataset.fallbackStep = '1';
+      img.src = 'https://drive.google.com/uc?export=view&id=' + encodeURIComponent(fileId);
+      return;
+    }
+    if (step === 1 && fileId && window.google && google.script && google.script.run) {
+      img.dataset.fallbackStep = '2';
+      google.script.run
+        .withSuccessHandler(function(dataUrl) {
+          if (dataUrl && String(dataUrl).indexOf('data:') === 0) {
+            img.src = dataUrl;
+            return;
+          }
+          img.dataset.fallbackDone = '1';
+          img.parentNode.innerHTML = fallbackHtml;
+        })
+        .withFailureHandler(function() {
+          img.dataset.fallbackDone = '1';
+          img.parentNode.innerHTML = fallbackHtml;
+        })
+        .getProfilePhotoDataUrl(fileId, getAuthToken());
+      return;
+    }
+    img.dataset.fallbackDone = '1';
+    img.parentNode.innerHTML = fallbackHtml;
+  }
+  window.profileAvatarFallback_ = profileAvatarFallback_;
+
+  function profileAvatarHtml(person, opts) {
+    opts = opts || {};
+    var avatarClass = opts.avatarClass || 'horse-avatar';
+    var fallbackHtml = opts.fallbackHtml || '🐴';
+    var avatarStyle = opts.avatarStyle || '';
+    var fileId = String(person.photoFileId || person.Photo_File_ID || '').trim();
+    var url = String(person.photoUrl || person.Photo_URL || '').trim();
+    if (!url && !fileId) {
+      var styleAttr = avatarStyle ? ' style="' + avatarStyle + '"' : '';
+      return '<div class="' + avatarClass + '"' + styleAttr + '>' + fallbackHtml + '</div>';
+    }
+    if (!url && fileId) {
+      url = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(fileId) + '&sz=w200';
+    }
+    return '<div class="' + avatarClass + '"><img data-file-id="' + escapeAttr(fileId) + '" data-fallback-html="' + escapeAttr(fallbackHtml) + '" src="' + escapeAttr(url) + '" alt="' + escapeAttr(person.name || '') + '" loading="lazy" onerror="window.profileAvatarFallback_ && window.profileAvatarFallback_(this)"></div>';
+  }
+
+  function horseAvatarHtml(h) {
+    return profileAvatarHtml(h, { avatarClass: 'horse-avatar', fallbackHtml: '🐴' });
+  }
+
+  function staffAvatarHtml(staff, kind) {
+    var initials = staffInitials(staff.name);
+    var style = kind === 'groom'
+      ? 'background:rgba(76,175,130,0.15);color:var(--green)'
+      : 'background:rgba(74,158,232,0.15);color:var(--blue)';
+    return profileAvatarHtml(staff, {
+      avatarClass: 'staff-avatar',
+      avatarStyle: style,
+      fallbackHtml: initials
+    });
+  }
+
+  function hydrateProfileAvatars() {
+    var imgs = document.querySelectorAll('#horsesList img[data-file-id], #trainersList img[data-file-id], #groomsList img[data-file-id]');
+    if (!imgs.length || !(window.google && google.script && google.script.run)) return;
+    var ids = [];
+    var seen = {};
+    imgs.forEach(function(img) {
+      var id = img.getAttribute('data-file-id');
+      if (id && !seen[id]) {
+        seen[id] = true;
+        ids.push(id);
+      }
+    });
+    if (!ids.length) return;
+    var token = getAuthToken();
+    if (!token) return;
+    google.script.run
+      .withSuccessHandler(function(map) {
+        if (!map) return;
+        imgs.forEach(function(img) {
+          var id = img.getAttribute('data-file-id');
+          var dataUrl = id && map[id];
+          if (dataUrl && String(dataUrl).indexOf('data:') === 0) {
+            img.src = dataUrl;
+            img.dataset.fallbackDone = '1';
+          }
+        });
+      })
+      .withFailureHandler(function(err) {
+        dashLog('hydrateProfileAvatars failed', err);
+      })
+      .getHorsePhotoDataUrls(ids, token);
+  }
+
+  function renderHorsesList(horses, locations) {
+    dashboardCache.horses = horses || [];
+    dashboardCache.locations = locations || [];
+    renderLocationChips(locations);
+    var list = document.getElementById('horsesList');
+    if (!list) return;
+    /* Server already filters by admin location; list is ready to display */
+    var filtered = horses || [];
+    if (!filtered.length) {
+      list.innerHTML = '<div class="empty-state"><p>No horses found for this location.</p></div>';
+      return;
+    }
+    list.innerHTML = filtered.map(function(h) {
+      var meta = [text(h.breed, ''), text(h.age, '') ? text(h.age) + ' yrs' : '', text(h.location, '')].filter(Boolean).join(' · ');
+      var ownerLine = h.owner ? '<div style="font-size:11px;color:var(--muted);margin-top:5px">Owner: ' + text(h.owner) + '</div>' : '';
+      var extra = [];
+      if (h.weight) extra.push(text(h.weight) + ' kg');
+      if (h.leaseRider) extra.push('Lease: ' + text(h.leaseRider));
+      if (h.presentMedication) extra.push('Meds: ' + text(h.presentMedication).slice(0, 40) + (text(h.presentMedication).length > 40 ? '…' : ''));
+      var extraLine = extra.length ? '<div style="font-size:11px;color:var(--muted);margin-top:4px">' + extra.join(' · ') + '</div>' : '';
+      var hid = text(h.id, '');
+      var editBtn = hid ? '<button type="button" class="btn-edit-horse" data-horse-id="' + hid + '" style="margin-top:8px;padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid var(--border);background:rgba(201,168,76,0.15);color:var(--gold);cursor:pointer">Edit</button>' : '';
+      return (
+        '<div class="horse-card">' +
+          horseAvatarHtml(h) +
+          '<div style="flex:1">' +
+            '<div class="horse-name">' + text(h.name) + '</div>' +
+            '<div class="horse-meta">' + meta + '</div>' +
+            extraLine +
+          '</div>' +
+          '<div class="horse-status">' + horseStatusBadge(h) + ownerLine + editBtn + '</div>' +
+        '</div>'
+      );
+    }).join('');
+    list.querySelectorAll('.btn-edit-horse').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = btn.getAttribute('data-horse-id');
+        if (id) editHorse(id);
+      });
+    });
+    hydrateProfileAvatars();
+  }
+
+  function staffStatusBadge(status) {
+    var s = String(status || 'Active').toLowerCase();
+    if (s.indexOf('leave') >= 0) return '<span class="badge badge-amber">Leave</span>';
+    if (s.indexOf('inactive') >= 0) return '<span class="badge badge-red">Inactive</span>';
+    return '<span class="badge badge-green">Active</span>';
+  }
+
+  function staffEditBtn(kind, name) {
+    if (!name) return '';
+    var attr = kind === 'trainer' ? 'data-trainer-name' : 'data-groom-name';
+    var cls = kind === 'trainer' ? 'btn-edit-trainer' : 'btn-edit-groom';
+    return '<button type="button" class="' + cls + '" ' + attr + '="' + String(name).replace(/"/g, '&quot;') + '" style="margin-top:8px;padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid var(--border);background:rgba(201,168,76,0.15);color:var(--gold);cursor:pointer">Edit</button>';
+  }
+
+  function renderStaffLists(trainers, grooms) {
+    var tEl = document.getElementById('trainersList');
+    var gEl = document.getElementById('groomsList');
+    if (tEl) {
+      tEl.innerHTML = (trainers || []).map(function(t) {
+        return (
+          '<div class="staff-card">' +
+            staffAvatarHtml(t, 'trainer') +
+            '<div>' +
+              '<div class="staff-name">' + text(t.name) + '</div>' +
+              '<div class="staff-role">' + text(t.specialization, 'Trainer') + (t.experienceYears ? ' · ' + text(t.experienceYears) + ' yrs exp' : '') + '</div>' +
+              '<div class="staff-loc">📍 ' + text(t.location) + '</div>' +
+              staffEditBtn('trainer', t.name) +
+            '</div>' +
+            '<div style="margin-left:auto">' + staffStatusBadge(t.status) + '</div>' +
+          '</div>'
+        );
+      }).join('') || '<div class="empty-state"><p>No trainers in sheet.</p></div>';
+      tEl.querySelectorAll('.btn-edit-trainer').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var n = btn.getAttribute('data-trainer-name');
+          if (n) editTrainer(n);
+        });
+      });
+    }
+    if (gEl) {
+      gEl.innerHTML = (grooms || []).map(function(g) {
+        var shift = g.shift ? ' · ' + text(g.shift) : '';
+        return (
+          '<div class="staff-card">' +
+            staffAvatarHtml(g, 'groom') +
+            '<div>' +
+              '<div class="staff-name">' + text(g.name) + '</div>' +
+              '<div class="staff-role">Groom' + shift + '</div>' +
+              '<div class="staff-loc">📍 ' + text(g.location) + '</div>' +
+              staffEditBtn('groom', g.name) +
+            '</div>' +
+            '<div style="margin-left:auto">' + staffStatusBadge(g.status) + '</div>' +
+          '</div>'
+        );
+      }).join('') || '<div class="empty-state"><p>No grooms in sheet.</p></div>';
+      gEl.querySelectorAll('.btn-edit-groom').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var n = btn.getAttribute('data-groom-name');
+          if (n) editGroom(n);
+        });
+      });
+    }
+    hydrateProfileAvatars();
+  }
+
+  function openForm(type, extraQuery) {
+    var token = getAuthToken();
+    if (!token) {
+      clearAuthAndRedirect();
+      return;
+    }
+    var page = FORM_PAGES[type];
+    if (!page) {
+      alert('Form link not configured for: ' + String(type).toUpperCase());
+      return;
+    }
+    if (!(window.google && google.script && google.script.run)) {
+      showBootError('Cannot open forms outside the deployed web app URL.');
+      return;
+    }
+    showLoader('Opening form…');
+    var formTab = FORM_TAB_MODE[type] || '';
+    google.script.run
+      .withSuccessHandler(redirectToApp)
+      .withFailureHandler(function(err) {
+        hideLoader();
+        showBootError(err && err.message ? err.message : 'Could not open form.');
+      })
+      .buildAppPageUrl(page, token, '', formTab, extraQuery || null);
+  }
+
+  function editHorse(horseId) {
+    if (!horseId) return;
+    openForm('horse', { horseId: horseId, edit: '1' });
+  }
+
+  function editTrainer(trainerName) {
+    if (!trainerName) return;
+    openForm('trainer', { trainerName: trainerName, edit: '1' });
+  }
+
+  function editGroom(groomName) {
+    if (!groomName) return;
+    openForm('groom', { groomName: groomName, edit: '1' });
+  }
+
+  function setReportPeriod(period) {
+    activeReportPeriod = period || 'daily';
+    document.querySelectorAll('.report-period-btn[data-report-period]').forEach(function(btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-report-period') === activeReportPeriod);
+    });
+    loadOperationsReport(activeReportPeriod);
+  }
+
+  function renderOperationsReport(report) {
+    var el = document.getElementById('operationsReportBody');
+    var meta = document.getElementById('reportPeriodMeta');
+    if (!el) return;
+    if (!report) {
+      el.innerHTML = '<div class="empty-state"><p>No report data.</p></div>';
+      return;
+    }
+    operationsReportCache = report;
+    if (meta) {
+      meta.textContent = (report.periodLabel || '') + ' · ' + (report.location || '') + ' · ' + (report.dateRange || '') + ' · Updated ' + (report.generatedAt || '');
+    }
+    var s = report.summary || {};
+    var html = '<div class="stat-grid" style="margin-bottom:14px">';
+    html += '<div class="stat-card" style="--accent:#d4af37"><div class="stat-label">Horses</div><div class="stat-value">' + num(s.horses) + '</div><div class="stat-sub">' + num(s.logsRecorded) + ' logs</div></div>';
+    html += '<div class="stat-card" style="--accent:#4CAF82"><div class="stat-label">Feed (kg)</div><div class="stat-value">' + num(s.totalFeedKg) + '</div><div class="stat-sub">Avg ' + num(s.avgFeedPerDay) + '/day</div></div>';
+    html += '<div class="stat-card" style="--accent:#4A9EE8"><div class="stat-label">Water (L)</div><div class="stat-value">' + num(s.totalWaterL) + '</div><div class="stat-sub">Avg ' + num(s.avgWaterPerDay) + '/day</div></div>';
+    html += '<div class="stat-card" style="--accent:#E05C5C"><div class="stat-label">Alerts</div><div class="stat-value">' + num(s.alertCount) + '</div><div class="stat-sub">' + num(s.activityHours) + ' hr activity</div></div>';
+    html += '</div>';
+
+    if ((report.metrics || []).length) {
+      html += '<div class="section-title">Key Metrics</div>';
+      (report.metrics || []).forEach(function(m) {
+        html += '<div class="inv-row"><div class="info-key">' + text(m.label) + '<div class="report-formula">' + text(m.formula, '') + '</div></div><div class="info-val">' + text(m.value) + '</div></div>';
+      });
+    }
+
+    if ((report.alerts || []).length) {
+      html += '<div class="section-title">Alerts</div>';
+      (report.alerts || []).slice(0, 12).forEach(function(a) {
+        var cls = a.type === 'vaccination' || a.type === 'health' ? ' report-alert warn' : ' report-alert';
+        html += '<div class="' + cls.trim() + '"><strong>' + text(a.title) + '</strong><br><span style="color:var(--muted);font-size:12px">' + text(a.sub) + '</span></div>';
+      });
+    }
+
+    if ((report.horseRows || []).length) {
+      html += '<div class="section-title">Horse Details</div>';
+      html += '<div style="overflow:auto"><table class="report-horse-table"><thead><tr>';
+      html += '<th>Horse</th><th>Feed kg</th><th>Water L</th><th>Expected</th><th>Activity</th><th>Status</th>';
+      html += '</tr></thead><tbody>';
+      (report.horseRows || []).forEach(function(h) {
+        html += '<tr><td><strong>' + text(h.horse) + '</strong><br><span style="color:var(--muted);font-size:10px">' +
+          text(h.trainer, '') + (h.groom ? ' · ' + text(h.groom) : '') + '</span></td>';
+        html += '<td>' + num(h.feedTotal) + (h.feedVariance ? '<br><span style="font-size:10px;color:var(--muted)">Δ ' + h.feedVariance + '</span>' : '') + '</td>';
+        html += '<td>' + num(h.waterTotal) + (h.waterVariance ? '<br><span style="font-size:10px;color:var(--muted)">Δ ' + h.waterVariance + '</span>' : '') + '</td>';
+        html += '<td>' + num(h.feedDefault) + ' kg<br>' + num(h.waterDefault) + ' L</td>';
+        html += '<td>' + num(h.activityHours) + ' hr' + (h.utilizationPct ? '<br><span style="font-size:10px">' + h.utilizationPct + '% util</span>' : '') + '</td>';
+        html += '<td>' + text(h.status) + (h.flags && h.flags.length ? '<br><span style="font-size:10px;color:var(--amber)">' + h.flags.join('; ') + '</span>' : '') + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+
+    if ((report.insights || []).length) {
+      html += '<div class="section-title">Management Insights</div>';
+      (report.insights || []).forEach(function(ins) {
+        html += '<div class="inv-row"><div class="info-key">' + text(ins.label) + '</div><div class="info-val">' + text(ins.value) + '</div></div>';
+      });
+    }
+
+    if ((report.inventory || []).length) {
+      html += '<div class="section-title">Feed Stock &amp; Days Remaining</div>';
+      (report.inventory || []).forEach(function(inv) {
+        html += '<div class="inv-row"><div class="info-key">' + text(inv.item) +
+          (inv.reorder ? ' <span class="badge badge-red">Reorder</span>' : '') +
+          '</div><div class="info-val">' + num(inv.stock) + ' in stock · ' + num(inv.dailyUse) + '/day · ' +
+          (inv.daysRemaining != null ? inv.daysRemaining + ' days' : '—') + '</div></div>';
+      });
+    }
+
+    el.innerHTML = html;
+
+    if (report.summary) {
+      document.getElementById('reportSessions').textContent = String(num(report.summary.activitySessions));
+      document.getElementById('reportAvgDuration').textContent = String(num(report.summary.avgDurationMin));
+      var sessLabelEl = document.getElementById('reportSessionsLabel');
+      if (sessLabelEl) sessLabelEl.textContent = 'Sessions — ' + (report.periodLabel || '');
+      var mix = report.activityMix || {};
+      var mixTotal = Object.values(mix).reduce(function(sum, n) { return sum + Number(n || 0); }, 0) || 1;
+      document.getElementById('reportActivityMix').innerHTML = Object.keys(mix).map(function(name, i) {
+        var count = Number(mix[name] || 0);
+        var pct = Math.round((count * 100) / mixTotal);
+        var colors = ['var(--gold)', 'var(--blue)', 'var(--green)', 'var(--amber)', 'var(--muted)'];
+        return '<div class="chart-bar-row"><div class="chart-bar-label">' + text(name) + '</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:' + pct + '%;background:' + colors[i % colors.length] + '">' + pct + '%</div></div><div class="chart-bar-count">' + count + '</div></div>';
+      }).join('') || '<div class="empty-state"><p>No activity data for this period.</p></div>';
+    }
+  }
+
+  function emailOperationsReport() {
+    var token = getAuthToken();
+    if (!token) return;
+    var viewLoc = (window.AppLocation && window.AppLocation.getViewLocation()) || '';
+    var btn = document.getElementById('reportEmailBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Sending…";
+    }
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "✉ Email Report";
+        }
+        alert("Report emailed to " + (res.sentTo || "your address") + ".");
+      })
+      .withFailureHandler(function(err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "✉ Email Report";
+        }
+        alert("Email failed: " + (err && err.message ? err.message : err));
+      })
+      .sendOperationsReportEmail(activeReportPeriod, viewLoc, token);
+  }
+
+  function loadOperationsReport(period) {
+    var token = getAuthToken();
+    if (!token || !(window.google && google.script && google.script.run)) {
+      return;
+    }
+    var el = document.getElementById('operationsReportBody');
+    if (el) el.innerHTML = '<div class="empty-state"><p>Loading ' + (period || 'daily') + ' report…</p></div>';
+    var viewLoc = (window.AppLocation && window.AppLocation.getViewLocation()) || '';
+    google.script.run
+      .withSuccessHandler(function(report) {
+        renderOperationsReport(report);
+      })
+      .withFailureHandler(function(err) {
+        if (el) el.innerHTML = '<div class="empty-state"><p>Report failed: ' + text(err && err.message ? err.message : err) + '</p></div>';
+      })
+      .getOperationsReport(period || 'daily', viewLoc, token);
+  }
+
+  document.querySelectorAll('.report-period-btn[data-report-period]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      setReportPeriod(btn.getAttribute('data-report-period'));
+    });
+  });
+  var reportRefreshBtn = document.getElementById('reportRefreshBtn');
+  if (reportRefreshBtn) {
+    reportRefreshBtn.addEventListener('click', function() {
+      loadOperationsReport(activeReportPeriod);
+    });
+  }
+  var reportEmailBtn = document.getElementById('reportEmailBtn');
+  if (reportEmailBtn) {
+    reportEmailBtn.addEventListener('click', emailOperationsReport);
+  }
+
+  document.querySelectorAll('[id^="form-"]').forEach(el => {
+    const key = el.id.replace('form-', '');
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      openForm(key);
+    });
+  });
+
+  document.querySelectorAll('[id^="qlink-"]').forEach(el => {
+    el.addEventListener('click', function(e) { e.preventDefault(); });
+  });
+
+  function formatDate(value) {
+    if (!value) return '-';
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return String(value);
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function text(v, fallback = '-') {
+    return v === undefined || v === null || v === '' ? fallback : String(v);
+  }
+
+  function renderDashboard(data) {
+    dashLog('renderDashboard() called', summarizeDashData(data));
+    if (!data) {
+      dashWarn('renderDashboard: no data — showing zeros');
+      data = emptyDashboardZeros_('No data returned');
+    }
+    if (data._loadError) {
+      dashError('renderDashboard load error:', data._loadError);
+      showBootError('Dashboard: ' + data._loadError);
+    }
+    var stats = data.stats || {};
+    var reports = data.reports || {};
+    var healthSummary = reports.healthSummary || { healthy: 0, watch: 0, vetCare: 0 };
+    var horseCount = stats.totalHorses != null && stats.totalHorses !== ''
+      ? num(stats.totalHorses)
+      : (data.horses || []).length;
+    var staffCount = stats.staff != null && stats.staff !== '' ? num(stats.staff)
+      : (data.trainers || []).length + (data.grooms || []).length;
+
+    var widgets = data.widgets || {};
+    var wh = widgets.horses || {};
+    var wt = widgets.trainers || {};
+    var wg = widgets.grooms || {};
+    var healthyVal = wh.healthy != null ? num(wh.healthy)
+      : (stats.healthy != null ? num(stats.healthy) : num(healthSummary.healthy));
+    var rehabVal = wh.rehabilitation != null ? num(wh.rehabilitation) : num(stats.rehabilitation);
+    var watchVal = wh.watch != null ? num(wh.watch) : num(healthSummary.watch);
+    var trainersActive = stats.trainersActive != null ? num(stats.trainersActive) : num(wt.active);
+    var trainersLeave = stats.trainersLeave != null ? num(stats.trainersLeave) : num(wt.leave);
+    var groomsActive = stats.groomsActive != null ? num(stats.groomsActive) : num(wg.active);
+    var groomsLeave = stats.groomsLeave != null ? num(stats.groomsLeave) : num(wg.leave);
+
+    setStatsPending(false);
+    document.getElementById('statTotalHorses').textContent = String(horseCount);
+    var horsesSub = document.getElementById('statHorsesSub');
+    if (horsesSub) {
+      horsesSub.textContent = 'Healthy: ' + healthyVal + ' · Rehab: ' + rehabVal;
+    }
+
+    var staffLines = [
+      '<div class="stat-line">Trainers: Active ' + trainersActive + ' · Leave ' + trainersLeave + '</div>',
+      '<div class="stat-line">Grooms: Active ' + groomsActive + ' · Leave ' + groomsLeave + '</div>'
+    ];
+    (widgets.horsesPerTrainer || []).forEach(function(x) {
+      staffLines.push('<div class="stat-line stat-line-muted">' + text(x.name) + ': ' + num(x.count) + ' horses</div>');
+    });
+    (widgets.horsesPerGroom || []).forEach(function(x) {
+      staffLines.push('<div class="stat-line stat-line-muted">' + text(x.name) + ': ' + num(x.count) + ' horses</div>');
+    });
+    var boxStaff = document.getElementById('boxStaff');
+    if (boxStaff) boxStaff.innerHTML = staffLines.join('');
+
+    var stockDays = widgets.stockDays || [];
+    var hd = widgets.healthDue || {};
+    dashLog('widgets stockDays:', stockDays.length, '| alerts:', (data.alerts || []).length,
+      '| todayActivity:', (data.todayActivity || []).length, '| inventory:', (data.inventory || []).length);
+    var stockLines = [
+      '<div class="stat-line">' + formatStockDaysLine_('Feed (Mixed)', stockDays, ['feed (mixed)', 'feed mixed']) + '</div>',
+      '<div class="stat-line">' + formatStockDaysLine_('Barley', stockDays, ['barley']) + '</div>',
+      '<div class="stat-line">' + formatStockDaysLine_('Dry grass', stockDays, ['dry grass']) + '</div>'
+    ];
+    if (hd.shoeing && hd.shoeing.days != null) {
+      stockLines.push('<div class="stat-line">Shoeing: Due in ' + num(hd.shoeing.days) + ' days</div>');
+    } else {
+      stockLines.push('<div class="stat-line">Shoeing: —</div>');
+    }
+    var boxStock = document.getElementById('boxStockAlerts');
+    if (boxStock) boxStock.innerHTML = stockLines.join('');
+
+    var healthLines = [];
+    if (hd.vetCheck && hd.vetCheck.days != null) {
+      healthLines.push('<div class="stat-line">Vet check: Due in ' + num(hd.vetCheck.days) + ' days</div>');
+    } else {
+      healthLines.push('<div class="stat-line">Vet check: —</div>');
+    }
+    if (hd.deworming && hd.deworming.days != null) {
+      healthLines.push('<div class="stat-line">De-worming: Due in ' + num(hd.deworming.days) + ' days</div>');
+    } else {
+      healthLines.push('<div class="stat-line">De-worming: —</div>');
+    }
+    var boxHealth = document.getElementById('boxHealth');
+    if (boxHealth) boxHealth.innerHTML = healthLines.join('');
+
+    if (data.viewLocation) {
+      activeHorseFilter = data.viewLocation;
+    } else if (window.AppLocation && window.AppLocation.isAdmin()) {
+      activeHorseFilter = 'All';
+    }
+    renderHorsesList(data.horses || [], data.locations || []);
+    renderStaffLists(data.trainers || [], data.grooms || []);
+
+    const alertStyles = {
+      stock: 'background:rgba(74,158,232,0.08);border-color:rgba(74,158,232,0.2)',
+      vaccination: 'background:rgba(240,165,0,0.08);border-color:rgba(240,165,0,0.25)',
+      shoeing: 'background:rgba(224,92,92,0.08);border-color:rgba(224,92,92,0.25)',
+      health: 'background:rgba(155,89,182,0.1);border-color:rgba(155,89,182,0.35)'
+    };
+    const alertIcons = { stock: '📦', vaccination: '💉', shoeing: '⚠️', health: '🏥' };
+    document.getElementById('alertsList').innerHTML = (data.alerts || []).map(a => `
+      <div class="alert-card" style="${alertStyles[a.type] || ''}">
+        <span class="alert-icon">${alertIcons[a.type] || '📌'}</span>
+        <div class="alert-text">
+          <div class="alert-title">${text(a.title)}</div>
+          <div class="alert-sub">${text(a.sub)}</div>
+        </div>
+      </div>
+    `).join('') || '<div class="empty-state"><p>No alerts currently.</p></div>';
+
+    const todayAct = data.todayActivity || [];
+    const todayLabel = todayAct.length && todayAct[0]._date
+      ? 'Activity — ' + new Date(todayAct[0]._date).toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' })
+      : 'Activity Log';
+    const todaySecEl = document.querySelector('[data-section="todayActivity"]');
+    if (todaySecEl) todaySecEl.textContent = todayLabel;
+    document.getElementById('todayActivityList').innerHTML = todayAct.map((r, i) => `
+      <div class="timeline-item">
+        <div style="position:relative">
+          <div class="timeline-dot" style="background:${i % 2 ? 'var(--blue)' : 'var(--gold)'}"></div>
+          ${i < todayAct.length - 1 ? '<div class="timeline-line"></div>' : ''}
+        </div>
+        <div class="timeline-content">
+          <div class="timeline-title">${text(r.Horse)} - ${text(r.Activity)}</div>
+          <div class="timeline-meta">${text(r.DurationLabel || r.Duration, '0')}${r.DurationLabel ? '' : ' min'} · Trainer: ${text(r.Trainer)}${r.Groom ? ' · Groom: ' + text(r.Groom) : ''} · ${text(r.Location)}</div>
+        </div>
+      </div>
+    `).join('') || '<div class="empty-state"><p>No activity logged for today.</p></div>';
+
+    const invData = data.inventory || [];
+    const maxQty = invData.reduce((m, r) => Math.max(m, Number(r['Quantity'] || 0)), 0) || 1;
+    document.getElementById('inventoryList').innerHTML = invData.map(r => {
+      const qty = Number(r['Quantity'] || 0);
+      const minLevel = Number(r['MinLevel'] || 0);
+      const width = Math.max(5, Math.min(100, Math.round((qty / maxQty) * 100)));
+      const color = (minLevel && qty < minLevel) ? 'var(--red)' : qty <= (maxQty * 0.2) ? 'var(--amber)' : 'var(--green)';
+      const label = r['Entry Type'] && r['Entry Type'] !== 'Summary' ? r['Entry Type'] : 'Closing Stock';
+      return `
+        <div class="inv-row">
+          <div>
+            <div class="inv-name">${text(r['Item'])}</div>
+            <div class="inv-loc">📍 ${text(r['Location'])}</div>
+            <div class="progress-bar"><div class="progress-fill" style="width:${width}%;--fill-color:${color}"></div></div>
+          </div>
+          <div class="inv-qty">
+            <div class="inv-num" style="color:${color}">${text(r['Quantity'], '0')}</div>
+            <div class="inv-unit">${label}</div>
+          </div>
+        </div>
+      `;
+    }).join('') || '<div class="empty-state"><p>No inventory entries yet.</p></div>';
+
+    document.getElementById('healthList').innerHTML = (data.health || []).map((r, idx) => {
+      var status = text(r.Status, '');
+      var badge = status.indexOf('🔴') >= 0 ? 'badge-red' : status.indexOf('🟡') >= 0 ? 'badge-amber' : 'badge-green';
+      var statusLabel = status.replace(/[^\w\s]/g, '').trim() || 'Healthy';
+      return `
+      ${idx > 0 ? '<div class="divider"></div>' : ''}
+      <div class="horse-card" style="margin-bottom:12px">
+        <div class="horse-avatar">🐴</div>
+        <div style="flex:1">
+          <div class="horse-name">${text(r.Horse)}</div>
+          <div class="horse-meta">${text(r.Date)} · ${text(r.Location)}</div>
+        </div>
+        <span class="badge ${badge}">${text(statusLabel)}</span>
+      </div>
+      <div class="health-row">
+        <div class="health-metric"><div class="health-label">Temperature</div><div class="health-value">${text(r.Temperature_C || r.Temp)} °C</div></div>
+        <div class="health-metric"><div class="health-label">Heart rate</div><div class="health-value">${text(r.Heart_Rate, '—')}</div></div>
+      </div>
+      <div class="health-row">
+        <div class="health-metric"><div class="health-label">Respiratory</div><div class="health-value">${text(r.Respiratory_Rate, '—')}</div></div>
+        <div class="health-metric"><div class="health-label">Appetite</div><div class="health-value">${text(r.Appetite)}</div></div>
+      </div>
+      <div class="health-row">
+        <div class="health-metric"><div class="health-label">Drinking</div><div class="health-value">${text(r.Drinking || r.Water)}</div></div>
+        <div class="health-metric"><div class="health-label">Droppings</div><div class="health-value">${text(r.Droppings_Consistency || r.Dung)}</div></div>
+      </div>
+      <div class="health-row">
+        <div class="health-metric"><div class="health-label">Movement</div><div class="health-value">${text(r.Movement, '—')}</div></div>
+        <div class="health-metric"><div class="health-label">Eyes</div><div class="health-value">${text(r.Eyes, '—')}</div></div>
+      </div>
+      <div class="health-metric" style="margin-bottom:14px">
+        <div class="health-label">Body / Vet / Dental</div>
+        <div class="health-value" style="font-size:13px;font-weight:400;color:var(--muted)">${text(r.Body_Condition, '—')} · Vet ${formatDate(r.Vet_Check_Date)} · Dental ${formatDate(r.Dental_Check_Date)}</div>
+      </div>
+      ${r.Notes ? '<div class="notice" style="margin-bottom:14px">' + text(r.Notes) + '</div>' : ''}
+    `;
+    }).join('') || '<div class="empty-state"><p>No health check records available.</p></div>';
+
+    document.getElementById('medicalVaccinationsList').innerHTML = (data.vaccinations || []).map(r => `
+      <div class="vaccn-row">
+        <div>
+          <div class="vaccn-name">${text(r.Vaccine)}</div>
+          <div class="vaccn-horse">🐎 ${text(r.Horse)}</div>
+        </div>
+        <div class="vaccn-due">
+          <div class="vaccn-due-label">Due Date</div>
+          <div style="font-size:13px;font-weight:600">${formatDate(r['Next Due'])}</div>
+          <span class="badge badge-amber" style="margin-top:4px">${text(r.Vet, 'Vet')}</span>
+        </div>
+      </div>
+    `).join('') || '<div class="empty-state"><p>No upcoming vaccinations.</p></div>';
+
+    document.getElementById('medicalHistoryList').innerHTML = (data.medicalHistory || []).map((r, i) => `
+      <div class="timeline-item">
+        <div style="position:relative">
+          <div class="timeline-dot" style="background:${i % 2 ? 'var(--blue)' : 'var(--green)'}"></div>
+          ${i < data.medicalHistory.length - 1 ? '<div class="timeline-line"></div>' : ''}
+        </div>
+        <div class="timeline-content">
+          <div class="timeline-title">${text(r.Horse)} - ${text(r.Issue)}</div>
+          <div class="timeline-meta">${formatDate(r.Date)} · Vet: ${text(r.Vet)} · ${text(r.Status)}</div>
+        </div>
+      </div>
+    `).join('') || '<div class="empty-state"><p>No medical history records.</p></div>';
+
+    document.getElementById('shoeingList').innerHTML = (data.shoeing || []).map(r => `
+      <div class="shoeing-card">
+        <div class="shoeing-top">
+          <div>
+            <div class="shoeing-name">${text(r.Horse)}</div>
+            <div class="shoeing-type">${text(r['Shoeing Type'])} · Farrier: ${text(r.Farrier)}</div>
+          </div>
+          <span class="badge badge-blue">Scheduled</span>
+        </div>
+        <div class="shoeing-dates">
+          <div class="shoeing-date-item">
+            <div class="shoeing-date-label">Last Done</div>
+            <div class="shoeing-date-val">${formatDate(r.Date)}</div>
+          </div>
+          <div class="shoeing-date-item">
+            <div class="shoeing-date-label">Next Due</div>
+            <div class="shoeing-date-val">${formatDate(r['Next Due'])}</div>
+          </div>
+        </div>
+      </div>
+    `).join('') || '<div class="empty-state"><p>No shoeing records available.</p></div>';
+
+    document.getElementById('reportSessions').textContent = String(num(reports.sessionsThisWeek));
+    document.getElementById('reportAvgDuration').textContent = String(num(reports.avgDuration));
+    const periodLabel = reports.periodLabel || 'This Week';
+    const sessLabelEl = document.getElementById('reportSessionsLabel');
+    if (sessLabelEl) sessLabelEl.textContent = 'Sessions — ' + periodLabel;
+    const sessSubEl = document.getElementById('reportSessionsSub');
+    if (sessSubEl) sessSubEl.textContent = num(reports.sessionsThisWeek) + ' total sessions';
+
+    const mix = reports.activityMix || {};
+    const mixTotal = Object.values(mix).reduce((s, n) => s + Number(n || 0), 0) || 1;
+    document.getElementById('reportActivityMix').innerHTML = Object.keys(mix).map((name, i) => {
+      const count = Number(mix[name] || 0);
+      const pct = Math.round((count * 100) / mixTotal);
+      const colors = ['var(--gold)', 'var(--blue)', 'var(--green)', 'var(--amber)', 'var(--muted)'];
+      return `
+        <div class="chart-bar-row">
+          <div class="chart-bar-label">${name}</div>
+          <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${pct}%;background:${colors[i % colors.length]}">${pct}%</div></div>
+          <div class="chart-bar-count">${count}</div>
+        </div>
+      `;
+    }).join('') || '<div class="empty-state"><p>No activity data for reports.</p></div>';
+
+    var healthRecords = data.health || [];
+    document.getElementById('reportHealthSummary').innerHTML = `
+      <div class="inv-row"><div class="info-key">Healthy horses</div><div class="info-val" style="color:var(--green)">${num(healthSummary.healthy)} / ${horseCount}</div></div>
+      <div class="inv-row"><div class="info-key">Under observation</div><div class="info-val" style="color:var(--amber)">${num(healthSummary.watch)}</div></div>
+      <div class="inv-row"><div class="info-key">Vet care required</div><div class="info-val" style="color:var(--red)">${num(healthSummary.vetCare)}</div></div>
+      <div class="inv-row"><div class="info-key">Checks on file</div><div class="info-val">${healthRecords.length}</div></div>
+    ` + (healthRecords.slice(0, 6).map(function(r) {
+      return '<div class="inv-row"><div class="info-key">' + text(r.Horse) + '</div><div class="info-val" style="font-size:12px">' +
+        text(r.Temperature_C || r.Temp) + '°C · ' + text(r.Appetite) + ' · ' + text((r.Status || '').replace(/[^\w\s]/g, '').trim() || 'OK') + '</div></div>';
+    }).join(''));
+    dashLog('renderDashboard() complete — horses:', horseCount, 'healthy:', healthyVal, 'staff:', staffCount);
+    if (window.AppViewport && window.AppViewport.boot) {
+      window.AppViewport.boot();
+    }
+
+    const invCons = reports.inventoryConsumption || {};
+    const invEntries = Object.entries(invCons);
+    const invMax = invEntries.reduce((m, e) => Math.max(m, Number(e[1] || 0)), 0) || 1;
+    document.getElementById('reportInventoryConsumption').innerHTML = invEntries.map((entry, i) => {
+      const name = entry[0];
+      const val = Number(entry[1] || 0);
+      const pct = Math.max(5, Math.round((val * 100) / invMax));
+      const colors = ['var(--gold)', 'var(--green)', 'var(--blue)', 'var(--amber)', 'var(--muted)'];
+      return `
+        <div class="chart-bar-row">
+          <div class="chart-bar-label">${name}</div>
+          <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${pct}%;background:${colors[i % colors.length]}">${pct}%</div></div>
+          <div class="chart-bar-count">${val}</div>
+        </div>
+      `;
+    }).join('') || '<div class="empty-state"><p>No consumption data yet.</p></div>';
+  }
+
+  function fetchDashboardData(reason) {
+    dashboardFetchGen++;
+    var fetchId = dashboardFetchGen;
+    dashLog('fetchDashboardData() start | reason:', reason || '—', '| id:', fetchId);
+    var token = requireAuth();
+    if (!token) {
+      dashError('fetchDashboardData: no token');
+      return;
+    }
+    if (!(window.google && google.script && google.script.run)) {
+      dashError('fetchDashboardData: google.script.run missing');
+      showBootError('Apps Script runtime unavailable. Open the deployed Web App URL.');
+      renderDashboard(emptyDashboardZeros_('Apps Script unavailable'));
+      setStatsPending(false);
+      return;
+    }
+
+    showLoader('Loading dashboard…');
+    setContentLoading(true);
+    setStatsPending(true);
+
+    var viewLoc = (window.AppLocation && window.AppLocation.getViewLocation()) || '';
+    var viewLabel = (window.AppLocation && window.AppLocation.getViewLabel()) || '';
+    dashLog('Calling backend getDashboardData | viewLoc:', viewLoc || '(all)', '| viewLabel:', viewLabel);
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (fetchId !== dashboardFetchGen) {
+          dashLog('Ignoring stale dashboard response id', fetchId, '(current', dashboardFetchGen + ')');
+          return;
+        }
+        dashLog('getDashboardData SUCCESS | reason:', reason, '| id:', fetchId, summarizeDashData(data));
+        if (data && data._locationFilterWarning) {
+          dashWarn(data._locationFilterWarning, data._locationSamples || '');
+          showBootError(data._locationFilterWarning);
+        }
+        if (data && data._unfilteredHorseCount > 0 && num(data.stats && data.stats.totalHorses) === 0) {
+          dashWarn('Filter returned 0 horses but sheet has', data._unfilteredHorseCount,
+            '— Location values in sheet:', data._locationSamples || '(see Locations tab)');
+        }
+        renderDashboard(data);
+        setContentLoading(false);
+        hideLoader();
+      })
+      .withFailureHandler(function(error) {
+        if (fetchId !== dashboardFetchGen) return;
+        dashError('getDashboardData FAILED | reason:', reason, error);
+        setContentLoading(false);
+        hideLoader();
+        setStatsPending(false);
+        var msg = error && error.message ? error.message : 'Could not load dashboard data';
+        showBootError(msg);
+        renderDashboard(emptyDashboardZeros_(msg));
+        if (String(msg).toLowerCase().indexOf('unauthorized') >= 0) {
+          setTimeout(clearAuthAndRedirect, 2000);
+        }
+      })
+      .getDashboardData(token, viewLoc);
+  }
+
+  var dashboardFetchGen = 0;
+  var dashboardFetchStarted = false;
+
+  function loadDashboardData() {
+    dashLog('loadDashboardData()');
+
+    function runFetch(reason) {
+      if (dashboardFetchStarted) {
+        dashLog('Dashboard fetch already scheduled, skip duplicate:', reason);
+        return;
+      }
+      dashboardFetchStarted = true;
+      fetchDashboardData(reason);
+    }
+
+    if (!window.AppLocation) {
+      dashWarn('AppLocation not found — load without location filter');
+      runFetch('no-app-location');
+      return;
+    }
+
+    if (window.AppLocation.getContext()) {
+      dashLog('AppLocation context already ready');
+      runFetch('ctx-ready');
+      return;
+    }
+
+    dashLog('Wait for AppLocation.init() then ONE dashboard fetch (avoids stale/race)');
+    window.AppLocation.init(function(ctx) {
+      dashLog('AppLocation.init done — fetch dashboard once', ctx ? {
+        isAdmin: ctx.isAdmin,
+        viewLocation: ctx.viewLocation,
+        viewLabel: ctx.viewLabel
+      } : null);
+      runFetch('after-app-location');
+    });
+
+    setTimeout(function() {
+      if (!dashboardFetchStarted) {
+        dashWarn('AppLocation slow (>7s) — fetching dashboard without waiting');
+        runFetch('timeout-fallback');
+      }
+    }, 7000);
+  }
+
+  window.addEventListener('ops-location-changed', function(e) {
+    var viewLoc = (window.AppLocation && window.AppLocation.getViewLocation()) || '';
+    activeHorseFilter = viewLoc || 'All';
+    dashLog('ops-location-changed → reload dashboard | viewLoc:', viewLoc || '(all)', e && e.detail);
+    dashboardFetchStarted = false;
+    fetchDashboardData('location-changed');
+  });
+
+  function bootDashboard() {
+    dashLog('bootDashboard()');
+    syncTokenFromUrl();
+    initDashboardUi();
+
+    var bootTab = window.__APP_TAB__ || new URLSearchParams(window.location.search).get('tab') || 'dashboard';
+    if (bootTab === 'medical') bootTab = 'health';
+    showPage(bootTab);
+
+    loadDashboardData();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootDashboard);
+  } else {
+    bootDashboard();
+  }
+</script>
+</body>
+</html>

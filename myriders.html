@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0e2818">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Jost:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>My Rides · Kings Equestrian</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --ink:#0a1a10;--forest:#0e2818;--pine:#163d22;--canopy:#1c5430;
+  --fern:#247a42;--sage:#36a85e;--mint:#62c987;--mist:#a3ddb8;
+  --dew:#d1f0de;--foam:#edf9f2;
+  --bark:#a87832;--bark-lt:#f5e8cc;--bark-pale:#fdf6ec;
+  --parch:#f8f6f1;--white:#ffffff;
+  --red:#b91c1c;--red-lt:#fef2f2;
+  --border:rgba(36,122,66,0.13);--border-md:rgba(36,122,66,0.22);
+  --shadow-sm:0 1px 4px rgba(10,26,16,0.07);--shadow:0 2px 12px rgba(10,26,16,0.1);--shadow-lg:0 8px 32px rgba(10,26,16,0.15);
+  --r:14px;--r-sm:10px;--r-lg:18px;
+}
+html{background:var(--forest)}
+body{font-family:'Jost',sans-serif;background:var(--parch);min-height:100vh;color:var(--ink);-webkit-font-smoothing:antialiased}
+
+/* ── LOGIN SCREEN ── */
+#login-screen{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:2rem 1.25rem 5rem;background:var(--forest);position:relative;overflow:hidden;
+}
+.ln-ring{position:absolute;border-radius:50%;border:1px solid rgba(163,221,184,0.08);pointer-events:none}
+.ln-card{width:100%;max-width:380px;background:var(--white);border-radius:22px;padding:2.25rem 2rem 2rem;box-shadow:var(--shadow-lg);position:relative;z-index:1}
+.brand{text-align:center;margin-bottom:2rem}
+.brand-icon{width:68px;height:68px;border-radius:18px;background:var(--forest);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 1.1rem;border:2px solid rgba(163,221,184,0.25);box-shadow:0 4px 16px rgba(10,26,16,0.3)}
+.brand-name{font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:var(--ink);line-height:1.1;margin-bottom:4px}
+.brand-sub{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#9aaa8e;font-weight:500;font-family:'DM Mono',monospace}
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--sage);margin-bottom:7px;font-family:'DM Mono',monospace}
+.id-toggle{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px}
+.id-btn{padding:8px 10px;border-radius:9px;border:1.5px solid var(--border-md);background:var(--white);font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:#9aaa8e;cursor:pointer;text-align:center;transition:all .15s}
+.id-btn.on{border-color:var(--sage);background:var(--foam);color:var(--pine);font-weight:600}
+.fi{width:100%;padding:12px 14px;border:1.5px solid var(--border-md);border-radius:var(--r-sm);font-family:'Jost',sans-serif;font-size:14px;color:var(--ink);background:var(--parch);outline:none;-webkit-appearance:none;appearance:none;transition:all .15s}
+.fi:focus{border-color:var(--sage);background:var(--white);box-shadow:0 0 0 3px rgba(54,168,94,0.1)}
+.fi::placeholder{color:#b8c8b0}
+select.fi{cursor:pointer}
+.btn-primary{width:100%;padding:14px;border-radius:var(--r-sm);background:var(--forest);color:var(--mist);border:none;font-family:'Jost',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:6px;transition:all .15s;letter-spacing:.02em}
+.btn-primary:disabled{opacity:.5;cursor:default}
+.btn-primary:hover:not(:disabled){background:var(--pine)}
+.ln-err{font-size:12px;color:var(--red);text-align:center;margin-top:10px;padding:9px 12px;background:var(--red-lt);border-radius:9px;border:1px solid #fecaca;display:none}
+.ln-note{font-size:11px;color:#9aaa8e;text-align:center;margin-top:10px;line-height:1.8}
+
+/* ── PROFILE PICKER ── */
+#profile-picker{display:none;min-height:100vh;background:var(--forest);align-items:center;justify-content:center;padding:2rem 1.25rem;flex-direction:column}
+.pk-card{width:100%;max-width:400px;background:var(--white);border-radius:22px;padding:1.75rem;box-shadow:var(--shadow-lg)}
+.pk-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:600;color:var(--ink);margin-bottom:5px;text-align:center}
+.pk-sub{font-size:12px;color:#9aaa8e;text-align:center;margin-bottom:18px;line-height:1.6}
+.pk-btn{width:100%;background:var(--foam);border:1.5px solid var(--dew);border-radius:12px;padding:13px 15px;margin-bottom:9px;cursor:pointer;text-align:left;font-family:'Jost',sans-serif;transition:all .15s}
+.pk-btn:hover{background:var(--dew);border-color:var(--mint)}
+.pk-name{font-size:14px;font-weight:600;color:var(--pine);margin-bottom:2px}
+.pk-meta{font-size:11px;color:#9aaa8e;font-family:'DM Mono',monospace}
+.btn-back{background:none;border:1px solid rgba(163,221,184,.3);color:var(--mist);font-size:11px;padding:6px 16px;border-radius:20px;cursor:pointer;font-family:'Jost',sans-serif;margin-top:6px;width:100%}
+
+/* ── DASHBOARD ── */
+#dashboard{display:none;min-height:100vh}
+.d-header{background:var(--forest);padding:14px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:200;border-bottom:1px solid rgba(255,255,255,.05)}
+.d-av{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--canopy),var(--fern));display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:15px;font-weight:600;color:#fff;flex-shrink:0;border:1.5px solid rgba(163,221,184,.25)}
+.d-info{min-width:0;flex:1}
+.d-name{font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:var(--mist);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.d-sub{font-size:10px;color:var(--mint);margin-top:1px;font-family:'DM Mono',monospace}
+.btn-lo{background:rgba(163,221,184,.1);border:1px solid rgba(163,221,184,.2);color:var(--mint);padding:5px 12px;border-radius:20px;font-size:11px;font-family:'Jost',sans-serif;cursor:pointer}
+
+/* ── BANNER ── */
+.d-banner{background:linear-gradient(135deg,var(--forest) 0%,var(--pine) 60%,var(--canopy) 100%);padding:16px;position:relative;overflow:hidden}
+.d-banner::before{content:"";position:absolute;top:-50px;right:-30px;width:200px;height:200px;border-radius:50%;background:rgba(98,201,135,0.06);pointer-events:none}
+.d-banner::after{content:"";position:absolute;bottom:-30px;left:30px;width:120px;height:120px;border-radius:50%;background:rgba(200,169,110,0.05);pointer-events:none}
+.b-ke{font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:var(--mist);margin-bottom:2px;position:relative;z-index:1}
+.b-svc{font-size:11px;color:var(--mint);margin-bottom:14px;position:relative;z-index:1;font-family:'DM Mono',monospace}
+.b-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;position:relative;z-index:1}
+.b-stat{background:rgba(163,221,184,.08);border:1px solid rgba(163,221,184,.15);border-radius:11px;padding:10px 8px;text-align:center}
+.b-val{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--mint);line-height:1}
+.b-lbl{font-size:9px;color:rgba(163,221,184,.7);text-transform:uppercase;letter-spacing:.09em;margin-top:3px;font-family:'DM Mono',monospace}
+
+/* ── TABS ── */
+.d-tabs{background:var(--white);display:flex;border-bottom:1.5px solid var(--border);position:sticky;top:68px;z-index:199;overflow-x:auto;scrollbar-width:none}
+.d-tabs::-webkit-scrollbar{display:none}
+.d-tab{flex:1;padding:12px 8px;background:none;border:none;border-bottom:2.5px solid transparent;font-family:'Jost',sans-serif;font-size:12px;color:#9aaa8e;cursor:pointer;font-weight:500;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px;min-width:110px}
+.d-tab.on{color:var(--pine);border-bottom-color:var(--pine);font-weight:600}
+
+/* ── TAB CONTENT ── */
+.tc{display:none;padding:16px 14px;max-width:720px;margin:0 auto}.tc.on{display:block}
+.t-heading{font-family:'Playfair Display',serif;font-size:24px;font-weight:600;color:var(--ink);margin-bottom:3px}
+.t-sub{font-size:12px;color:#9aaa8e;margin-bottom:16px;line-height:1.6}
+.sec-div{display:flex;align-items:center;gap:8px;margin:18px 0 11px;color:#b8c8b0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;font-family:'DM Mono',monospace}
+.sec-div::before,.sec-div::after{content:"";flex:1;height:1px;background:var(--border)}
+
+/* ── SESSION CARD ── */
+.s-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:14px 14px 14px 18px;margin-bottom:9px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden}
+.s-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--border)}
+.s-card.c-up::before{background:var(--fern)}
+.s-card.c-att::before{background:var(--sage)}
+.s-card.c-ns::before{background:var(--red)}
+.s-card.c-rs::before{background:var(--bark)}
+.s-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px}
+.s-svc{font-size:14px;font-weight:600;color:var(--ink)}
+.s-dt{font-size:12px;color:var(--sage);margin-top:3px;display:flex;align-items:center;gap:4px}
+.s-tm{font-size:11px;color:#9aaa8e;margin-top:3px}
+.s-pax{font-size:11px;color:#9aaa8e;margin-top:2px}
+.bdg{font-size:9px;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0;letter-spacing:.05em;font-family:'DM Mono',monospace;text-transform:uppercase}
+.b-up{background:var(--foam);color:var(--pine);border:1px solid var(--dew)}
+.b-dn{background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb}
+.b-ns{background:var(--red-lt);color:var(--red);border:1px solid #fecaca}
+.b-rs{background:var(--bark-pale);color:var(--bark);border:1px solid var(--bark-lt)}
+.b-sc{background:#eaedff;color:#3040aa;border:1px solid #b8c0f8}
+
+/* ── SCORE DISPLAY ON SESSION ── */
+.session-score{display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding:8px 10px;background:var(--foam);border:1px solid var(--border);border-radius:9px}
+.ss-title{font-size:10px;font-weight:700;color:var(--fern);text-transform:uppercase;letter-spacing:.07em;font-family:'DM Mono',monospace}
+.ss-badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.ss-badge{font-size:10px;padding:2px 7px;border-radius:20px;background:var(--dew);color:var(--canopy);border:1px solid var(--border-md);font-family:'DM Mono',monospace}
+.ss-avg{font-family:'Playfair Display',serif;font-size:20px;font-weight:700}
+
+/* ── RESCHEDULE ── */
+.rs-trigger{margin-top:10px;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--sage);background:var(--foam);border:1px solid var(--dew);padding:5px 12px;border-radius:20px;cursor:pointer}
+.rs-panel{display:none;margin-top:10px;padding:14px;background:var(--parch);border:1px solid var(--border-md);border-radius:var(--r-sm)}
+.rs-panel.open{display:block}
+.rs-from{font-size:12px;color:var(--sage);margin-bottom:11px;padding:8px 10px;background:var(--foam);border-radius:8px;border:1px solid var(--dew)}
+
+/* ── CURRICULUM TAB ── */
+.progress-overview{background:var(--forest);border-radius:var(--r);padding:16px;margin-bottom:16px;position:relative;overflow:hidden}
+.po-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.po-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:var(--mist)}
+.po-sub{font-size:11px;color:var(--mint);font-family:'DM Mono',monospace}
+.prog-bar-wrap{background:rgba(255,255,255,0.1);border-radius:20px;height:8px;margin-bottom:6px;overflow:hidden}
+.prog-bar{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--mint),var(--sage));transition:width .6s ease}
+.prog-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--mint);font-family:'DM Mono',monospace}
+.level-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px}
+.lc-header{background:var(--pine);padding:11px 14px;display:flex;align-items:center;justify-content:space-between}
+.lc-name{font-family:'Playfair Display',serif;font-size:14px;font-weight:600;color:var(--mist)}
+.lc-prog{font-size:10px;font-family:'DM Mono',monospace;color:var(--mint)}
+.class-item{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.class-item:last-child{border-bottom:none}
+.class-item:hover{background:var(--foam)}
+.ci-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'DM Mono',monospace;flex-shrink:0;margin-top:1px}
+.ci-todo{background:var(--dew);color:var(--canopy);border:1px solid var(--border-md)}
+.ci-done{background:var(--fern);color:#fff}
+.ci-curr{background:var(--bark);color:#fff}
+.ci-name{font-size:13px;font-weight:600;color:var(--ink)}
+.ci-obj{font-size:11px;color:#9aaa8e;margin-top:2px}
+.ci-expand{display:none;margin-top:9px;padding:11px;background:var(--foam);border-radius:9px;border:1px solid var(--border)}
+.ci-expand.open{display:block}
+.ce-row{display:flex;gap:8px;margin-bottom:7px}
+.ce-key{font-size:10px;font-weight:700;color:#9aaa8e;text-transform:uppercase;letter-spacing:.07em;width:75px;flex-shrink:0;padding-top:1px;font-family:'DM Mono',monospace}
+.ce-val{font-size:11px;color:var(--ink);flex:1;line-height:1.5}
+.score-guide{display:flex;flex-direction:column;gap:3px}
+.sg-row{display:flex;align-items:flex-start;gap:6px}
+.sg-n{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;font-family:'DM Mono',monospace}
+.n1{background:#b91c1c;color:#fff}.n2{background:#c07020;color:#fff}.n3{background:#b09020;color:#fff}.n4{background:#28a745;color:#fff}
+.sg-desc{font-size:11px;color:var(--ink);padding-top:2px}
+.your-score{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:5px 10px;background:#eaedff;border:1px solid #b8c0f8;border-radius:20px;font-size:11px;color:#3040aa;font-weight:600;font-family:'DM Mono',monospace}
+
+/* ── BOOK TAB ── */
+.mode-toggle{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:16px}
+.mode-btn{padding:11px 8px;border-radius:var(--r-sm);border:1.5px solid var(--border-md);background:var(--white);font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:#9aaa8e;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s}
+.mode-btn .mi{font-size:22px}
+.mode-btn.on{border-color:var(--sage);background:var(--foam);color:var(--pine);font-weight:600}
+.slot-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.slot-num{font-size:10px;font-weight:700;color:var(--sage);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace}
+.sn-badge{background:var(--pine);color:var(--mist);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;font-family:'DM Mono',monospace}
+.rm-slot{position:absolute;right:12px;top:12px;background:none;border:1px solid #fecaca;color:var(--red);font-size:11px;cursor:pointer;padding:3px 8px;border-radius:6px;font-family:'Jost',sans-serif}
+.add-btn{width:100%;padding:11px;border:2px dashed var(--dew);background:transparent;color:var(--sage);border-radius:var(--r-sm);font-family:'Jost',sans-serif;font-size:13px;font-weight:500;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-sub{width:100%;padding:13px;border-radius:var(--r-sm);background:var(--forest);color:var(--mist);border:none;font-family:'Jost',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;letter-spacing:.02em;transition:background .15s}
+.btn-sub:disabled{opacity:.5;cursor:default}
+.btn-sub:hover:not(:disabled){background:var(--pine)}
+.result{margin-top:10px;padding:10px 13px;border-radius:var(--r-sm);font-size:12px;font-weight:500;display:none}
+.r-ok{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
+.r-err{background:var(--red-lt);color:var(--red);border:1px solid #fecaca}
+/* recurring */
+.rec-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:16px}
+.day-picker{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.day-chip{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid var(--border-md);background:var(--white);color:#9aaa8e;flex-shrink:0}
+.day-chip.sel{background:var(--pine);border-color:var(--pine);color:#fff}
+.pat-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}
+.pat-btn{padding:10px;border-radius:var(--r-sm);border:1.5px solid var(--border-md);background:var(--white);color:#9aaa8e;font-family:'Jost',sans-serif;font-size:11px;font-weight:500;cursor:pointer;text-align:center;transition:all .15s}
+.pat-btn.sel{border-color:var(--sage);background:var(--foam);color:var(--pine);font-weight:600}
+.prev-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.prev-chip{font-size:10px;padding:3px 8px;background:var(--foam);color:var(--pine);border:1px solid var(--dew);border-radius:20px;font-family:'DM Mono',monospace}
+.prev-more{font-size:10px;padding:3px 8px;background:var(--parch);color:#9aaa8e;border:1px solid var(--border);border-radius:20px;font-family:'DM Mono',monospace}
+.hint{font-size:10px;color:#b8c8b0;margin-top:4px}
+
+/* ── PAYMENTS TAB ── */
+.pay-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:9px;box-shadow:var(--shadow-sm)}
+.pay-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.pay-amt{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:var(--pine);line-height:1}
+.pay-meta{font-size:11px;color:#9aaa8e;margin-top:5px}
+.pay-txn{font-size:10px;color:#b8c8b0;margin-top:3px;font-family:'DM Mono',monospace}
+.pay-cta{display:flex;justify-content:center;margin-top:18px}
+.btn-pay{display:inline-flex;align-items:center;gap:8px;background:var(--forest);color:var(--mist);padding:13px 26px;text-decoration:none;border-radius:var(--r-sm);font-size:13px;font-weight:600;font-family:'Jost',sans-serif}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--forest);color:#fff;font-size:11px;font-weight:600;padding:10px 20px;border-radius:100px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:9999;border:1px solid rgba(163,221,184,.2);font-family:'DM Mono',monospace}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── FOOTER ── */
+.pfooter{text-align:center;padding:18px;font-size:10px;color:#b8c8b0;border-top:1px solid var(--border);letter-spacing:.05em;font-family:'DM Mono',monospace}
+.empty-st{text-align:center;padding:34px 16px;color:#b8c8b0;font-size:13px;line-height:2}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="login-screen">
+  <div class="ln-ring" style="width:340px;height:340px;top:-90px;right:-90px"></div>
+  <div class="ln-ring" style="width:220px;height:220px;bottom:70px;left:-70px"></div>
+  <div class="ln-ring" style="width:120px;height:120px;bottom:200px;right:20px"></div>
+  <div class="ln-card">
+    <div class="brand">
+      <div class="brand-icon">🐴</div>
+      <div class="brand-name">My Rides</div>
+      <div class="brand-sub">Kings Equestrian</div>
+    </div>
+    <div class="fg">
+      <label class="fl" for="inp-id">Phone or KE Number</label>
+      <div class="id-toggle" role="group">
+        <button type="button" class="id-btn on" id="btn-tel" onclick="setLoginMode(true)">📱 Phone (numbers)</button>
+        <button type="button" class="id-btn" id="btn-ke" onclick="setLoginMode(false)">🆔 KE number</button>
+      </div>
+      <input type="text" class="fi" id="inp-id" placeholder="e.g. 9876543210" inputmode="tel" autocapitalize="off" autocomplete="tel" maxlength="20">
+    </div>
+    <button class="btn-primary" id="btn-login" onclick="doLogin()">View My Rides</button>
+    <div class="ln-err" id="ln-err"></div>
+    <p class="ln-note">Choose <strong>Phone</strong> for number pad, or <strong>KE number</strong> for letter ID.<br>No password needed.</p>
+  </div>
+</div>
+
+<!-- ═══ PROFILE PICKER ═══ -->
+<div id="profile-picker" style="display:none;min-height:100vh;background:var(--forest);align-items:center;justify-content:center;padding:2rem 1.25rem;flex-direction:column">
+  <div class="pk-card">
+    <div style="font-size:32px;text-align:center;margin-bottom:12px">👥</div>
+    <div class="pk-title">Choose Profile</div>
+    <div class="pk-sub">Multiple profiles found for this number.<br>Select a family member to continue.</div>
+    <div id="profile-list"></div>
+    <button class="btn-back" onclick="backToLogin()">← Use a different number</button>
+  </div>
+</div>
+
+<!-- ═══ DASHBOARD ═══ -->
+<div id="dashboard">
+  <div class="d-header">
+    <div class="d-av" id="d-av">KE</div>
+    <div class="d-info">
+      <div class="d-name" id="d-name"></div>
+      <div class="d-sub" id="d-sub"></div>
+    </div>
+    <button class="btn-lo" onclick="doLogout()">Sign out</button>
+  </div>
+
+  <div class="d-banner">
+    <div class="b-ke" id="d-kename"></div>
+    <div class="b-svc" id="d-svc"></div>
+    <div class="b-stats">
+      <div class="b-stat"><div class="b-val" id="d-att">0</div><div class="b-lbl">Class Units</div></div>
+      <div class="b-stat"><div class="b-val" id="d-ns">0</div><div class="b-lbl">No-Shows</div></div>
+      <div class="b-stat"><div class="b-val" id="d-up">0</div><div class="b-lbl">Upcoming</div></div>
+      <div class="b-stat"><div class="b-val" id="d-pay">0</div><div class="b-lbl">Payments</div></div>
+    </div>
+  </div>
+
+  <div class="d-tabs">
+    <button class="d-tab on" data-tab="sessions">📅 Sessions</button>
+    <button class="d-tab" data-tab="curriculum">📚 Curriculum</button>
+    <button class="d-tab" data-tab="book">＋ Book</button>
+    <button class="d-tab" data-tab="payments">💳 Payments</button>
+  </div>
+
+  <div id="tc-sessions" class="tc on"></div>
+  <div id="tc-curriculum" class="tc"></div>
+  <div id="tc-book" class="tc"></div>
+  <div id="tc-payments" class="tc"></div>
+
+  <div class="pfooter">Kings Equestrian Foundation · Karnataka · +91-9980895533</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ── DEMO DATA ── replace with google.script.run calls ── */
+var DEMO_RIDER = {
+  found:true, keNo:"KE240101", name:"Arjun Sharma", phone:"9876543210",
+  services:"Private Lesson", classesAttended:4, noShowCount:1, totalParticipants:4,
+  sessions:[
+    {rowIndex:10,service:"Private Lesson",date:"05-May-2026",rawDate:"2026-05-05",timeSlot:"06:00 - 06:30",participants:1,status:"Scheduled",attendance:"",isFuture:true},
+    {rowIndex:11,service:"Private Lesson",date:"12-May-2026",rawDate:"2026-05-12",timeSlot:"06:00 - 06:30",participants:1,status:"Scheduled",attendance:"",isFuture:true},
+    {rowIndex:8,service:"Private Lesson",date:"28-Apr-2026",rawDate:"2026-04-28",timeSlot:"06:00 - 06:30",participants:1,status:"Completed",attendance:"Present",isFuture:false,
+     score:{safety:3,riding:4,knowledge:3,attitude:4,avg:3.5,pass:true}},
+    {rowIndex:7,service:"Private Lesson",date:"21-Apr-2026",rawDate:"2026-04-21",timeSlot:"06:00 - 06:30",participants:1,status:"No-Show",attendance:"No-Show",isFuture:false},
+    {rowIndex:6,service:"Group Riding",date:"14-Apr-2026",rawDate:"2026-04-14",timeSlot:"07:00 - 07:30",participants:2,status:"Completed",attendance:"Present",isFuture:false,
+     score:{safety:4,riding:3,knowledge:3,attitude:4,avg:3.5,pass:true}},
+    {rowIndex:5,service:"Beginner Package",date:"07-Apr-2026",rawDate:"2026-04-07",timeSlot:"07:30 - 08:00",participants:1,status:"Completed",attendance:"Present",isFuture:false,
+     score:{safety:2,riding:2,knowledge:3,attitude:3,avg:2.5,pass:true}},
+    {rowIndex:4,service:"Private Lesson",date:"31-Mar-2026",rawDate:"2026-03-31",timeSlot:"06:00 - 06:30",participants:1,status:"Completed",attendance:"Present",isFuture:false,
+     score:{safety:3,riding:2,knowledge:2,attitude:3,avg:2.5,pass:true}},
+  ],
+  payments:[
+    {amount:2500,payDate:"01-May-2026",txnRef:"TXN001",receiptNo:"RCP001",paidOn:"01-May-2026 10:15"},
+    {amount:2500,payDate:"01-Apr-2026",txnRef:"TXN002",receiptNo:"RCP002",paidOn:"01-Apr-2026 09:00"},
+  ]
+};
+
+var CURRICULUM = [
+  {level:"Level 1",num:1,title:"Safe Approach",obj:"Approach horse safely and confidently",exercise:"Approach from shoulder, observe behavior",scores:{"4":"Confident safe","3":"Minor hesitation","2":"Needs help","1":"Unsafe"},primary:"Safety & Behavior",secondary:"Confidence & Attitude"},
+  {level:"Level 1",num:2,title:"Haltering",obj:"Put on and remove halter correctly",exercise:"Halter horse and secure properly",scores:{"4":"Independent correct","3":"Minor error","2":"Needs help","1":"Incorrect"},primary:"Safety & Behavior",secondary:"Horse Knowledge"},
+  {level:"Level 1",num:3,title:"Leading Basics",obj:"Lead horse correctly at walk",exercise:"Walk with horse maintaining position",scores:{"4":"Controlled safe","3":"Minor correction","2":"Inconsistent","1":"Unsafe"},primary:"Safety & Behavior",secondary:"Control at Walk"},
+  {level:"Level 1",num:4,title:"Leading Turns",obj:"Turn horse correctly while leading",exercise:"Practice left/right turns",scores:{"4":"Smooth turns","3":"Minor issue","2":"Needs help","1":"Incorrect"},primary:"Safety & Behavior",secondary:"Control at Walk"},
+  {level:"Level 1",num:5,title:"Tying Knot",obj:"Tie quick release knot",exercise:"Tie and untie using safe knot",scores:{"4":"Correct secure","3":"Minor error","2":"Needs help","1":"Incorrect"},primary:"Safety & Behavior",secondary:"Horse Knowledge"},
+  {level:"Level 2",num:6,title:"Grooming Basics",obj:"Groom horse safely and correctly",exercise:"Full grooming sequence",scores:{"4":"Complete correct","3":"Minor gaps","2":"Needs help","1":"Unsafe"},primary:"Horse Care",secondary:"Safety & Behavior"},
+  {level:"Level 2",num:7,title:"Tacking Up",obj:"Saddle and bridle horse correctly",exercise:"Full tacking sequence with check",scores:{"4":"Correct independent","3":"Minor error","2":"Needs help","1":"Incorrect/unsafe"},primary:"Horse Knowledge",secondary:"Safety & Behavior"},
+  {level:"Level 2",num:8,title:"Mounting",obj:"Mount correctly using block",exercise:"Safe mounting sequence",scores:{"4":"Safe controlled","3":"Minor issue","2":"Needs help","1":"Unsafe"},primary:"Riding Technique",secondary:"Safety & Behavior"},
+  {level:"Level 3",num:9,title:"Walk & Halt",obj:"Walk and halt confidently",exercise:"Walk circles, halt on command",scores:{"4":"Balanced smooth","3":"Minor issue","2":"Inconsistent","1":"Unable"},primary:"Riding Technique",secondary:"Control at Walk"},
+  {level:"Level 3",num:10,title:"Rising Trot",obj:"Rise to trot correctly",exercise:"Trot 20m circle both reins",scores:{"4":"Correct balanced","3":"Minor error","2":"Inconsistent","1":"Unable"},primary:"Riding Technique",secondary:"Rhythm & Balance"},
+];
+
+var RD=null, bookMode='single', slotCount=1, recurSelDays=[], recurPattern='';
+var DAYS=['Su','Mo','Tu','We','Th','Fr','Sa'];
+var SERVICES=[
+  {name:'Private Lesson',price:2500,type:'Regular'},
+  {name:'Group Riding',price:1500,type:'Regular'},
+  {name:'Beginner Package',price:1800,type:'Package'},
+  {name:'Trek Experience',price:3500,type:'One-Time'},
+];
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showToast(m){var t=document.getElementById('toast');t.innerHTML=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2800);}
+function showErr(m){var e=document.getElementById('ln-err');e.textContent=m;e.style.display='block';}
+function showResult(id,ok,m){var e=document.getElementById(id);if(!e)return;e.textContent=m;e.className='result '+(ok?'r-ok':'r-err');e.style.display='block';}
+
+function setLoginMode(useTel){
+  var inp=document.getElementById('inp-id');
+  document.getElementById('btn-tel').className='id-btn'+(useTel?' on':'');
+  document.getElementById('btn-ke').className='id-btn'+(!useTel?' on':'');
+  if(useTel){inp.setAttribute('inputmode','tel');inp.placeholder='e.g. 9876543210';}
+  else{inp.setAttribute('inputmode','text');inp.placeholder='e.g. KE240101';}
+}
+
+function doLogin(){
+  var id=document.getElementById('inp-id').value.trim();
+  if(!id){showErr('Please enter your phone or KE Number.');return;}
+  document.getElementById('ln-err').style.display='none';
+  var btn=document.getElementById('btn-login');
+  btn.textContent='Looking up…';btn.disabled=true;
+  /* REPLACE WITH: google.script.run.withSuccessHandler(onLoginSuccess).getRiderData(id); */
+  setTimeout(function(){
+    btn.textContent='View My Rides';btn.disabled=false;
+    if(id==='9876543210'||id.toUpperCase()==='KE240101'){
+      RD=DEMO_RIDER;renderDash();
+    } else {
+      showErr('No rider found. Try 9876543210 or KE240101 to demo.');
+    }
+  },700);
+}
+
+function backToLogin(){
+  document.getElementById('profile-picker').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+}
+function doLogout(){
+  RD=null;
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('inp-id').value='';
+  window.scrollTo(0,0);
+}
+
+function renderDash(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  var init=(RD.name||'KE').split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase()||'KE';
+  document.getElementById('d-av').textContent=init;
+  document.getElementById('d-name').textContent=RD.name;
+  document.getElementById('d-sub').textContent=RD.keNo+' · '+RD.phone;
+  document.getElementById('d-kename').textContent=RD.name;
+  document.getElementById('d-svc').textContent=RD.services||'';
+  var up=(RD.sessions||[]).filter(function(s){return s.isFuture&&s.attendance!=='Present';}).length;
+  document.getElementById('d-att').textContent=RD.classesAttended||0;
+  document.getElementById('d-ns').textContent=RD.noShowCount||0;
+  document.getElementById('d-up').textContent=up;
+  document.getElementById('d-pay').textContent=(RD.payments||[]).length;
+  renderSessionsTab();renderCurriculumTab();renderBookTab();renderPaymentsTab();
+  window.scrollTo(0,0);
+}
+
+/* ── TAB SWITCH ── */
+document.querySelectorAll('.d-tab').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('.d-tab').forEach(function(b){b.classList.remove('on');});
+    document.querySelectorAll('.tc').forEach(function(c){c.classList.remove('on');});
+    btn.classList.add('on');
+    var tc=document.getElementById('tc-'+btn.getAttribute('data-tab'));
+    if(tc)tc.classList.add('on');
+  });
+});
+
+/* ── SESSIONS TAB ── */
+function renderSessionsTab(){
+  var s=RD.sessions||[];
+  var up=s.filter(function(x){return x.isFuture;});
+  var past=s.filter(function(x){return !x.isFuture;});
+  var h='<div class="t-heading">My Sessions</div>';
+  h+='<div class="t-sub">'+s.length+' total · '+(RD.classesAttended||0)+' class units attended</div>';
+  if(up.length){h+='<div class="sec-div">Upcoming</div>'+up.map(buildSessCard).join('');}
+  if(past.length){h+='<div class="sec-div">Past</div>'+past.map(buildSessCard).join('');}
+  if(!s.length)h+='<div class="empty-st">No sessions yet. Use the Book tab!</div>';
+  document.getElementById('tc-sessions').innerHTML=h;
+  document.querySelectorAll('.rs-trigger').forEach(function(el){
+    el.addEventListener('click',function(){
+      var rid=el.getAttribute('data-rid');
+      var panel=document.getElementById('rsp-'+rid);
+      if(panel)panel.classList.toggle('open');
+    });
+  });
+  document.querySelectorAll('.rs-submit').forEach(function(el){
+    el.addEventListener('click',function(){submitResched(parseInt(el.getAttribute('data-idx'),10));});
+  });
+}
+
+function buildSessCard(s){
+  var att=s.attendance||'',st=s.status||'';
+  var bCls=att==='Present'?'b-dn':att==='No-Show'?'b-ns':st==='Rescheduled'?'b-rs':'b-up';
+  var lbl=att==='Present'?'Attended':att==='No-Show'?'No-Show':st||'Scheduled';
+  var cSt=att==='Present'?'c-att':att==='No-Show'?'c-ns':st==='Rescheduled'?'c-rs':s.isFuture?'c-up':'';
+  var canR=s.isFuture&&att!=='Present'&&st!=='Completed'&&st!=='Cancelled';
+  var rHtml='';
+  if(canR){
+    var rid=s.rowIndex;
+    rHtml+='<div class="rs-trigger" data-rid="'+rid+'">↻ Reschedule</div>';
+    rHtml+='<div class="rs-panel" id="rsp-'+rid+'">';
+    rHtml+='<div class="rs-from">Moving: <strong>'+esc(s.date)+' · '+esc(s.timeSlot||'TBD')+'</strong></div>';
+    rHtml+='<label class="fl">New Date</label><input type="date" class="fi rs-date" id="rsd-'+rid+'" style="margin-bottom:10px">';
+    rHtml+='<label class="fl">New Time</label><select class="fi" id="rst-'+rid+'" style="margin-bottom:10px"><option value="">Same ('+esc(s.timeSlot||'TBD')+')</option>'+buildTimeOpts()+'</select>';
+    rHtml+='<label class="fl">Reason (optional)</label><input type="text" class="fi" id="rsr-'+rid+'" placeholder="Optional…" style="margin-bottom:10px">';
+    rHtml+='<button class="btn-sub rs-submit" data-idx="'+rid+'">Confirm Reschedule</button>';
+    rHtml+='<div id="rsr-result-'+rid+'" class="result"></div></div>';
+  }
+  var scoreHtml='';
+  if(s.score){
+    var sc=s.score;
+    var col=sc.avg>=3.5?'#1a6e3a':sc.avg>=2.5?'#7a5a10':sc.avg>=1.5?'#a04010':'#b91c1c';
+    scoreHtml='<div class="session-score">'
+      +'<div><div class="ss-title">Assessment</div>'
+      +'<div class="ss-badges">'
+      +'<span class="ss-badge">S:'+sc.safety+'</span>'
+      +'<span class="ss-badge">R:'+sc.riding+'</span>'
+      +'<span class="ss-badge">K:'+sc.knowledge+'</span>'
+      +'<span class="ss-badge">A:'+sc.attitude+'</span>'
+      +'<span class="ss-badge" style="background:'+(sc.pass?'#d1fae5':'#fde8e2')+';border:1px solid '+(sc.pass?'#6ee7b7':'#fecaca')+'">'+( sc.pass?'PASS':'REPEAT')+'</span>'
+      +'</div></div>'
+      +'<div class="ss-avg" style="color:'+col+'">'+sc.avg.toFixed(1)+'</div>'
+      +'</div>';
+  }
+  return '<div class="s-card '+cSt+'">'
+    +'<div class="s-top"><div>'
+    +'<div class="s-svc">'+esc(s.service)+'</div>'
+    +'<div class="s-dt">📅 '+esc(s.date||'TBD')+'</div>'
+    +(s.timeSlot?'<div class="s-tm">🕐 '+esc(s.timeSlot)+'</div>':'')
+    +'<div class="s-pax">👤 '+(Number(s.participants)||1)+' participant'+((Number(s.participants)||1)!==1?'s':'')+'</div>'
+    +'</div>'
+    +'<span class="bdg '+bCls+'">'+lbl+'</span></div>'
+    +scoreHtml+rHtml+'</div>';
+}
+
+function submitResched(rowIndex){
+  var nd=(document.getElementById('rsd-'+rowIndex)||{}).value||'';
+  if(!nd){showToast('Please pick a new date');return;}
+  showToast('Reschedule request sent!');
+  /* REPLACE WITH: google.script.run.rescheduleSession(RD.keNo, rowIndex, nd, nt, reason) */
+}
+
+/* ── CURRICULUM TAB ── */
+function renderCurriculumTab(){
+  var sessions=RD.sessions||[];
+  var scoredNums=sessions.filter(function(s){return s.score&&s.score.pass;}).length;
+  var totalInCurr=CURRICULUM.length;
+  var pct=Math.round((scoredNums/totalInCurr)*100);
+  var levels={};
+  CURRICULUM.forEach(function(c){if(!levels[c.level])levels[c.level]=[];levels[c.level].push(c);});
+  var h='<div class="t-heading">Curriculum</div>';
+  h+='<div class="t-sub">Your learning journey through Kings Equestrian Foundation</div>';
+  h+='<div class="progress-overview">';
+  h+='<div class="po-header"><div class="po-title">Your Progress</div><div class="po-sub">'+scoredNums+' / '+totalInCurr+' passed</div></div>';
+  h+='<div class="prog-bar-wrap"><div class="prog-bar" style="width:'+pct+'%"></div></div>';
+  h+='<div class="prog-labels"><span>Level 1</span><span>'+pct+'% complete</span></div></div>';
+  Object.keys(levels).forEach(function(lv){
+    var cls=levels[lv];
+    var lvPassed=0;
+    cls.forEach(function(c){
+      var ss=sessions.find(function(s){return s.score&&s.service&&(s.score.pass);});
+      if(scoredNums>c.num-1)lvPassed++;
+    });
+    h+='<div class="level-card"><div class="lc-header"><span class="lc-name">'+esc(lv)+'</span><span class="lc-prog">'+Math.min(lvPassed,cls.length)+'/'+cls.length+' classes</span></div>';
+    cls.forEach(function(c){
+      var passed=scoredNums>=c.num;
+      var current=scoredNums===c.num-1;
+      var numCls=passed?'ci-done':current?'ci-curr':'ci-todo';
+      var sg=[4,3,2,1].map(function(n){
+        return '<div class="sg-row"><div class="sg-n n'+n+'">'+n+'</div><div class="sg-desc">'+esc(c.scores[String(n)])+'</div></div>';
+      }).join('');
+      var myScore=sessions.find(function(s){return s.score&&passed;});
+      var scoreDisp='';
+      if(myScore&&myScore.score){
+        var sc=myScore.score;
+        scoreDisp='<div class="your-score">My score: '+sc.avg.toFixed(1)+' · '+(sc.pass?'✓ PASS':'✗ REPEAT')+'</div>';
+      }
+      h+='<div class="class-item" onclick="toggleCI(this)">'
+        +'<div class="ci-num '+numCls+'">'+(passed?'✓':current?'→':c.num)+'</div>'
+        +'<div style="flex:1">'
+        +'<div class="ci-name">'+esc(c.title)+'</div>'
+        +'<div class="ci-obj">'+esc(c.obj)+'</div>'
+        +'<div class="ci-expand">'
+        +'<div class="ce-row"><div class="ce-key">Exercise</div><div class="ce-val">'+esc(c.exercise)+'</div></div>'
+        +'<div class="ce-row"><div class="ce-key">Primary</div><div class="ce-val"><span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:#e6f9ee;color:#1a6e3a;border:1px solid #9addb5">'+esc(c.primary)+'</span></div></div>'
+        +'<div class="ce-row"><div class="ce-key">Secondary</div><div class="ce-val"><span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:var(--bark-pale);color:var(--bark);border:1px solid var(--bark-lt)">'+esc(c.secondary)+'</span></div></div>'
+        +'<div class="ce-row"><div class="ce-key">Scoring</div><div class="ce-val"><div class="score-guide">'+sg+'</div></div></div>'
+        +scoreDisp
+        +'</div></div></div>';
+    });
+    h+='</div>';
+  });
+  document.getElementById('tc-curriculum').innerHTML=h;
+}
+
+function toggleCI(el){var e=el.querySelector('.ci-expand');if(e)e.classList.toggle('open');}
+
+/* ── BOOK TAB ── */
+function renderBookTab(){
+  slotCount=1;bookMode='single';recurSelDays=[];recurPattern='';
+  var h='<div class="t-heading">Book Sessions</div>';
+  h+='<div class="t-sub">Pick specific dates or a weekly pattern for a whole month.</div>';
+  h+='<div class="mode-toggle">';
+  h+='<button class="mode-btn on" id="mbtn-single" data-mode="single"><span class="mi">📅</span>Single / Multi<br><span style="font-size:10px;font-weight:400;color:#9aaa8e">Specific dates</span></button>';
+  h+='<button class="mode-btn" id="mbtn-recurring" data-mode="recurring"><span class="mi">🔄</span>Recurring<br><span style="font-size:10px;font-weight:400;color:#9aaa8e">Weekly pattern</span></button>';
+  h+='</div>';
+  h+='<div id="area-single">'+buildSingleArea()+'</div>';
+  h+='<div id="area-recur" style="display:none">'+buildRecurArea()+'</div>';
+  h+='<button class="btn-sub" id="btn-book">Submit Sessions</button>';
+  h+='<div id="book-result" class="result"></div>';
+  document.getElementById('tc-book').innerHTML=h;
+  document.querySelectorAll('.mode-btn').forEach(function(b){b.addEventListener('click',function(){switchBookMode(b.getAttribute('data-mode'));});});
+  document.querySelector('#btn-add-slot') && document.getElementById('btn-add-slot').addEventListener('click',addSlot);
+  document.getElementById('btn-book').addEventListener('click',submitBookings);
+  document.querySelectorAll('.pat-btn').forEach(function(b){b.addEventListener('click',function(){selectPattern(b.getAttribute('data-pat'));});});
+  document.querySelectorAll('.day-chip').forEach(function(c){c.addEventListener('click',function(){toggleDay(c);});});
+}
+
+function buildSingleArea(){
+  return '<div id="slots-wrap">'+buildSlotCard(1)+'</div>'
+    +'<button class="add-btn" id="btn-add-slot">＋ Add Another Session</button>';
+}
+
+function buildSlotCard(n){
+  var opts=SERVICES.map(function(s,i){return '<option value="'+i+'">'+esc(s.name)+(s.type?' ('+esc(s.type)+')':'')+'</option>';}).join('');
+  return '<div class="slot-card" id="slot-'+n+'" style="position:relative">'
+    +'<div class="slot-num"><span class="sn-badge">'+n+'</span> Session '+n+'</div>'
+    +(n>1?'<button class="rm-slot" onclick="document.getElementById(\'slot-'+n+'\').remove()">Remove</button>':'')
+    +'<label class="fl">Service</label><select class="fi" id="svc-'+n+'" style="margin-bottom:10px"><option value="">Select a service…</option>'+opts+'</select>'
+    +'<label class="fl">Date</label><input type="date" class="fi" id="sdate-'+n+'" style="margin-bottom:10px">'
+    +'<label class="fl">Time Slot</label><select class="fi" id="stime-'+n+'" style="margin-bottom:10px"><option value="">Select time…</option>'+buildTimeOpts()+'</select>'
+    +'<label class="fl">Participants</label><input type="number" class="fi" id="spax-'+n+'" value="1" min="1" max="20" style="margin-bottom:10px">'
+    +'<p class="hint">Include yourself in the count.</p>'
+    +'</div>';
+}
+
+function buildRecurArea(){
+  var opts=SERVICES.map(function(s,i){return '<option value="'+i+'">'+esc(s.name)+'</option>';}).join('');
+  var dayChips=DAYS.map(function(d,i){return '<div class="day-chip" data-day="'+i+'">'+d+'</div>';}).join('');
+  var pats=[{id:'thu',l:'All Thursdays'},{id:'fri',l:'All Fridays'},{id:'sat',l:'All Saturdays'},{id:'sun',l:'All Sundays'},{id:'wknd',l:'All Weekends'},{id:'wkdy',l:'Weekdays'},{id:'cust',l:'Custom Days'}];
+  var patBtns=pats.map(function(p){return '<button class="pat-btn" data-pat="'+p.id+'">'+p.l+'</button>';}).join('');
+  return '<div class="rec-card">'
+    +'<label class="fl">Service</label><select class="fi" id="rsvc" style="margin-bottom:10px"><option value="">Select…</option>'+opts+'</select>'
+    +'<label class="fl">Month</label><input type="month" class="fi" id="recur-month" style="margin-bottom:10px">'
+    +'<label class="fl">Time Slot</label><select class="fi" id="rtime" style="margin-bottom:12px"><option value="">Select time…</option>'+buildTimeOpts()+'</select>'
+    +'<label class="fl">Participants</label><input type="number" class="fi" id="rpax" value="1" min="1" max="20" style="margin-bottom:12px">'
+    +'<label class="fl" style="margin-bottom:8px">Day Pattern</label>'
+    +'<div class="pat-grid">'+patBtns+'</div>'
+    +'<div id="cust-days" style="display:none"><label class="fl" style="margin-top:8px">Select Days</label><div class="day-picker">'+dayChips+'</div></div>'
+    +'<div id="recur-preview"></div></div>';
+}
+
+function switchBookMode(mode){
+  bookMode=mode;
+  document.querySelectorAll('.mode-btn').forEach(function(b){b.classList.remove('on');});
+  document.getElementById('mbtn-'+mode).classList.add('on');
+  document.getElementById('area-single').style.display=mode==='single'?'block':'none';
+  document.getElementById('area-recur').style.display=mode==='recurring'?'block':'none';
+}
+
+function addSlot(){
+  slotCount++;
+  var wrap=document.getElementById('slots-wrap');
+  var d=document.createElement('div');d.innerHTML=buildSlotCard(slotCount);wrap.appendChild(d.firstChild);
+}
+
+function toggleDay(chip){
+  chip.classList.toggle('sel');
+  recurSelDays=[];
+  document.querySelectorAll('.day-chip.sel').forEach(function(c){recurSelDays.push(parseInt(c.getAttribute('data-day'),10));});
+  recurPattern='cust';updateRecurPreview();
+}
+
+function selectPattern(pat){
+  document.querySelectorAll('.pat-btn').forEach(function(b){b.classList.remove('sel');});
+  var el=document.querySelector('.pat-btn[data-pat="'+pat+'"]');if(el)el.classList.add('sel');
+  recurPattern=pat;
+  var cd=document.getElementById('cust-days');
+  if(cd)cd.style.display=pat==='cust'?'block':'none';
+  if(pat!=='cust'){document.querySelectorAll('.day-chip').forEach(function(c){c.classList.remove('sel');});recurSelDays=[];}
+  updateRecurPreview();
+}
+
+function getRecurDates(){
+  var mi=document.getElementById('recur-month');if(!mi||!mi.value)return[];
+  var p=mi.value.split('-');var yr=parseInt(p[0]),mo=parseInt(p[1])-1;
+  var tgt=[];
+  if(recurPattern==='thu')tgt=[4];else if(recurPattern==='fri')tgt=[5];else if(recurPattern==='sat')tgt=[6];else if(recurPattern==='sun')tgt=[0];else if(recurPattern==='wknd')tgt=[0,6];else if(recurPattern==='wkdy')tgt=[1,2,3,4,5];else if(recurPattern==='cust')tgt=recurSelDays.slice();else return[];
+  var dates=[],d=new Date(yr,mo,1);
+  while(d.getMonth()===mo){if(tgt.indexOf(d.getDay())>-1)dates.push(new Date(d));d.setDate(d.getDate()+1);}
+  return dates;
+}
+
+function updateRecurPreview(){
+  var el=document.getElementById('recur-preview');if(!el)return;
+  var dates=getRecurDates();if(!dates.length){el.innerHTML='';return;}
+  var shown=dates.slice(0,5),extra=dates.length-shown.length;
+  var chips=shown.map(function(dt){return '<span class="prev-chip">'+dt.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'})+'</span>';}).join('');
+  if(extra>0)chips+='<span class="prev-more">+'+extra+' more</span>';
+  el.innerHTML='<div style="margin-top:10px"><div style="font-size:10px;font-weight:700;color:var(--sage);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-family:\'DM Mono\',monospace">'+dates.length+' session'+(dates.length!==1?'s':'')+' will be booked</div><div class="prev-wrap">'+chips+'</div></div>';
+}
+
+function submitBookings(){
+  showToast('Booking submitted!');
+  /* REPLACE WITH: google.script.run.bookMultipleSessions(RD.keNo, requests) */
+  showResult('book-result',true,'Sessions booked successfully!');
+}
+
+function buildTimeOpts(){
+  function p(n){return(n<10?'0':'')+n;}
+  function grp(label,sh,sm,eh){
+    var html='<optgroup label="'+label+'">';
+    var cur=sh*60+sm,end=eh*60;
+    while(cur+30<=end){var s1=Math.floor(cur/60),m1=cur%60,s2=Math.floor((cur+30)/60),m2=(cur+30)%60;html+='<option>'+p(s1)+':'+p(m1)+' - '+p(s2)+':'+p(m2)+'</option>';cur+=30;}
+    return html+'</optgroup>';
+  }
+  return grp('Morning',6,0,12)+grp('Afternoon',13,0,19);
+}
+
+/* ── PAYMENTS TAB ── */
+function renderPaymentsTab(){
+  var pays=RD.payments||[];
+  var h='<div class="t-heading">My Payments</div>';
+  h+='<div class="t-sub">'+pays.length+' transaction'+(pays.length!==1?'s':'')+' recorded</div>';
+  if(!pays.length){h+='<div class="empty-st">No payments yet. Payments appear after your receipt is generated.</div>';}
+  else{
+    h+=pays.map(function(p){
+      return '<div class="pay-card"><div class="pay-top">'
+        +'<div><div class="pay-amt">₹'+Number(p.amount).toLocaleString('en-IN')+'</div>'
+        +(p.payDate?'<div class="pay-meta">📅 '+esc(p.payDate)+'</div>':'')
+        +'</div>'
+        +'<div style="text-align:right">'
+        +(p.receiptNo?'<div class="pay-meta">Receipt: '+esc(p.receiptNo)+'</div>':'')
+        +(p.paidOn?'<div style="font-size:10px;color:#b8c8b0;margin-top:3px">'+esc(p.paidOn)+'</div>':'')
+        +'</div></div>'
+        +(p.txnRef?'<div class="pay-txn">Txn: '+esc(p.txnRef)+'</div>':'')
+        +'</div>';
+    }).join('');
+  }
+  h+='<div class="pay-cta"><a class="btn-pay" href="#" onclick="showToast(\'Opening payment form…\');return false">＋ Make a Payment</a></div>';
+  document.getElementById('tc-payments').innerHTML=h;
+}
+
+/* ── KEYBOARD ENTER ── */
+var inpEl=document.getElementById('inp-id');
+if(inpEl){inpEl.addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});}
+
+/* ── AUTO-RESTORE ── */
+(function(){
+  var saved='';try{saved=localStorage.getItem('KE_ID')||'';}catch(e){}
+  if(!saved)return;
+  var savedInput=document.getElementById('inp-id');
+  if(savedInput){savedInput.value=saved;}
+  if(/[a-zA-Z]/.test(saved))setLoginMode(false);
+})();
+</script>
+</body>
+</html>

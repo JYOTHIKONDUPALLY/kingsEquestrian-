@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>Inventory Login – Kings Equestrian</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 12px;
+      font-family: 'DM Sans', Arial, sans-serif;
+      background: linear-gradient(135deg, #0b1220, #1A1A2E);
+      color: #F0EAD6;
+      font-size: 20px;
+    }
+    .card {
+      width: min(520px, 100%);
+      background: #0F3460;
+      border: 1px solid rgba(201,168,76,0.35);
+      border-radius: 14px;
+      padding: 22px;
+    }
+    h1 { font-size: 30px; color: #C9A84C; margin-bottom: 6px; }
+    p { font-size: 18px; color: #9BACC4; margin-bottom: 16px; }
+    label { display: block; font-size: 14px; color: #9BACC4; margin: 10px 0 4px; text-transform: uppercase; }
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(0,0,0,0.25);
+      color: #F0EAD6;
+      font-size: 20px;
+    }
+    button {
+      width: 100%;
+      margin-top: 16px;
+      padding: 13px;
+      border: none;
+      border-radius: 8px;
+      background: #C9A84C;
+      color: #1A1A2E;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 20px;
+    }
+    .error { min-height: 18px; color: #ffb4b4; font-size: 16px; margin-top: 10px; }
+    .hint { font-size: 14px; color: #9BACC4; margin-top: 12px; line-height: 1.45; }
+
+    @media (max-width: 768px) {
+      body { font-size: 20px; }
+      .card { width: 100%; max-width: 100%; padding: 20px 16px; }
+      h1 { font-size: 28px; }
+      p { font-size: 18px; }
+      input, button { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <?!= include('AppViewport'); ?>
+  <?!= include('AppLoader'); ?>
+  <main class="card">
+    <h1>Inventory Login</h1>
+    <p>Sign in with your USER_MASTER credentials (not your Google account).</p>
+    <form id="loginForm" novalidate>
+      <label for="identifier">Username / Email</label>
+      <input id="identifier" type="text" required autocomplete="username" placeholder="KE Admin or admin@ke.demo">
+
+      <label for="password">Password</label>
+      <input id="password" type="password" required autocomplete="current-password">
+
+      <button type="button" id="loginBtn">Login</button>
+      <div class="error" id="loginError"></div>
+    </form>
+    <p class="hint">Demo (after seedSampleData): <strong>KE Admin</strong> / <strong>admin@123</strong></p>
+  </main>
+
+  <script>
+    var WEB_APP_URL = '<?= webAppUrl ?>';
+
+    function buildDashboardUrl(token) {
+      var base = WEB_APP_URL;
+      if (!base || base.indexOf('/exec') < 0) {
+        return '';
+      }
+      var sep = base.indexOf('?') >= 0 ? '&' : '?';
+      return base + sep + 'page=dashboard&token=' + encodeURIComponent(token);
+    }
+
+    function runLogin() {
+      var form = document.getElementById('loginForm');
+      var btn = document.getElementById('loginBtn');
+      var err = document.getElementById('loginError');
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+      var identifier = document.getElementById('identifier').value.trim();
+      var password = document.getElementById('password').value;
+      err.textContent = '';
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+      if (window.AppLoader) window.AppLoader.show('Signing in…');
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.token) {
+            if (window.AppLoader) window.AppLoader.forceHide();
+            btn.disabled = false;
+            btn.textContent = 'Login';
+            err.textContent = 'No session token returned.';
+            return;
+          }
+          if (window.AppLoader) window.AppLoader.setMessage('Opening dashboard…');
+          try { localStorage.setItem('keInvAuthToken', res.token); } catch (e) {}
+          var url = buildDashboardUrl(res.token);
+          if (url) {
+            window.top.location.replace(url);
+          } else {
+            google.script.run
+              .withSuccessHandler(function(dest) {
+                window.top.location.replace(dest);
+              })
+              .withFailureHandler(function(e2) {
+                btn.disabled = false;
+                btn.textContent = 'Login';
+                err.textContent = e2.message || 'Deploy web app first.';
+              })
+              .buildAppPageUrl('dashboard', res.token);
+          }
+        })
+        .withFailureHandler(function(e) {
+          if (window.AppLoader) window.AppLoader.forceHide();
+          btn.disabled = false;
+          btn.textContent = 'Login';
+          err.textContent = e.message || 'Login failed';
+        })
+        .loginUser(identifier, password);
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', runLogin);
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      runLogin();
+    });
+  </script>
+</body>
+</html>

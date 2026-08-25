@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>KE Track v2</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #151c2c;
+      --panel-2: #1a2235;
+      --gold: #C9A84C;
+      --text: #F0EAD6;
+      --muted: #9BACC4;
+      --line: rgba(255,255,255,0.1);
+      --danger: #ff8a8a;
+      --ok: #7dcea0;
+      --warn: #f0c674;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: radial-gradient(ellipse at top left, rgba(201,168,76,0.08), transparent 40%), var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+      padding: 14px 18px;
+      background: rgba(13,17,23,0.95);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(8px);
+    }
+    .brand { font-family: 'Cormorant Garamond', serif; font-size: 26px; color: var(--gold); }
+    .meta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); }
+    .list-meta { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
+    select, input, textarea, button {
+      font-family: inherit; font-size: 14px;
+    }
+    select, input, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,0.28);
+      color: var(--text);
+    }
+    textarea { min-height: 70px; resize: vertical; }
+    .btn {
+      border: none; border-radius: 8px; padding: 10px 14px;
+      background: var(--gold); color: #1A1A2E; font-weight: 700; cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn.ghost {
+      background: transparent; color: var(--text); border: 1px solid var(--line);
+    }
+    .btn.small { padding: 6px 10px; font-size: 12px; }
+    .btn:disabled { opacity: 0.55; cursor: wait; }
+    nav {
+      display: flex; gap: 6px; overflow-x: auto; padding: 10px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    nav button {
+      border: 1px solid transparent; background: transparent; color: var(--muted);
+      padding: 8px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+    }
+    nav button.active {
+      color: #1A1A2E; background: var(--gold); font-weight: 600;
+    }
+    main { padding: 18px; max-width: 1200px; margin: 0 auto; }
+    .panel {
+      display: none;
+      animation: fade .2s ease;
+    }
+    .panel.active { display: block; }
+    @keyframes fade { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: none;} }
+    h2 { font-size: 20px; margin-bottom: 6px; }
+    .lead { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+    .grid { display: grid; gap: 14px; }
+    .grid.kpi { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom: 18px; }
+    .grid.form { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .kpi-box {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px;
+    }
+    .kpi-box .n { font-size: 28px; font-weight: 700; color: var(--gold); }
+    .kpi-box .l { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-top: 4px; }
+    .section {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px;
+    }
+    .section h3 { font-size: 15px; margin-bottom: 12px; color: var(--gold); }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; text-transform: uppercase; letter-spacing: .04em; }
+    .field { margin-bottom: 12px; }
+    .row-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+    .pill {
+      display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 600;
+      background: rgba(255,255,255,0.08);
+    }
+    .pill.low, .pill.out { background: rgba(255,138,138,0.18); color: var(--danger); }
+    .pill.near { background: rgba(240,198,116,0.18); color: var(--warn); }
+    .pill.ok { background: rgba(125,206,160,0.15); color: var(--ok); }
+    .toast {
+      position: fixed; right: 16px; bottom: 16px; z-index: 50;
+      background: var(--panel-2); border: 1px solid var(--gold);
+      padding: 12px 16px; border-radius: 10px; max-width: 360px;
+      display: none; box-shadow: 0 12px 30px rgba(0,0,0,.4);
+    }
+    .toast.show { display: block; }
+    .toast.err { border-color: var(--danger); }
+    .empty { color: var(--muted); padding: 16px 0; font-size: 14px; }
+    .check { display: flex; align-items: center; gap: 8px; margin: 8px 0 12px; color: var(--muted); font-size: 13px; text-transform: none; letter-spacing: 0; }
+    .check input { width: auto; }
+    .item-photo-preview {
+      min-height: 88px;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      background: rgba(0,0,0,0.2);
+    }
+    .item-photo-preview img {
+      width: 88px; height: 88px; object-fit: cover; border-radius: 8px;
+    }
+    .thumb {
+      width: 36px; height: 36px; object-fit: cover; border-radius: 6px;
+      border: 1px solid var(--line); vertical-align: middle;
+      background: rgba(0,0,0,0.25);
+    }
+    #loader {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none;
+      align-items: center; justify-content: center; z-index: 40; color: var(--gold); font-weight: 600;
+    }
+    #loader.show { display: flex; }
+    .filters {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px; align-items: end; margin-bottom: 12px;
+    }
+    .filters .field { margin-bottom: 0; }
+    .two-col { display: grid; gap: 14px; grid-template-columns: 1fr; }
+    @media (min-width: 900px) {
+      .two-col { grid-template-columns: 1fr 1fr; }
+    }
+    .loc-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .loc-chip {
+      background: rgba(255,255,255,0.05); border: 1px solid var(--line);
+      border-radius: 10px; padding: 10px 12px; min-width: 120px;
+    }
+    .loc-chip strong { display: block; color: var(--gold); font-size: 18px; }
+    .loc-chip span { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+    @media (max-width: 640px) {
+      .brand { font-size: 22px; }
+      main { padding: 12px; }
+      th, td { padding: 8px 6px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="loader">Loading…</div>
+  <div id="toast" class="toast"></div>
+
+  <header>
+    <div>
+      <div class="brand">Kings Equestrian · Track v2</div>
+      <div class="meta" id="userMeta">Signing in…</div>
+    </div>
+    <div class="meta">
+      <label for="viewLocation" style="margin:0;display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;">
+        Location
+        <select id="viewLocation" style="width:auto;min-width:140px;"></select>
+      </label>
+      <button class="btn ghost" type="button" id="refreshBtn">Refresh</button>
+      <button class="btn ghost" type="button" id="logoutBtn">Logout</button>
+    </div>
+  </header>
+
+  <nav id="tabs">
+    <button type="button" data-tab="overview" class="active">Overview</button>
+    <button type="button" data-tab="vendors">Vendors</button>
+    <button type="button" data-tab="items">Items</button>
+    <button type="button" data-tab="inventory">Inventory</button>
+    <button type="button" data-tab="requests">Requests</button>
+    <button type="button" data-tab="issue">Issue</button>
+    <button type="button" data-tab="students">Students</button>
+  </nav>
+
+  <main>
+    <!-- Overview -->
+    <section class="panel active" id="panel-overview">
+      <h2>Overview</h2>
+      <p class="lead">Stock health, activity, and recent issues for the selected location.</p>
+      <div id="weeklyReportWrap" class="section" style="display:none">
+        <h3>Weekly report (admins)</h3>
+        <p class="list-meta">Sends inventory by location, issued totals, current stock, and vendor order list by email. Student issue names go in an Excel attachment only.</p>
+        <button class="btn" type="button" id="sendWeeklyBtn">Send weekly report now</button>
+      </div>
+      <div class="grid kpi" id="kpiRow"></div>
+      <div class="loc-bar" id="locBreakdown"></div>
+      <div class="section">
+        <h3>Total qty by item / size</h3>
+        <p class="list-meta">On-hand units for each item (size variants listed separately), plus location split.</p>
+        <div id="stockByItemTable"></div>
+      </div>
+      <div class="two-col">
+        <div class="section">
+          <h3>Low stock alerts</h3>
+          <div id="lowStockTable"></div>
+        </div>
+        <div class="section">
+          <h3>Recent issues</h3>
+          <div id="recentIssuesTable"></div>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Recent activity (who did what)</h3>
+        <div id="activityTable"></div>
+      </div>
+    </section>
+
+    <!-- Vendors -->
+    <section class="panel" id="panel-vendors">
+      <h2>Vendors</h2>
+      <p class="lead">Add vendors for a site, or choose <strong>All</strong> if the vendor serves every location.</p>
+      <div class="section" id="vendorFormWrap">
+        <h3 id="vendorFormTitle">Add vendor</h3>
+        <form id="vendorForm" class="grid form">
+          <input type="hidden" name="vendorId" id="vendorId">
+          <div class="field"><label>Vendor name</label><input name="vendorName" id="vendorName" required></div>
+          <div class="field"><label>Code</label><input name="code" id="vendorCode" required placeholder="EQS"></div>
+          <div class="field"><label>Phone</label><input name="phone" id="vendorPhone"></div>
+          <div class="field"><label>Email</label><input name="email" id="vendorEmail" type="email"></div>
+          <div class="field"><label>Location</label><select name="location" id="vendorLocation"></select></div>
+          <div class="field" style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;">
+            <button class="btn" type="submit" id="vendorSubmitBtn">Add vendor</button>
+            <button class="btn ghost" type="button" id="vendorCancelBtn" style="display:none;">Cancel edit</button>
+          </div>
+        </form>
+      </div>
+      <div class="section">
+        <h3>Vendor list</h3>
+        <p class="list-meta" id="vendorListMeta">Showing latest 10</p>
+        <div class="filters" data-list="vendors">
+          <div class="field"><label>Search</label><input data-f="search" placeholder="Name, code, added by…"></div>
+          <div class="field"><label>Filter location</label><select data-f="filterLocation" class="filterLoc"></select></div>
+          <div class="field"><label>From</label><input data-f="dateFrom" type="date"></div>
+          <div class="field"><label>To</label><input data-f="dateTo" type="date"></div>
+          <div class="field"><button class="btn" type="button" data-search="vendors">Search</button></div>
+        </div>
+        <div id="vendorTable"></div>
+      </div>
+    </section>
+
+    <!-- Items -->
+    <section class="panel" id="panel-items">
+      <h2>Items</h2>
+      <p class="lead">Item master. Use location <strong>All</strong> when the item can be stocked at any site.</p>
+      <div class="section" id="itemFormWrap">
+        <h3 id="itemFormTitle">Add item</h3>
+        <form id="itemForm" class="grid form">
+          <input type="hidden" name="itemCode" id="itemCodeHidden">
+          <div class="field" id="itemCodeDisplayWrap" style="display:none;">
+            <label>Item code (fixed)</label>
+            <input id="itemCodeDisplay" readonly>
+          </div>
+          <div class="field"><label>Item name</label><input name="itemName" id="itemName" required></div>
+          <div class="field"><label>Category</label><input name="category" id="itemCategory" placeholder="Helmet"></div>
+          <div class="field"><label>Vendor</label><select name="vendor" id="itemVendor" required></select></div>
+          <div class="field"><label>Location</label><select name="location" id="itemLocation"></select></div>
+          <div class="field"><label>Min level (alert)</label><input name="minLevel" id="itemMinLevel" type="number" min="0" value="5"></div>
+          <div class="field" style="grid-column:1/-1;">
+            <label>Photo</label>
+            <div class="grid form">
+              <div class="field">
+                <label>Camera</label>
+                <input id="itemImageCamera" type="file" accept="image/*" capture="environment">
+              </div>
+              <div class="field">
+                <label>Gallery / files</label>
+                <input id="itemImageGallery" type="file" accept="image/*">
+              </div>
+              <div class="field">
+                <label>Or paste image URL</label>
+                <input name="imageUrl" id="itemImageUrl" placeholder="https://…">
+              </div>
+              <div class="field">
+                <label>Preview</label>
+                <div class="item-photo-preview" id="itemImagePreview">No image</div>
+              </div>
+            </div>
+          </div>
+          <div class="field" style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;">
+            <button class="btn" type="submit" id="itemSubmitBtn">Add item</button>
+            <button class="btn ghost" type="button" id="itemCancelBtn" style="display:none;">Cancel edit</button>
+          </div>
+        </form>
+      </div>
+      <div class="section">
+        <h3>Item list</h3>
+        <p class="list-meta" id="itemListMeta">Showing latest 10</p>
+        <div class="filters" data-list="items">
+          <div class="field"><label>Search</label><input data-f="search" placeholder="Name, code, vendor…"></div>
+          <div class="field"><label>Filter location</label><select data-f="filterLocation" class="filterLoc"></select></div>
+          <div class="field"><label>From</label><input data-f="dateFrom" type="date"></div>
+          <div class="field"><label>To</label><input data-f="dateTo" type="date"></div>
+          <div class="field"><button class="btn" type="button" data-search="items">Search</button></div>
+        </div>
+        <div id="itemTable"></div>
+      </div>
+    </section>
+
+    <!-- Inventory -->
+    <section class="panel" id="panel-inventory">
+      <h2>Inventory</h2>
+      <p class="lead">Each <strong>Add stock</strong> writes a new row on the INVENTORY sheet (qty, date, who). On-hand is the total of those adds minus Issue records — adds are never merged into one line.</p>
+      <div class="section" id="invFormWrap">
+        <h3>Add stock</h3>
+        <form id="invForm" class="grid form">
+          <div class="field"><label>Item</label><select name="itemCode" id="invItem" required></select></div>
+          <div class="field"><label>Location</label><select name="location" id="invLocation"></select></div>
+          <div class="field"><label>Qty to add</label><input name="qty" id="invAddQty" type="number" min="1" step="1" required placeholder="e.g. 10"></div>
+          <div class="field">
+            <label>On hand now</label>
+            <div id="invOnHand" class="list-meta" style="margin:8px 0 0">Select item and location</div>
+          </div>
+          <div class="field" style="display:flex;align-items:flex-end;"><button class="btn" type="submit">Add stock</button></div>
+        </form>
+      </div>
+      <div class="section">
+        <h3>Stock additions</h3>
+        <p class="list-meta" id="invListMeta">Showing latest 10</p>
+        <div class="filters" data-list="inventory">
+          <div class="field"><label>Search</label><input data-f="search" placeholder="Item, added by…"></div>
+          <div class="field"><label>Filter location</label><select data-f="filterLocation" class="filterLoc"></select></div>
+          <div class="field"><label>Stock status</label>
+            <select data-f="status">
+              <option value="">All</option>
+              <option>Out of stock</option>
+              <option>Low stock</option>
+              <option>Near min</option>
+              <option>Healthy</option>
+            </select>
+          </div>
+          <div class="field"><label>From</label><input data-f="dateFrom" type="date"></div>
+          <div class="field"><label>To</label><input data-f="dateTo" type="date"></div>
+          <div class="field"><button class="btn" type="button" data-search="inventory">Search</button></div>
+        </div>
+        <div id="invTable"></div>
+      </div>
+    </section>
+
+    <!-- Requests -->
+    <section class="panel" id="panel-requests">
+      <h2>Requests</h2>
+      <p class="lead">All requests are written to the <strong>REQUEST_REGISTER</strong> sheet tab (your Excel register).</p>
+      <div class="section" id="reqFormWrap">
+        <h3>New request</h3>
+        <form id="reqForm" class="grid form">
+          <div class="field"><label>Vendor</label><select name="vendor" id="reqVendor" required></select></div>
+          <div class="field"><label>Item</label><select name="item" id="reqItem" required></select></div>
+          <div class="field"><label>Qty</label><input name="qty" type="number" min="1" required></div>
+          <div class="field"><label>Location</label><select name="location" id="reqLocation"></select></div>
+          <div class="field" style="grid-column:1/-1;"><label>Notes</label><textarea name="notes"></textarea></div>
+          <div class="field" style="display:flex;align-items:flex-end;"><button class="btn" type="submit">Add to register</button></div>
+        </form>
+      </div>
+      <div class="section">
+        <h3>Update status</h3>
+        <form id="reqStatusForm" class="grid form">
+          <div class="field"><label>Request ID</label><select name="requestId" id="reqStatusId" required></select></div>
+          <div class="field"><label>Status</label>
+            <select name="status">
+              <option>Pending</option>
+              <option>Ordered</option>
+              <option>Received</option>
+              <option>Cancelled</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="check"><input type="checkbox" name="addStock" id="reqAddStock"> When Received, add qty to inventory</label>
+            <input name="receiveQty" type="number" min="1" placeholder="Receive qty (optional)">
+          </div>
+          <div class="field" style="display:flex;align-items:flex-end;"><button class="btn" type="submit">Update status</button></div>
+        </form>
+      </div>
+      <div class="section">
+        <h3>Request register</h3>
+        <p class="list-meta" id="reqListMeta">Showing latest 10</p>
+        <div class="filters" data-list="requests">
+          <div class="field"><label>Search</label><input data-f="search" placeholder="ID, item, requested by…"></div>
+          <div class="field"><label>Filter location</label><select data-f="filterLocation" class="filterLoc"></select></div>
+          <div class="field"><label>Status</label>
+            <select data-f="status">
+              <option value="">All</option>
+              <option>Pending</option>
+              <option>Ordered</option>
+              <option>Received</option>
+              <option>Cancelled</option>
+            </select>
+          </div>
+          <div class="field"><label>From</label><input data-f="dateFrom" type="date"></div>
+          <div class="field"><label>To</label><input data-f="dateTo" type="date"></div>
+          <div class="field"><button class="btn" type="button" data-search="requests">Search</button></div>
+        </div>
+        <div id="reqTable"></div>
+      </div>
+    </section>
+
+    <!-- Issue -->
+    <section class="panel" id="panel-issue">
+      <h2>Issue</h2>
+      <p class="lead">Pick location and student (<strong>Name - Student_ID</strong>), then item and qty. Stock must already exist.</p>
+      <div class="section" id="issueFormWrap">
+        <h3>Issue item</h3>
+        <form id="issueForm" class="grid form">
+          <div class="field"><label>Location</label><select name="location" id="issueLocation"></select></div>
+          <div class="field"><label>Student</label>
+            <select id="issueStudentPick" name="studentId" required>
+              <option value="">— select student —</option>
+            </select>
+          </div>
+          <input type="hidden" name="studentName" id="issueStudentName">
+          <input type="hidden" name="keNumber" id="issueKe">
+          <div class="field"><label>Item</label><select name="item" id="issueItem" required></select></div>
+          <div class="field"><label>Qty</label><input name="qty" type="number" min="1" required></div>
+          <div class="field" style="display:flex;align-items:flex-end;"><button class="btn" type="submit">Issue</button></div>
+        </form>
+      </div>
+      <div class="section">
+        <h3>Issue records</h3>
+        <p class="list-meta" id="issueListMeta">Showing latest 10</p>
+        <div class="filters" data-list="issue">
+          <div class="field"><label>Search</label><input data-f="search" placeholder="Student, item, issued by…"></div>
+          <div class="field"><label>Filter location</label><select data-f="filterLocation" class="filterLoc"></select></div>
+          <div class="field"><label>From</label><input data-f="dateFrom" type="date"></div>
+          <div class="field"><label>To</label><input data-f="dateTo" type="date"></div>
+          <div class="field"><button class="btn" type="button" data-search="issue">Search</button></div>
+        </div>
+        <div id="issueTable"></div>
+      </div>
+    </section>
+
+    <!-- Students -->
+    <section class="panel" id="panel-students">
+      <h2>Students</h2>
+      <p class="lead">Paste or add students into <strong>STUDENT_MASTER</strong> (same columns as students-hyderabad + Location). Dropdowns filter by location.</p>
+      <div class="section" id="studentFormWrap">
+        <h3 id="studentFormTitle">Add student</h3>
+        <form id="studentForm" class="grid form">
+          <div class="field"><label>Student_ID (KE number)</label><input name="studentId" id="studentId" required placeholder="KE1004"></div>
+          <div class="field"><label>Student_Name</label><input name="studentName" id="studentName" required></div>
+          <div class="field"><label>Parent_Name</label><input name="parentName" id="studentParent"></div>
+          <div class="field"><label>Email</label><input name="email" id="studentEmail" type="email"></div>
+          <div class="field"><label>Phone</label><input name="phone" id="studentPhone"></div>
+          <div class="field"><label>Program</label><input name="program" id="studentProgram"></div>
+          <div class="field"><label>Skill_Riding_Avg</label><input name="skillRidingAvg" id="studentSkill"></div>
+          <div class="field"><label>Grade</label><input name="grade" id="studentGrade"></div>
+          <div class="field"><label>Section</label><input name="section" id="studentSection"></div>
+          <div class="field"><label>Location</label><select name="location" id="studentLocation"></select></div>
+          <div class="field" style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;">
+            <button class="btn" type="submit" id="studentSubmitBtn">Add student</button>
+            <button class="btn ghost" type="button" id="studentCancelBtn" style="display:none;">Cancel edit</button>
+          </div>
+        </form>
+      </div>
+      <div class="section">
+        <h3>Student list (this location)</h3>
+        <p class="list-meta" id="studentListMeta">Showing latest 10</p>
+        <div class="filters" data-list="students">
+          <div class="field"><label>Search</label><input data-f="search" placeholder="Name, Student_ID…"></div>
+          <div class="field"><label>Filter location</label><select data-f="filterLocation" class="filterLoc"></select></div>
+          <div class="field"><label>From</label><input data-f="dateFrom" type="date"></div>
+          <div class="field"><label>To</label><input data-f="dateTo" type="date"></div>
+          <div class="field"><button class="btn" type="button" data-search="students">Search</button></div>
+        </div>
+        <div id="studentTable"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    var URL_TOKEN = '<?= urlToken ?>';
+    var state = {
+      token: '',
+      bootstrap: null,
+      viewLocation: '',
+      listCache: { vendors: {}, items: {}, students: {} },
+      editing: { vendor: false, item: false, student: false }
+    };
+
+    function $(id) { return document.getElementById(id); }
+
+    function showLoader(on) {
+      $('loader').classList.toggle('show', !!on);
+    }
+
+    function toast(msg, isErr) {
+      var el = $('toast');
+      el.textContent = msg;
+      el.className = 'toast show' + (isErr ? ' err' : '');
+      setTimeout(function () { el.classList.remove('show'); }, 3200);
+    }
+
+    function getViewLocation() {
+      var sel = $('viewLocation');
+      if (!sel || sel.disabled) {
+        return state.viewLocation || '';
+      }
+      return sel.value;
+    }
+
+    function api(action, payload, cb) {
+      payload = payload || {};
+      payload.viewLocation = getViewLocation();
+      showLoader(true);
+      google.script.run
+        .withSuccessHandler(function (res) {
+          showLoader(false);
+          if (!res || res.success === false) {
+            toast((res && res.message) || 'Request failed', true);
+            if (cb) cb(null, res);
+            return;
+          }
+          if (cb) cb(res);
+        })
+        .withFailureHandler(function (e) {
+          showLoader(false);
+          toast((e && e.message) || String(e), true);
+          if (cb) cb(null, { message: e && e.message });
+        })
+        .apiCall(action, payload, state.token);
+    }
+
+    function fillSelect(sel, options, includeBlank) {
+      if (!sel) return;
+      var html = includeBlank ? '<option value="">— select —</option>' : '';
+      (options || []).forEach(function (o) {
+        if (typeof o === 'string') {
+          html += '<option value="' + esc(o) + '">' + esc(o) + '</option>';
+        } else {
+          html += '<option value="' + esc(o.value != null ? o.value : o.code || o.id || o.keNumber || '') + '">' +
+            esc(o.label || o.name || o.value || '') + '</option>';
+        }
+      });
+      sel.innerHTML = html;
+    }
+
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function statusPill(status) {
+      var s = String(status || '');
+      var cls = 'pill';
+      if (/out of stock/i.test(s)) cls += ' out';
+      else if (/low/i.test(s)) cls += ' low';
+      else if (/near/i.test(s)) cls += ' near';
+      else if (/healthy|received|issued/i.test(s)) cls += ' ok';
+      return '<span class="' + cls + '">' + esc(s) + '</span>';
+    }
+
+    function tableHtml(headers, rows, mapFn) {
+      if (!rows || !rows.length) {
+        return '<div class="empty">No records yet.</div>';
+      }
+      var h = '<table><thead><tr>' + headers.map(function (x) {
+        return '<th>' + esc(x) + '</th>';
+      }).join('') + '</tr></thead><tbody>';
+      rows.forEach(function (r) {
+        h += '<tr>' + mapFn(r).map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
+      });
+      return h + '</tbody></table>';
+    }
+
+    function applyPermissions(p) {
+      p = p || {};
+      $('vendorFormWrap').style.display = p.master ? '' : 'none';
+      $('itemFormWrap').style.display = p.master ? '' : 'none';
+      $('invFormWrap').style.display = p.inventory ? '' : 'none';
+      $('reqFormWrap').style.display = p.request ? '' : 'none';
+      $('issueFormWrap').style.display = p.issue ? '' : 'none';
+      $('studentFormWrap').style.display = p.issue ? '' : 'none';
+      if ($('weeklyReportWrap')) {
+        $('weeklyReportWrap').style.display = p.admin ? '' : 'none';
+      }
+    }
+
+    function hydrateLocationControls(b) {
+      var loc = b.location || {};
+      var siteOpts = (b.locations || []).map(function (l) { return { value: l, label: l }; });
+      var masterOpts = (loc.masterLocationOptions || []).map(function (o) {
+        return { value: o.value, label: o.label };
+      });
+      if (!masterOpts.length) {
+        masterOpts = [{ value: 'All', label: 'All Locations' }].concat(siteOpts);
+      }
+
+      fillSelect($('vendorLocation'), masterOpts);
+      fillSelect($('itemLocation'), masterOpts);
+      fillSelect($('invLocation'), siteOpts);
+      fillSelect($('reqLocation'), siteOpts);
+      fillSelect($('issueLocation'), siteOpts);
+      fillSelect($('studentLocation'), siteOpts);
+
+      var viewSel = $('viewLocation');
+      if (loc.locationLocked) {
+        viewSel.innerHTML = '<option value="' + esc(loc.viewLocation) + '">' + esc(loc.viewLabel) + '</option>';
+        viewSel.disabled = true;
+        state.viewLocation = loc.viewLocation;
+      } else {
+        fillSelect(viewSel, loc.locationOptions || []);
+        viewSel.disabled = false;
+        viewSel.value = loc.viewLocation || '';
+        state.viewLocation = viewSel.value;
+      }
+
+      // Default site location fields to current view (or user location)
+      var defaultSite = loc.viewLocation || loc.userLocation || (b.locations && b.locations[0]) || 'Farm';
+      if (!defaultSite) defaultSite = 'Farm';
+      ['invLocation', 'reqLocation', 'issueLocation', 'studentLocation'].forEach(function (id) {
+        if ($(id) && !$(id).value) $(id).value = defaultSite;
+        else if ($(id)) $(id).value = defaultSite;
+      });
+      if ($('vendorLocation')) $('vendorLocation').value = 'All';
+      if ($('itemLocation')) $('itemLocation').value = 'All';
+
+      // Filter bars: location dropdowns
+      var filterOpts = [{ value: '', label: 'All (view)' }].concat(siteOpts);
+      document.querySelectorAll('select.filterLoc').forEach(function (sel) {
+        fillSelect(sel, filterOpts);
+      });
+    }
+
+    function hydrateLists(lists) {
+      lists = lists || {};
+      fillSelect($('itemVendor'), (lists.vendors || []).map(function (v) {
+        return { value: v, label: v };
+      }), true);
+      fillSelect($('reqVendor'), (lists.vendors || []).map(function (v) {
+        return { value: v, label: v };
+      }), true);
+      fillSelect($('invItem'), lists.items || [], true);
+      fillSelect($('reqItem'), (lists.items || []).map(function (i) {
+        return { value: i.name, label: i.label };
+      }), true);
+      fillSelect($('issueItem'), (lists.items || []).map(function (i) {
+        return { value: i.name, label: i.label };
+      }), true);
+      fillSelect($('reqStatusId'), (lists.requests || []).map(function (r) {
+        return { value: r.id, label: r.label };
+      }), true);
+      fillSelect($('issueStudentPick'), lists.students || [], true);
+    }
+
+    function readFilters(listKey) {
+      var bar = document.querySelector('.filters[data-list="' + listKey + '"]');
+      var out = {};
+      if (!bar) return out;
+      bar.querySelectorAll('[data-f]').forEach(function (el) {
+        var k = el.getAttribute('data-f');
+        var v = (el.value || '').trim();
+        if (v) out[k] = v;
+      });
+      return out;
+    }
+
+    function setListMeta(id, res) {
+      var el = $(id);
+      if (!el || !res) return;
+      var shown = res.shown != null ? res.shown : (res.rows || []).length;
+      var total = res.total != null ? res.total : shown;
+      el.textContent = 'Showing ' + shown + ' of ' + total +
+        (total > shown ? ' (latest / filtered — use search to find more)' : '');
+    }
+
+    function renderOverview(summary) {
+      summary = summary || {};
+      $('kpiRow').innerHTML = [
+        { n: summary.totalItems || 0, l: 'Inventory rows' },
+        { n: summary.totalQty || 0, l: 'Total units' },
+        { n: summary.lowStockCount || 0, l: 'Low / out of stock' },
+        { n: summary.pendingRequests || 0, l: 'Pending requests' },
+        { n: summary.issuedToday || 0, l: 'Issued today' },
+        { n: summary.totalIssues || 0, l: 'Total issues' }
+      ].map(function (k) {
+        return '<div class="kpi-box"><div class="n">' + k.n + '</div><div class="l">' + k.l + '</div></div>';
+      }).join('');
+
+      var breakdown = summary.locationBreakdown || [];
+      $('locBreakdown').innerHTML = breakdown.map(function (b) {
+        return '<div class="loc-chip"><strong>' + esc(b.qty) + '</strong><span>' +
+          esc(b.location) + ' · ' + esc(b.rows) + ' rows' +
+          (b.low ? ' · ' + b.low + ' low' : '') + '</span></div>';
+      }).join('');
+
+      var byItem = summary.stockByItem || [];
+      if (!byItem.length) {
+        $('stockByItemTable').innerHTML = '<div class="empty">No stock rows yet. Add stock in Inventory.</div>';
+      } else {
+        var locHeaders = (summary.locationBreakdown || []).map(function (b) { return b.location; });
+        if (!locHeaders.length) locHeaders = ['Bangalore', 'Hyderabad', 'Pune', 'Farm'];
+        $('stockByItemTable').innerHTML = tableHtml(
+          ['Item', 'Code', 'Total qty'].concat(locHeaders),
+          byItem,
+          function (r) {
+            var cells = [esc(r.itemName), esc(r.itemCode), '<strong>' + esc(r.totalQty) + '</strong>'];
+            locHeaders.forEach(function (loc) {
+              cells.push(esc((r.locations && r.locations[loc]) || 0));
+            });
+            return cells;
+          }
+        );
+      }
+
+      var low = summary.lowStockItems || [];
+      if (!low.length) {
+        $('lowStockTable').innerHTML = '<div class="empty">No low-stock alerts for this location.</div>';
+      } else {
+        $('lowStockTable').innerHTML = tableHtml(
+          ['Item', 'Location', 'Qty', 'Min', 'Status'],
+          low,
+          function (r) {
+            return [
+              esc(r['Item Name']), esc(r['Location']), esc(r['Current Qty']),
+              esc(r.minLevel), statusPill(r.stockStatus)
+            ];
+          }
+        );
+      }
+
+      var issues = summary.recentIssues || [];
+      if (!issues.length) {
+        $('recentIssuesTable').innerHTML = '<div class="empty">No issues yet.</div>';
+      } else {
+        $('recentIssuesTable').innerHTML = tableHtml(
+          ['Date', 'Item', 'Qty', 'Student', 'By'],
+          issues,
+          function (r) {
+            return [
+              esc(r['Date']), esc(r['Item']), esc(r['Qty']),
+              esc(r['Student Name']) + ' (' + esc(r['KE Number']) + ')',
+              esc(r['Issued By'])
+            ];
+          }
+        );
+      }
+
+      var act = summary.recentActivity || [];
+      if (!act.length) {
+        $('activityTable').innerHTML = '<div class="empty">No activity logged yet. New actions will appear here.</div>';
+      } else {
+        $('activityTable').innerHTML = tableHtml(
+          ['When', 'Action', 'Type', 'ID', 'Details', 'Location', 'User'],
+          act,
+          function (r) {
+            return [
+              esc(r['Date']), esc(r['Action']), esc(r['Entity Type']), esc(r['Entity ID']),
+              esc(r['Details']), esc(r['Location']), esc(r['User'])
+            ];
+          }
+        );
+      }
+    }
+
+    function loadTabData(tab) {
+      if (tab === 'vendors') {
+        api('listVendors', readFilters('vendors'), function (res) {
+          if (!res) return;
+          setListMeta('vendorListMeta', res);
+          state.listCache.vendors = {};
+          (res.rows || []).forEach(function (r) {
+            state.listCache.vendors[r['Vendor ID']] = r;
+          });
+          $('vendorTable').innerHTML = tableHtml(
+            ['ID', 'Name', 'Code', 'Phone', 'Email', 'Location', 'Added By', 'Date', ''],
+            res.rows || [],
+            function (r) {
+              return [esc(r['Vendor ID']), esc(r['Vendor Name']), esc(r['Code']),
+                esc(r['Phone']), esc(r['Email']), esc(r['Location']),
+                esc(r['Added By']), esc(r['Date Added']),
+                '<button type="button" class="btn ghost small" data-edit="vendor" data-id="' + esc(r['Vendor ID']) + '">Edit</button>'];
+            }
+          );
+        });
+      } else if (tab === 'items') {
+        api('listItems', readFilters('items'), function (res) {
+          if (!res) return;
+          setListMeta('itemListMeta', res);
+          state.listCache.items = {};
+          (res.rows || []).forEach(function (r) {
+            state.listCache.items[r['Item Code']] = r;
+          });
+          $('itemTable').innerHTML = tableHtml(
+            ['Photo', 'Code', 'Name', 'Category', 'Vendor', 'Location', 'Min', 'Added By', 'Date', ''],
+            res.rows || [],
+            function (r) {
+              var img = r['Image URL']
+                ? '<img class="thumb" src="' + esc(r['Image URL']) + '" alt="">'
+                : '—';
+              return [img, esc(r['Item Code']), esc(r['Item Name']), esc(r['Category']),
+                esc(r['Vendor']), esc(r['Location']), esc(r['Min Level']),
+                esc(r['Added By']), esc(r['Date Added']),
+                '<button type="button" class="btn ghost small" data-edit="item" data-id="' + esc(r['Item Code']) + '">Edit</button>'];
+            }
+          );
+        });
+      } else if (tab === 'inventory') {
+        api('listInventory', readFilters('inventory'), function (res) {
+          if (!res) return;
+          setListMeta('invListMeta', res);
+          $('invTable').innerHTML = tableHtml(
+            ['Code', 'Name', 'Location', 'Qty added', 'Date added', 'Added by', 'On hand', 'Status'],
+            res.rows || [],
+            function (r) {
+              return [esc(r['Item Code']), esc(r['Item Name']), esc(r['Location']),
+                esc(r['Qty Added']), esc(r['Date Added']), esc(r['Added By']),
+                esc(r.onHand), statusPill(r.stockStatus)];
+            }
+          );
+        });
+      } else if (tab === 'requests') {
+        api('listRequests', readFilters('requests'), function (res) {
+          if (!res) return;
+          setListMeta('reqListMeta', res);
+          $('reqTable').innerHTML = tableHtml(
+            ['ID', 'Date', 'Vendor', 'Item', 'Qty', 'Location', 'By', 'Status', 'Notes'],
+            res.rows || [],
+            function (r) {
+              return [esc(r['Request ID']), esc(r['Date']), esc(r['Vendor']), esc(r['Item']),
+                esc(r['Qty']), esc(r['Location']), esc(r['Requested By']),
+                statusPill(r['Status']), esc(r['Notes'])];
+            }
+          );
+        });
+      } else if (tab === 'issue') {
+        reloadIssueStudents();
+        api('listIssues', readFilters('issue'), function (res) {
+          if (!res) return;
+          setListMeta('issueListMeta', res);
+          $('issueTable').innerHTML = tableHtml(
+            ['Issue ID', 'Item', 'Qty', 'Student', 'Student_ID', 'Location', 'Issued By', 'Date'],
+            res.rows || [],
+            function (r) {
+              return [esc(r['Issue ID']), esc(r['Item']), esc(r['Qty']),
+                esc(r['Student Name']), esc(r['KE Number']), esc(r['Location']),
+                esc(r['Issued By']), esc(r['Date'])];
+            }
+          );
+        });
+      } else if (tab === 'students') {
+        api('listStudents', readFilters('students'), function (res) {
+          if (!res) return;
+          setListMeta('studentListMeta', res);
+          state.listCache.students = {};
+          (res.rows || []).forEach(function (r) {
+            state.listCache.students[r['Student_ID']] = r;
+          });
+          $('studentTable').innerHTML = tableHtml(
+            ['Student_ID', 'Student_Name', 'Parent', 'Program', 'Grade', 'Section', 'Location', 'Added By', ''],
+            res.rows || [],
+            function (r) {
+              return [
+                esc(r['Student_ID']), esc(r['Student_Name']), esc(r['Parent_Name']),
+                esc(r['Program']), esc(r['Grade']), esc(r['Section']),
+                esc(r['Location']), esc(r['Added By']),
+                '<button type="button" class="btn ghost small" data-edit="student" data-id="' + esc(r['Student_ID']) + '">Edit</button>'
+              ];
+            }
+          );
+        });
+      } else if (tab === 'overview') {
+        renderOverview(state.bootstrap && state.bootstrap.summary);
+      }
+    }
+
+    function applyBootstrap(b) {
+      state.bootstrap = b;
+      if (!b || !b.authenticated) {
+        toast((b && b.message) || 'Please sign in', true);
+        setTimeout(function () {
+          var url = (b && b.webAppUrl) || '';
+          window.top.location.href = url ? (url + (url.indexOf('?') >= 0 ? '&' : '?') + 'page=login') : '?page=login';
+        }, 800);
+        return;
+      }
+      var u = b.user || {};
+      $('userMeta').textContent = (u.name || u.email) + ' · ' + (u.role || '') +
+        (u.location ? ' · home: ' + u.location : '');
+      applyPermissions(b.permissions);
+      hydrateLocationControls(b);
+      hydrateLists(b.lists);
+      renderOverview(b.summary);
+    }
+
+    function refreshAll() {
+      api('refresh', {}, function (res) {
+        if (!res || !res.bootstrap) return;
+        applyBootstrap(res.bootstrap);
+        var active = document.querySelector('nav button.active');
+        if (active) loadTabData(active.getAttribute('data-tab'));
+        toast('Refreshed');
+      });
+    }
+
+    function boot() {
+      try {
+        state.token = URL_TOKEN || localStorage.getItem('ke_v2_token') || '';
+      } catch (e) {
+        state.token = URL_TOKEN || '';
+      }
+      if (!state.token) {
+        window.top.location.href = '?page=login';
+        return;
+      }
+      showLoader(true);
+      google.script.run
+        .withSuccessHandler(function (b) {
+          showLoader(false);
+          applyBootstrap(b);
+        })
+        .withFailureHandler(function (e) {
+          showLoader(false);
+          toast((e && e.message) || String(e), true);
+        })
+        .getDashboardBootstrap(state.token, '');
+    }
+
+    setupItemImageInputs();
+
+    // Tabs
+    document.getElementById('tabs').addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-tab]');
+      if (!btn) return;
+      document.querySelectorAll('nav button').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.panel').forEach(function (p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      var tab = btn.getAttribute('data-tab');
+      $('panel-' + tab).classList.add('active');
+      loadTabData(tab);
+    });
+
+    $('viewLocation').addEventListener('change', function () {
+      state.viewLocation = this.value;
+      refreshAll();
+    });
+    $('refreshBtn').addEventListener('click', refreshAll);
+    if ($('sendWeeklyBtn')) {
+      $('sendWeeklyBtn').addEventListener('click', function () {
+        api('sendWeeklyReport', {}, function (res) {
+          if (!res) return;
+          toast(res.message || 'Weekly report sent');
+        });
+      });
+    }
+    $('logoutBtn').addEventListener('click', function () {
+      api('logout', {}, function () {
+        try { localStorage.removeItem('ke_v2_token'); } catch (e) {}
+        window.top.location.href = '?page=login';
+      });
+    });
+
+    function formPayload(form) {
+      var fd = new FormData(form);
+      var o = {};
+      fd.forEach(function (v, k) {
+        if (form.elements[k] && form.elements[k].type === 'checkbox') {
+          o[k] = form.elements[k].checked;
+        } else {
+          o[k] = v;
+        }
+      });
+      // checkboxes not in FormData when unchecked
+      Array.prototype.forEach.call(form.querySelectorAll('input[type=checkbox]'), function (cb) {
+        o[cb.name] = cb.checked;
+      });
+      return o;
+    }
+
+    function bindForm(id, action, okMsg) {
+      $(id).addEventListener('submit', function (e) {
+        e.preventDefault();
+        var payload = formPayload(e.target);
+        api(action, payload, function (res) {
+          if (!res) return;
+          toast(res.message || okMsg);
+          e.target.reset();
+          refreshAll();
+        });
+      });
+    }
+
+    function resetItemImageFilesOnly() {
+      if ($('itemImageCamera')) $('itemImageCamera').value = '';
+      if ($('itemImageGallery')) $('itemImageGallery').value = '';
+    }
+
+    function resetItemImageInputs() {
+      resetItemImageFilesOnly();
+      if ($('itemImageUrl')) $('itemImageUrl').value = '';
+      setItemImagePreview('');
+    }
+
+    function setItemImagePreview(src) {
+      var el = $('itemImagePreview');
+      if (!el) return;
+      if (!src) {
+        el.textContent = 'No image';
+        return;
+      }
+      el.innerHTML = '<img src="' + src + '" alt="Item photo">';
+    }
+
+    function compressImageFile(file, okCb, errCb) {
+      var reader = new FileReader();
+      reader.onerror = function () { errCb('Could not read image file.'); };
+      reader.onload = function () {
+        var img = new Image();
+        img.onload = function () {
+          var max = 900;
+          var w = img.width || max;
+          var h = img.height || max;
+          var scale = Math.min(1, max / Math.max(w, h));
+          var canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(w * scale));
+          canvas.height = Math.max(1, Math.round(h * scale));
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          var mime = 'image/jpeg';
+          var dataUrl = canvas.toDataURL(mime, 0.72);
+          okCb(dataUrl, mime);
+        };
+        img.onerror = function () { errCb('Invalid image file.'); };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function setupItemImageInputs() {
+      var cam = $('itemImageCamera');
+      var gal = $('itemImageGallery');
+      var url = $('itemImageUrl');
+      if (!cam || !gal) return;
+      function fromFile(primary, other) {
+        var f = primary.files && primary.files[0];
+        if (!f) return;
+        other.value = '';
+        var reader = new FileReader();
+        reader.onload = function () { setItemImagePreview(reader.result); };
+        reader.readAsDataURL(f);
+      }
+      cam.addEventListener('change', function () { fromFile(cam, gal); });
+      gal.addEventListener('change', function () { fromFile(gal, cam); });
+      if (url) {
+        url.addEventListener('input', function () {
+          if ((cam.files && cam.files.length) || (gal.files && gal.files.length)) return;
+          setItemImagePreview(url.value.trim());
+        });
+      }
+    }
+
+    function clearVendorEdit() {
+      state.editing.vendor = false;
+      $('vendorId').value = '';
+      $('vendorForm').reset();
+      $('vendorFormTitle').textContent = 'Add vendor';
+      $('vendorSubmitBtn').textContent = 'Add vendor';
+      $('vendorCancelBtn').style.display = 'none';
+      if ($('vendorLocation')) $('vendorLocation').value = 'All';
+    }
+
+    function clearItemEdit() {
+      state.editing.item = false;
+      $('itemCodeHidden').value = '';
+      $('itemForm').reset();
+      $('itemCodeDisplayWrap').style.display = 'none';
+      $('itemFormTitle').textContent = 'Add item';
+      $('itemSubmitBtn').textContent = 'Add item';
+      $('itemCancelBtn').style.display = 'none';
+      if ($('itemMinLevel')) $('itemMinLevel').value = 5;
+      if ($('itemLocation')) $('itemLocation').value = 'All';
+      resetItemImageInputs();
+    }
+
+    function clearStudentEdit() {
+      state.editing.student = false;
+      $('studentForm').reset();
+      $('studentId').readOnly = false;
+      $('studentFormTitle').textContent = 'Add student';
+      $('studentSubmitBtn').textContent = 'Add student';
+      $('studentCancelBtn').style.display = 'none';
+    }
+
+    function startVendorEdit(id) {
+      var r = state.listCache.vendors[id];
+      if (!r) { toast('Vendor not in current list — search then edit', true); return; }
+      state.editing.vendor = true;
+      $('vendorId').value = r['Vendor ID'] || '';
+      $('vendorName').value = r['Vendor Name'] || '';
+      $('vendorCode').value = r['Code'] || '';
+      $('vendorPhone').value = r['Phone'] || '';
+      $('vendorEmail').value = r['Email'] || '';
+      $('vendorLocation').value = r['Location'] || 'All';
+      $('vendorFormTitle').textContent = 'Edit vendor';
+      $('vendorSubmitBtn').textContent = 'Save changes';
+      $('vendorCancelBtn').style.display = '';
+      $('vendorFormWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function startItemEdit(id) {
+      var r = state.listCache.items[id];
+      if (!r) { toast('Item not in current list — search then edit', true); return; }
+      state.editing.item = true;
+      $('itemCodeHidden').value = r['Item Code'] || '';
+      $('itemCodeDisplay').value = r['Item Code'] || '';
+      $('itemCodeDisplayWrap').style.display = '';
+      $('itemName').value = r['Item Name'] || '';
+      $('itemCategory').value = r['Category'] || '';
+      $('itemVendor').value = r['Vendor'] || '';
+      $('itemLocation').value = r['Location'] || 'All';
+      $('itemMinLevel').value = r['Min Level'] != null ? r['Min Level'] : 0;
+      if ($('itemImageUrl')) $('itemImageUrl').value = r['Image URL'] || '';
+      setItemImagePreview(r['Image URL'] || '');
+      resetItemImageFilesOnly();
+      $('itemFormTitle').textContent = 'Edit item';
+      $('itemSubmitBtn').textContent = 'Save changes';
+      $('itemCancelBtn').style.display = '';
+      $('itemFormWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function startStudentEdit(id) {
+      var r = state.listCache.students[id];
+      if (!r) { toast('Student not in current list — search then edit', true); return; }
+      state.editing.student = true;
+      $('studentId').value = r['Student_ID'] || '';
+      $('studentId').readOnly = true;
+      $('studentName').value = r['Student_Name'] || '';
+      $('studentParent').value = r['Parent_Name'] || '';
+      $('studentEmail').value = r['Email'] || '';
+      $('studentPhone').value = r['Phone'] || '';
+      $('studentProgram').value = r['Program'] || '';
+      $('studentSkill').value = r['Skill_Riding_Avg'] || '';
+      $('studentGrade').value = r['Grade'] || '';
+      $('studentSection').value = r['Section'] || '';
+      $('studentLocation').value = r['Location'] || '';
+      $('studentFormTitle').textContent = 'Edit student';
+      $('studentSubmitBtn').textContent = 'Save changes';
+      $('studentCancelBtn').style.display = '';
+      $('studentFormWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    $('vendorForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var payload = formPayload(e.target);
+      var action = state.editing.vendor ? 'updateVendor' : 'addVendor';
+      api(action, payload, function (res) {
+        if (!res) return;
+        toast(res.message || (state.editing.vendor ? 'Vendor updated' : 'Vendor added'));
+        clearVendorEdit();
+        refreshAll();
+      });
+    });
+
+    $('itemForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var payload = formPayload(e.target);
+      var action = state.editing.item ? 'updateItem' : 'addItem';
+      if (state.editing.item) {
+        payload.itemCode = $('itemCodeHidden').value;
+      } else {
+        delete payload.itemCode;
+      }
+      var cam = $('itemImageCamera');
+      var gal = $('itemImageGallery');
+      var file = (cam && cam.files && cam.files[0]) || (gal && gal.files && gal.files[0]);
+      function submitItem() {
+        api(action, payload, function (res) {
+          if (!res) return;
+          toast(res.message || (state.editing.item ? 'Item updated' : 'Item added'));
+          clearItemEdit();
+          refreshAll();
+        });
+      }
+      if (file) {
+        if (file.size > 8 * 1024 * 1024) {
+          toast('Image too large. Use a file under 8 MB.', true);
+          return;
+        }
+        showLoader(true);
+        compressImageFile(file, function (dataUrl, mime) {
+          payload.imageData = dataUrl;
+          payload.imageName = file.name || 'item.jpg';
+          payload.imageMimeType = mime || file.type || 'image/jpeg';
+          submitItem();
+        }, function (err) {
+          showLoader(false);
+          toast(err || 'Could not read image.', true);
+        });
+        return;
+      }
+      submitItem();
+    });
+
+    $('studentForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var payload = formPayload(e.target);
+      var action = state.editing.student ? 'updateStudent' : 'addStudent';
+      api(action, payload, function (res) {
+        if (!res) return;
+        toast(res.message || (state.editing.student ? 'Student updated' : 'Student added'));
+        clearStudentEdit();
+        refreshAll();
+      });
+    });
+
+    $('vendorCancelBtn').addEventListener('click', clearVendorEdit);
+    $('itemCancelBtn').addEventListener('click', clearItemEdit);
+    $('studentCancelBtn').addEventListener('click', clearStudentEdit);
+
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-edit]');
+      if (!btn) return;
+      var kind = btn.getAttribute('data-edit');
+      var id = btn.getAttribute('data-id');
+      if (kind === 'vendor') startVendorEdit(id);
+      else if (kind === 'item') startItemEdit(id);
+      else if (kind === 'student') startStudentEdit(id);
+    });
+
+    bindForm('invForm', 'addInventoryQty', 'Stock added');
+    bindForm('reqForm', 'createRequest', 'Request added');
+    bindForm('reqStatusForm', 'updateRequestStatus', 'Status updated');
+    bindForm('issueForm', 'issueItem', 'Issued');
+
+    function refreshInvOnHand() {
+      var el = $('invOnHand');
+      if (!el) return;
+      var item = $('invItem') ? $('invItem').value : '';
+      var loc = $('invLocation') ? $('invLocation').value : '';
+      if (!item || !loc) {
+        el.textContent = 'Select item and location';
+        return;
+      }
+      api('getStockQty', { itemCode: item, item: item, location: loc }, function (res) {
+        if (!res) return;
+        el.textContent = (res.qty != null ? res.qty : 0) + ' at ' + loc;
+      });
+    }
+    if ($('invItem')) $('invItem').addEventListener('change', refreshInvOnHand);
+    if ($('invLocation')) $('invLocation').addEventListener('change', refreshInvOnHand);
+
+    function reloadIssueStudents() {
+      var loc = $('issueLocation') ? $('issueLocation').value : '';
+      api('listStudents', { location: loc }, function (res) {
+        if (!res) return;
+        var opts = res.students || (res.rows || []).map(function (r) {
+          var id = r['Student_ID'] || '';
+          var name = r['Student_Name'] || '';
+          return { value: id, studentId: id, keNumber: id, studentName: name, label: name + ' - ' + id };
+        });
+        fillSelect($('issueStudentPick'), opts, true);
+        if (state.bootstrap && state.bootstrap.lists) {
+          state.bootstrap.lists.students = opts;
+        }
+        $('issueStudentName').value = '';
+        $('issueKe').value = '';
+      });
+    }
+
+    $('issueStudentPick').addEventListener('change', function () {
+      var v = this.value;
+      $('issueStudentName').value = '';
+      $('issueKe').value = '';
+      if (!v) return;
+      var lists = (state.bootstrap && state.bootstrap.lists && state.bootstrap.lists.students) || [];
+      for (var i = 0; i < lists.length; i++) {
+        var id = lists[i].studentId || lists[i].keNumber || lists[i].value;
+        if (id === v) {
+          $('issueStudentName').value = lists[i].studentName || '';
+          $('issueKe').value = id;
+          break;
+        }
+      }
+      if (!$('issueKe').value) {
+        $('issueKe').value = v;
+      }
+    });
+
+    if ($('issueLocation')) {
+      $('issueLocation').addEventListener('change', reloadIssueStudents);
+    }
+
+    document.querySelectorAll('button[data-search]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        loadTabData(btn.getAttribute('data-search'));
+      });
+    });
+    document.querySelectorAll('.filters input[data-f="search"]').forEach(function (inp) {
+      inp.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          var bar = inp.closest('.filters');
+          if (bar) loadTabData(bar.getAttribute('data-list'));
+        }
+      });
+    });
+
+    boot();
+  </script>
+</body>
+</html>

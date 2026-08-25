@@ -1,0 +1,124 @@
+<style>
+  .profile-photo-wrap { display:flex; flex-direction:column; gap:10px; }
+  .profile-photo-preview {
+    width:120px; height:120px; border-radius:12px; border:1px dashed #334155;
+    background:#0b1220; object-fit:cover; display:block;
+  }
+  .profile-photo-preview.empty { display:flex; align-items:center; justify-content:center;
+    color:#9ca3af; font-size:12px; text-align:center; padding:8px; }
+  .profile-photo-actions { display:flex; flex-wrap:wrap; gap:8px; }
+  .profile-photo-btn {
+    border:1px solid #334155; background:#132033; color:#e5e7eb; border-radius:8px;
+    padding:8px 12px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .profile-photo-btn.primary { background:#d4af37; color:#111827; border-color:#d4af37; }
+  .profile-photo-hint { font-size:12px; color:#9ca3af; }
+  .profile-photo-input { display:none; }
+</style>
+<script>
+(function() {
+  var instances = {};
+
+  function resizeImage(file, maxDim, quality, done) {
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var img = new Image();
+      img.onload = function() {
+        var w = img.width;
+        var h = img.height;
+        var scale = Math.min(1, maxDim / Math.max(w, h));
+        var cw = Math.round(w * scale);
+        var ch = Math.round(h * scale);
+        var canvas = document.createElement("canvas");
+        canvas.width = cw;
+        canvas.height = ch;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, cw, ch);
+        done(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = function() { done(""); };
+      img.src = ev.target.result;
+    };
+    reader.onerror = function() { done(""); };
+    reader.readAsDataURL(file);
+  }
+
+  window.ProfilePhoto = {
+    mount: function(containerSel, opts) {
+      opts = opts || {};
+      var id = opts.id || "default";
+      var el = typeof containerSel === "string" ? document.querySelector(containerSel) : containerSel;
+      if (!el) return;
+      var label = opts.label || "Profile photo";
+      var dataKey = opts.dataKey || "Photo_Data";
+      var urlKey = opts.urlKey || "Photo_URL";
+      el.innerHTML =
+        '<div class="profile-photo-wrap" data-photo-id="' + id + '">' +
+          '<label style="font-size:14px;font-weight:600">' + label + '</label>' +
+          '<img class="profile-photo-preview empty" id="photoPreview_' + id + '" alt="Photo preview" />' +
+          '<div class="profile-photo-actions">' +
+            '<button type="button" class="profile-photo-btn primary" data-photo-pick="' + id + '">Take / choose photo</button>' +
+            '<button type="button" class="profile-photo-btn" data-photo-clear="' + id + '" style="display:none">Remove</button>' +
+          '</div>' +
+          '<span class="profile-photo-hint">Use camera on phone or upload JPG/PNG. Image is resized before upload.</span>' +
+          '<input type="file" class="profile-photo-input" id="photoInput_' + id + '" accept="image/*" capture="environment" />' +
+          '<input type="hidden" id="photoUrl_' + id + '" name="' + urlKey + '" value="" />' +
+        '</div>';
+      var preview = document.getElementById("photoPreview_" + id);
+      var input = document.getElementById("photoInput_" + id);
+      var urlHidden = document.getElementById("photoUrl_" + id);
+      var clearBtn = el.querySelector('[data-photo-clear="' + id + '"]');
+      var pickBtn = el.querySelector('[data-photo-pick="' + id + '"]');
+      instances[id] = { dataUrl: "", preview: preview, urlHidden: urlHidden, clearBtn: clearBtn, dataKey: dataKey, urlKey: urlKey };
+
+      pickBtn.addEventListener("click", function() { input.click(); });
+      clearBtn.addEventListener("click", function() {
+        instances[id].dataUrl = "";
+        urlHidden.value = "";
+        preview.src = "";
+        preview.classList.add("empty");
+        preview.textContent = "No photo";
+        clearBtn.style.display = "none";
+        input.value = "";
+      });
+      input.addEventListener("change", function() {
+        var file = input.files && input.files[0];
+        if (!file) return;
+        if (!/^image\//i.test(file.type)) {
+          alert("Please choose an image file.");
+          return;
+        }
+        resizeImage(file, 1200, 0.78, function(dataUrl) {
+          if (!dataUrl) {
+            alert("Could not read image.");
+            return;
+          }
+          instances[id].dataUrl = dataUrl;
+          preview.src = dataUrl;
+          preview.classList.remove("empty");
+          preview.textContent = "";
+          clearBtn.style.display = "inline-block";
+        });
+      });
+      preview.textContent = "No photo";
+    },
+    setExisting: function(id, url) {
+      var inst = instances[id || "default"];
+      if (!inst || !url) return;
+      inst.urlHidden.value = url;
+      inst.preview.src = url;
+      inst.preview.classList.remove("empty");
+      inst.preview.textContent = "";
+      inst.clearBtn.style.display = "inline-block";
+    },
+    readPayload: function(id) {
+      var inst = instances[id || "default"];
+      if (!inst) return { Photo_Data: "", Photo_URL: "" };
+      var out = {};
+      out[inst.dataKey || "Photo_Data"] = inst.dataUrl || "";
+      out[inst.urlKey || "Photo_URL"] = inst.urlHidden ? inst.urlHidden.value : "";
+      return out;
+    }
+  };
+})();
+</script>

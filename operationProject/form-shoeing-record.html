@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+  <title>Shoeing Record (ShoeingData)</title>
+  <style>
+    :root { --bg:#0f172a; --card:#111827; --text:#e5e7eb; --muted:#9ca3af; --accent:#d4af37; --border:#334155; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Arial, sans-serif; background:linear-gradient(135deg,#0b1220,#111827); color:var(--text); padding:16px; padding-top:max(16px, env(safe-area-inset-top)); }
+    .form-topbar { display:flex; align-items:flex-start; gap:12px; margin-bottom:16px; }
+    .home-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); background:rgba(212,175,55,0.12); color:var(--accent); border-radius:10px; padding:8px 12px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; }
+    .home-btn:hover { background:rgba(212,175,55,0.25); }
+    .form-topbar h1 { margin:0 0 4px; font-size:22px; }
+    .form-topbar p { margin:0; }
+    .wrap { max-width:760px; margin:0 auto; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:22px; }
+    h1 { margin:0 0 6px; font-size:24px; }
+    p { margin:0 0 18px; color:var(--muted); }
+    .grid { display:grid; gap:14px; grid-template-columns:1fr 1fr; }
+    .field { display:flex; flex-direction:column; gap:6px; }
+    .full { grid-column:1 / -1; }
+    label { font-size:14px; font-weight:600; }
+    input, select, textarea { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#0b1220; color:var(--text); }
+    input[type="date"] { cursor:pointer; color-scheme: dark; }
+    input[type="date"]::-webkit-calendar-picker-indicator { cursor:pointer; filter: invert(0.85); }
+    textarea { min-height:100px; resize:vertical; }
+    button { margin-top:18px; border:none; background:var(--accent); color:#111827; font-weight:700; padding:12px 16px; border-radius:10px; cursor:pointer; width:100%; }
+    @media (max-width: 640px) { .grid { grid-template-columns:1fr; } }
+  
+    body.app-page { padding: 0; padding-bottom: max(24px, env(safe-area-inset-bottom)); width: 100%; max-width: 100%; margin: 0; overflow-x: hidden; }
+    .content.form-page-body { padding: 12px; width: 100%; max-width: 100%; }
+    .wrap { width: 100%; max-width: 100%; }
+    @media (min-width: 1200px) { html:not(.app-fullwidth) body.app-page { max-width: 760px; margin: 0 auto; } html:not(.app-fullwidth) .wrap { max-width: 760px; } }
+
+  </style>
+</head>
+<body class="app-page">
+<script>
+  window.__APP_PAGE__ = '<?= appPage ?>';
+  window.__APP_TAB__ = 'forms';
+</script>
+<?!= include('AppChrome'); ?>
+<div class="content form-page-body">
+  <main class="wrap">
+    <h1>Shoeing Record</h1>
+    <p>Sheet: ShoeingData</p>
+    <form id="shoeingRecordForm" novalidate>
+      <div class="grid">
+        <div class="field"><label for="timestamp">Timestamp</label><input id="timestamp" name="Timestamp" type="datetime-local" required></div>
+        <div class="field"><label for="date">Date</label><input id="date" name="Date" type="date" required></div>
+        <div class="field">
+          <label for="location">Location</label>
+          <select id="location" name="Location" required><option value="">Select location</option></select>
+        </div>
+        <div class="field">
+          <label for="horse">Horse</label>
+          <select id="horse" name="Horse" required disabled><option value="">Select location first</option></select>
+        </div>
+        <div class="field">
+          <label for="shoeingType">Shoeing Type</label>
+          <select id="shoeingType" name="Type" required><option value="">Select shoeing type</option><option>Full Set</option><option>Front Only</option><option>Rear Only</option><option>Trim Only</option></select>
+        </div>
+        <div class="field"><label for="nextDue">Next Due</label><input id="nextDue" name="NextDue" type="date" required></div>
+        <div class="field"><label for="farrier">Farrier</label><input id="farrier" name="Farrier" type="text" required></div>
+        <div class="field"><label for="cost">Cost</label><input id="cost" name="Cost" type="number" min="0" step="0.01"></div>
+        <div class="field full"><label for="notes">Notes</label><textarea id="notes" name="Notes" placeholder="Optional notes"></textarea></div>
+      </div>
+      <button type="submit">Submit</button>
+    </form>
+  </main>
+</div>
+  <script>
+    const FORM_KEY = "shoeing";
+    const PAGE_KEY = "form-shoeing-record";
+    function redirectToApp(url) {
+      if (!url) return;
+      try {
+        if (window.top && window.top !== window.self) {
+          window.top.location.replace(url);
+          return;
+        }
+      } catch (e) {}
+      try {
+        var link = document.createElement("a");
+        link.href = url;
+        link.target = "_top";
+        link.rel = "noopener";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        return;
+      } catch (e2) {}
+      window.location.replace(url);
+    }
+    function goToLogin() {
+      if (window.google && google.script && google.script.run) {
+        google.script.run.withSuccessHandler(redirectToApp).getLoginUrl(PAGE_KEY);
+        return;
+      }
+      redirectToApp("?page=login");
+    }
+    function syncTokenFromUrl() {
+      const p = new URLSearchParams(window.location.search);
+      const token = p.get("token");
+      if (token) localStorage.setItem("opsAuthToken", token);
+    }
+    function getAuthToken() {
+      syncTokenFromUrl();
+      return localStorage.getItem("opsAuthToken") || "";
+    }
+    function requireAuth() {
+      syncTokenFromUrl();
+      const token = getAuthToken();
+      if (!token) {
+        goToLogin();
+        return "";
+      }
+      return token;
+    }
+    const ts = document.getElementById("timestamp");
+    const dateEl = document.getElementById("date");
+    const locationEl = document.getElementById("location");
+    const horseEl = document.getElementById("horse");
+
+    function setDefaultDates() {
+      var now = new Date();
+      ts.value = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      dateEl.value = now.toISOString().slice(0, 10);
+    }
+    setDefaultDates();
+
+    function getPayload(formEl) {
+      const formData = new FormData(formEl);
+      return Object.fromEntries(formData.entries());
+    }
+
+    function fillSelect(selectEl, values, placeholder, disabled) {
+      selectEl.innerHTML = "";
+      var emptyOpt = document.createElement("option");
+      emptyOpt.value = "";
+      emptyOpt.textContent = placeholder || "Select";
+      selectEl.appendChild(emptyOpt);
+      (values || []).forEach(function(value) {
+        var opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = value;
+        selectEl.appendChild(opt);
+      });
+      selectEl.disabled = !!disabled;
+    }
+
+    function fillHorseSelect(horses, disabled) {
+      horseEl.innerHTML = "";
+      var emptyOpt = document.createElement("option");
+      emptyOpt.value = "";
+      emptyOpt.textContent = disabled ? "Select location first" : "Select horse";
+      horseEl.appendChild(emptyOpt);
+      (horses || []).forEach(function(h) {
+        var opt = document.createElement("option");
+        opt.value = h.value;
+        opt.textContent = h.label;
+        horseEl.appendChild(opt);
+      });
+      horseEl.disabled = !!disabled;
+    }
+
+    function handleDropdownError(error) {
+      if (String(error && error.message || "").toLowerCase().includes("unauthorized")) {
+        localStorage.removeItem("opsAuthToken");
+        goToLogin();
+        return;
+      }
+      alert("Unable to load dropdown data: " + (error && error.message ? error.message : error));
+    }
+
+    function loadBootstrap() {
+      var token = requireAuth();
+      if (!token || !(window.google && google.script && google.script.run)) {
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function(data) {
+          if (window.AppLocation) {
+            window.AppLocation.applyField(locationEl, data);
+          } else {
+            fillSelect(locationEl, data.locations || data.Location || [], "Select location", false);
+          }
+          if (data.locationLocked && locationEl.value) {
+            loadHorsesForLocation(locationEl.value);
+          } else {
+            fillHorseSelect([], true);
+          }
+        })
+        .withFailureHandler(handleDropdownError)
+        .getDropdownOptions(FORM_KEY, token);
+    }
+
+    function loadHorsesForLocation(location) {
+      var token = requireAuth();
+      if (!token || !location) {
+        fillHorseSelect([], true);
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function(data) {
+          fillHorseSelect(data.horses || [], false);
+        })
+        .withFailureHandler(handleDropdownError)
+        .getShoeingHorsesForLocation(location, token);
+    }
+
+    locationEl.addEventListener("change", function() {
+      var loc = locationEl.value;
+      if (!loc) {
+        fillHorseSelect([], true);
+        return;
+      }
+      fillHorseSelect([], true);
+      loadHorsesForLocation(loc);
+    });
+
+    document.getElementById("shoeingRecordForm").addEventListener("submit", function (e) {
+      if (!this.checkValidity()) { e.preventDefault(); this.reportValidity(); return; }
+      e.preventDefault();
+      const payload = getPayload(this);
+      const token = requireAuth();
+      if (token && window.google && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(() => {
+            alert("Shoeing record submitted.");
+            this.reset();
+            setDefaultDates();
+            loadBootstrap();
+          })
+          .withFailureHandler((error) => {
+            if (String(error.message || "").toLowerCase().includes("unauthorized")) {
+              localStorage.removeItem("opsAuthToken");
+              goToLogin();
+              return;
+            }
+            alert("Submit failed: " + error.message);
+          })
+          .submitFormData(FORM_KEY, payload, token);
+        return;
+      }
+      alert("Shoeing record submitted (preview mode).");
+      this.reset();
+      setDefaultDates();
+    });
+loadBootstrap();
+  </script>
+</body>
+</html>

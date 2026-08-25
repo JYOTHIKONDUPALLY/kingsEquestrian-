@@ -1,0 +1,370 @@
+# DAILY REPORT SCRIPTS — STABLE OPERATIONS
+
+==================================================
+
+1. LOCATION BASED HORSE LOAD
+   ==================================================
+
+WHEN location selected
+
+LOAD:
+all active horses
+WHERE horse_location = selected_location
+
+AUTO POPULATE:
+
+* trainer
+* groom
+* feed defaults
+* water defaults
+* serving times
+
+==================================================
+2. DAILY FEED TOTAL
+===================
+
+daily_feed_total =
+wet_grass +
+dry_grass +
+feed_mix +
+barley +
+oats
+
+==================================================
+3. DAILY WATER TOTAL
+====================
+
+daily_water_total =
+sum(all_water_servings)
+
+==================================================
+4. MISSED FEED ALERT
+====================
+
+IF scheduled_feed_time_passed
+AND feed_not_logged
+
+THEN:
+alert = "Feed Missed"
+
+==================================================
+5. MISSED WATER ALERT
+=====================
+
+IF scheduled_water_time_passed
+AND water_not_logged
+
+THEN:
+alert = "Water Missed"
+
+==================================================
+6. LOW WATER ALERT
+==================
+
+IF actual_water <
+(default_water × 0.80)
+
+THEN:
+status = "Low Water Intake"
+
+==================================================
+7. LOW FEED ALERT
+=================
+
+IF actual_feed <
+(default_feed × 0.85)
+
+THEN:
+status = "Low Feed Intake"
+
+==================================================
+8. HORSE ACTIVITY ALERT
+=======================
+
+IF no_activity_logged
+
+THEN:
+status = "Inactive"
+
+==================================================
+9. MEDICATION RESTRICTION
+=========================
+
+IF horse_status = "Medication"
+
+THEN:
+restrict_activity = TRUE
+
+==================================================
+10. VACCINATION ALERT
+=====================
+
+IF vaccination_due <= 15 days
+
+THEN:
+generate_alert = TRUE
+
+==================================================
+11. DAILY FEED INVENTORY UPDATE
+===============================
+
+remaining_stock =
+opening_stock -
+daily_consumption
+
+==================================================
+12. DAILY HEALTH SCORE
+======================
+
+health_score =
+feed_compliance +
+water_compliance +
+activity_consistency -
+medical_flags
+
+==================================================
+END DAILY REPORT SCRIPTS
+========================
+# WEEKLY REPORT SCRIPTS — STABLE ANALYTICS
+
+==================================================
+
+1. WEEKLY ACTIVITY HOURS
+   ==================================================
+
+weekly_activity_hours =
+sum(all_daily_activity_hours)
+
+==================================================
+2. HORSE UTILIZATION %
+======================
+
+horse_utilization =
+(active_days /
+total_days) × 100
+
+==================================================
+3. OVERWORK DETECTION
+=====================
+
+IF activity_hours >
+defined_limit
+FOR 5 consecutive days
+
+THEN:
+flag = "Fatigue Risk"
+
+==================================================
+4. LOW ACTIVITY DETECTION
+=========================
+
+IF weekly_activity_hours <
+minimum_required_hours
+
+THEN:
+flag = "Underutilized"
+
+==================================================
+5. WEEKLY FEED AVERAGE
+======================
+
+avg_feed_per_day =
+weekly_feed_total / 7
+
+==================================================
+6. WEEKLY WATER AVERAGE
+=======================
+
+avg_water_per_day =
+weekly_water_total / 7
+
+==================================================
+7. FEED VARIANCE ANALYSIS
+=========================
+
+feed_variance =
+actual_feed -
+default_feed
+
+==================================================
+8. WATER VARIANCE ANALYSIS
+==========================
+
+water_variance =
+actual_water -
+default_water
+
+==================================================
+9. HEALTH OBSERVATION ALERT
+===========================
+
+IF low_feed_days >= 3
+OR low_water_days >= 3
+
+THEN:
+flag_health_observation = TRUE
+
+==================================================
+10. TRAINER PERFORMANCE SCORE
+=============================
+
+trainer_score =
+activities_completed -
+pending_entries -
+compliance_issues
+
+==================================================
+11. GROOM COMPLIANCE SCORE
+==========================
+
+groom_score =
+feed_accuracy +
+water_accuracy -
+missed_logs
+
+==================================================
+12. WEEKLY FEED FORECAST
+========================
+
+next_week_feed_requirement =
+avg_daily_consumption × 7
+
+==================================================
+END WEEKLY REPORT SCRIPTS
+=========================
+# MONTHLY REPORT SCRIPTS — MANAGEMENT & FORECASTING
+
+==================================================
+
+1. MONTHLY FEED CONSUMPTION
+   ==================================================
+
+monthly_feed_total =
+sum(all_daily_feed_totals)
+
+==================================================
+2. MONTHLY WATER CONSUMPTION
+============================
+
+monthly_water_total =
+sum(all_daily_water_totals)
+
+==================================================
+3. AVERAGE DAILY CONSUMPTION / HORSE
+====================================
+
+avg_daily_consumption =
+monthly_total /
+active_days
+
+==================================================
+4. HORSE MONTHLY COST
+=====================
+
+horse_monthly_cost =
+feed_cost +
+water_cost +
+medical_cost +
+supplement_cost
+
+==================================================
+5. STABLE MONTHLY COST
+======================
+
+stable_monthly_cost =
+sum(all_horse_costs)
+
+==================================================
+6. FEED DAYS REMAINING
+======================
+
+days_remaining =
+current_stock /
+average_daily_consumption
+
+==================================================
+7. FEED REORDER ALERT
+=====================
+
+IF days_remaining <= reorder_limit
+
+THEN:
+purchase_alert = TRUE
+
+==================================================
+8. PROCUREMENT FORECAST
+=======================
+
+recommended_purchase_qty =
+(monthly_avg_usage × safety_factor) -
+current_stock
+
+==================================================
+9. HORSE PERFORMANCE INDEX
+==========================
+
+horse_performance_score =
+activity_hours +
+session_consistency -
+health_flags
+
+==================================================
+10. HORSE HEALTH RISK SCORE
+===========================
+
+risk_score =
+low_water_days +
+low_feed_days +
+medication_days +
+injury_flags
+
+==================================================
+11. TRAINER WORKLOAD ANALYSIS
+=============================
+
+trainer_workload =
+horses_managed +
+sessions_conducted
+
+==================================================
+12. STABLE EFFICIENCY SCORE
+===========================
+
+stable_efficiency =
+completed_logs /
+expected_logs × 100
+
+==================================================
+13. VACCINATION COMPLIANCE
+==========================
+
+vaccination_compliance =
+completed_vaccinations /
+scheduled_vaccinations × 100
+
+==================================================
+14. HORSE RECOVERY MONITORING
+=============================
+
+IF medication_days >
+configured_threshold
+
+THEN:
+recommend_vet_review = TRUE
+
+==================================================
+15. MANAGEMENT INSIGHT ENGINE
+=============================
+
+IDENTIFY:
+
+* highest activity horse
+* lowest intake horse
+* highest feed usage
+* horses needing observation
+* feed likely to finish first
+* trainer with highest workload
+
+==================================================
+END MONTHLY REPORT SCRIPTS
+==========================

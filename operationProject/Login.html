@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>Login - Kings Equestrian Ops</title>
+  <style>
+    html.app-mobile, html.app-mobile body { font-size: 16px; }
+    :root { --bg:#0f172a; --card:#111827; --text:#e5e7eb; --muted:#9ca3af; --accent:#d4af37; --border:#334155; --danger:#ef4444; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:20px; font-family:Arial,sans-serif; font-size:16px; background:linear-gradient(135deg,#0b1220,#111827); color:var(--text); }
+    .card { width:min(420px,100%); background:var(--card); border:1px solid var(--border); border-radius:14px; padding:22px; }
+    h1 { margin:0 0 8px; font-size:26px; }
+    p { margin:0 0 16px; color:var(--muted); font-size:16px; }
+    label { display:block; margin:10px 0 6px; font-size:16px; font-weight:600; }
+    input { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#0b1220; color:var(--text); }
+    button { width:100%; margin-top:16px; border:none; border-radius:10px; padding:12px; background:var(--accent); color:#111827; font-weight:700; cursor:pointer; }
+    .error { min-height:18px; color:#ffb4b4; font-size:13px; margin-top:10px; line-height:1.4; }
+  </style>
+</head>
+<body>
+  <script>
+  (function (g) {
+    function isMobile() {
+      return /Android|iPhone|iPad|Mobile/i.test(g.navigator.userAgent || "") ||
+        (g.screen && Math.min(g.screen.width, g.screen.height) <= 768);
+    }
+    function devW() {
+      if (g.visualViewport && g.visualViewport.width > 0 && g.visualViewport.width < 900) {
+        return Math.round(g.visualViewport.width);
+      }
+      if (g.screen && g.screen.width) {
+        return Math.round(Math.min(g.screen.width, g.screen.height || g.screen.width));
+      }
+      return 390;
+    }
+    function boot() {
+      var root = g.document.documentElement;
+      var w = devW();
+      try {
+        if (g.google && g.google.script && g.google.script.host && typeof g.google.script.host.setWidth === "function") {
+          g.google.script.host.setWidth(w);
+        }
+      } catch (e) {}
+      if (isMobile()) {
+        root.classList.add("app-mobile");
+        root.style.fontSize = "18px";
+        var layoutW = root.clientWidth || g.innerWidth || 0;
+        if (layoutW > w + 24) {
+          root.style.zoom = String(Math.max(0.4, w / layoutW));
+        } else {
+          root.style.zoom = "1";
+        }
+        var meta = g.document.querySelector('meta[name="viewport"]');
+        if (meta) {
+          meta.setAttribute("content", "width=" + w + ", initial-scale=1, maximum-scale=1, viewport-fit=cover");
+        }
+      }
+    }
+    boot();
+    [0, 200, 700, 1500].forEach(function (d) { g.setTimeout(boot, d); });
+    g.addEventListener("resize", boot);
+    g.addEventListener("orientationchange", function () { g.setTimeout(boot, 200); });
+  })(window);
+  </script>
+  <main class="card">
+    <h1>Ops Login</h1>
+    <p>Sign in with your user credentials.</p>
+    <form id="loginForm" novalidate>
+      <label for="identifier">Username / Email</label>
+      <input id="identifier" name="identifier" type="text" required autocomplete="username">
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required autocomplete="current-password">
+
+      <button type="button" id="loginBtn">Login</button>
+      <div class="error" id="loginError"></div>
+    </form>
+  </main>
+
+  <script>
+    // Injected by Apps Script template (real /exec URL — never userCodeAppPanel)
+    var WEB_APP_URL = '<?= webAppUrl ?>';
+
+    function getNextPage() {
+      var params = new URLSearchParams(window.location.search);
+      return params.get('next') || 'dashboard';
+    }
+
+    function sanitizeRedirectUrl(url) {
+      if (url == null) return '';
+      var s = String(url).trim();
+      while (
+        (s.charAt(0) === '"' && s.charAt(s.length - 1) === '"') ||
+        (s.charAt(0) === "'" && s.charAt(s.length - 1) === "'")
+      ) {
+        s = s.slice(1, -1).trim();
+      }
+      return s.replace(/\\"/g, '"');
+    }
+
+    /** Only allow the deployed web app URL, not the iframe sandbox URL. */
+    function isValidExecUrl(url) {
+      url = sanitizeRedirectUrl(url);
+      if (!url || url.indexOf('http') !== 0) return false;
+      if (url.indexOf('userCodeAppPanel') >= 0) return false;
+      if (url.indexOf('googleusercontent.com') >= 0) return false;
+      return url.indexOf('/exec') >= 0 && url.indexOf('script.google.com/macros') >= 0;
+    }
+
+    function buildPageUrlFromBase(base, page, token) {
+      base = sanitizeRedirectUrl(base);
+      if (!base) return '';
+      var sep = base.indexOf('?') >= 0 ? '&' : '?';
+      var dest = base + sep + 'page=' + encodeURIComponent(page || 'dashboard');
+      if (token) {
+        dest += '&token=' + encodeURIComponent(token);
+      }
+      return dest;
+    }
+
+    /**
+     * Redirect the top browser window to /exec (required for Apps Script HTML).
+     */
+    function redirectToApp(url) {
+      url = sanitizeRedirectUrl(url);
+      if (!isValidExecUrl(url)) {
+        console.error('Blocked invalid redirect URL:', url);
+        return false;
+      }
+      try {
+        if (window.top && window.top !== window.self) {
+          window.top.location.replace(url);
+          return true;
+        }
+      } catch (e) {}
+      try {
+        var link = document.createElement('a');
+        link.href = url;
+        link.target = '_top';
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        return true;
+      } catch (e2) {}
+      window.location.replace(url);
+      return true;
+    }
+
+    function showRedirectError(msg) {
+      document.getElementById('loginError').textContent = msg;
+    }
+
+    function goToDashboardAfterLogin(token) {
+      var next = getNextPage();
+      var errorEl = document.getElementById('loginError');
+      if (window.AppLoader) {
+        window.AppLoader.show('Opening dashboard…');
+      }
+
+      var fromTemplate = buildPageUrlFromBase(WEB_APP_URL, next, token);
+      if (isValidExecUrl(fromTemplate)) {
+        redirectToApp(fromTemplate);
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(function(dest) {
+          dest = sanitizeRedirectUrl(dest);
+          if (redirectToApp(dest)) {
+            return;
+          }
+          showRedirectError(
+            'Could not redirect. Copy this URL into your browser: ' + dest
+          );
+        })
+        .withFailureHandler(function(err) {
+          showRedirectError(
+            (err && err.message ? err.message : 'Could not build app URL.') +
+            ' Deploy the web app and open the /exec link (not the editor preview).'
+          );
+        })
+        .buildAppPageUrl(next, token);
+    }
+
+    function setBusy(isBusy, btn) {
+      btn.disabled = isBusy;
+      btn.textContent = isBusy ? 'Signing in…' : 'Login';
+    }
+
+    function runLogin() {
+      var form = document.getElementById('loginForm');
+      var btn = document.getElementById('loginBtn');
+      var errorEl = document.getElementById('loginError');
+
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      var identifier = document.getElementById('identifier').value.trim();
+      var password = document.getElementById('password').value;
+      errorEl.textContent = '';
+
+      if (typeof google === 'undefined' || !google.script || !google.script.run) {
+        errorEl.textContent = 'Open this page using your deployed Web App URL (ends with /exec).';
+        return;
+      }
+
+      setBusy(true, btn);
+      if (window.AppLoader) {
+        window.AppLoader.show('Signing in…');
+      }
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          console.log('[KingsOps Login] loginUser SUCCESS — full response:', res);
+          if (res && res.user) {
+            console.log('[KingsOps Login] session user from backend:', {
+              email: res.user.email,
+              name: res.user.name,
+              role: res.user.role,
+              location: res.user.location,
+              locationId: res.user.locationId
+            });
+          } else {
+            console.warn('[KingsOps Login] No res.user on login response — location may be missing in Users sheet');
+          }
+          if (!res || !res.token) {
+            setBusy(false, btn);
+            if (window.AppLoader) window.AppLoader.hide();
+            errorEl.textContent = 'Login succeeded but no session token was returned.';
+            return;
+          }
+          try {
+            localStorage.setItem('opsAuthToken', res.token);
+            console.log('[KingsOps Login] token saved to localStorage, length:', res.token.length);
+          } catch (err) {
+            console.error('[KingsOps Login] localStorage.setItem failed:', err);
+          }
+          btn.textContent = 'Redirecting…';
+          if (window.AppLoader) {
+            window.AppLoader.setMessage('Opening dashboard…');
+          }
+          goToDashboardAfterLogin(res.token);
+        })
+        .withFailureHandler(function(error) {
+          console.error('[KingsOps Login] loginUser FAILED:', error);
+          setBusy(false, btn);
+          if (window.AppLoader) window.AppLoader.hide();
+          var msg = error && error.message ? error.message : String(error || 'Login failed.');
+          errorEl.textContent = msg;
+        })
+        .loginUser(identifier, password);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var form = document.getElementById('loginForm');
+      var btn = document.getElementById('loginBtn');
+
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        runLogin();
+      });
+
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        runLogin();
+      });
+
+      // If user landed on userCodeAppPanel with token, send them to real /exec
+      var params = new URLSearchParams(window.location.search);
+      var page = params.get('page');
+      var token = params.get('token');
+      if (page && page !== 'login' && token) {
+        try { localStorage.setItem('opsAuthToken', token); } catch (e) {}
+        var fixUrl = buildPageUrlFromBase(WEB_APP_URL, page, token);
+        if (isValidExecUrl(fixUrl)) {
+          redirectToApp(fixUrl);
+        }
+      }
+    });
+  </script>
+</body>
+</html>

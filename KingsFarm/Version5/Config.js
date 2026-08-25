@@ -37,7 +37,18 @@
 const CONFIG = {
   UPI_ID: 'vyapar.176548151976@hdfcbank',
   BUSINESS_NAME: 'KingsEquestrian',
-  PAYMENT_FORM_LINK: 'https://docs.google.com/forms/d/e/1FAIpQLSeQEpr82za7CflvDNidtCU93LVHW7NjbjCNIaGm386XGax_Qg/viewform?usp=header',
+  /**
+   * Bump this EVERY time you Deploy → Edit → New version.
+   * Clients compare this to the version baked into their cached HTML.
+   * If different, they auto-reload once so stale users pick up the new UI.
+   */
+  APP_UI_VERSION: '2026-08-25c',
+  LOCATION_CODE: 'FARM',
+  LOCATION_CITY: 'Farm',
+  LOCATION_STATE: 'Karnataka',
+  LOCATION_COUNTRY: 'India',
+  // Payment confirmation is now submitted in My Rides (Payments tab), not a Google Form.
+  PAYMENT_FORM_LINK: 'https://script.google.com/macros/s/AKfycbz-knn13EWho_5osQNSRWTmnNfdCHAyAqVOMqYodlf3TJezLhIOETQJrqRIn3xU2VdpLQ/exec?app=portal',
   TERMS_CONDITIONS_DOC_ID: '1QbJHA5keyTLvgw-5stTY74i92BQ89TYya-NvtJ4YGx4',
   ADVANCE_BOOKING_AMOUNT: 1000,
   WEB_APP_URL: 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec',
@@ -45,7 +56,7 @@ const CONFIG = {
   // Use the actual Drive file ID from the sharing link:
   // https://drive.google.com/file/d/1CpWYOphlAJzJSHtuS9au35tWdg743rAW/view
   ADDITIONAL_PDF_DRIVE_LINK: 'https://drive.google.com/file/d/1Wnh-GR2G7DE7SO_It1OtsaOq77YDfMxK/view?usp=sharing',
-  MYRIDES:'https://script.google.com/macros/s/AKfycbyzCGHcVGHQQFP-VTepIZ4ipsMjaoXAYSvowU-qahWrd45ckslE2kO1XafDNskxma0BFw/exec?app=portal',
+  MYRIDES:'https://script.google.com/macros/s/AKfycbz-knn13EWho_5osQNSRWTmnNfdCHAyAqVOMqYodlf3TJezLhIOETQJrqRIn3xU2VdpLQ/exec?app=portal',
   BACKUP_FOLDER_ID: '',   // optional: set a private Drive folder ID, else auto-create one
   BACKUP_KEEP_DAYS: 60,
 

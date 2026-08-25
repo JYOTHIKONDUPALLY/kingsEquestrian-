@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+  <title>Daily Routine Log</title>
+  <style>
+    :root { --bg:#0f172a; --card:#111827; --text:#e5e7eb; --muted:#9ca3af; --accent:#d4af37; --border:#334155; --sticky:#1a2438; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Arial,sans-serif; background:linear-gradient(135deg,#0b1220,#111827); color:var(--text); font-size:12px; }
+    .meta-bar { display:grid; gap:10px; grid-template-columns:1fr 1fr; padding:12px; background:var(--card); border:1px solid var(--border); border-radius:12px; margin-bottom:12px; }
+    .meta-bar .field { display:flex; flex-direction:column; gap:4px; }
+    .meta-bar label { font-size:11px; font-weight:600; color:var(--muted); }
+    .meta-bar input, .meta-bar select { padding:8px; border-radius:8px; border:1px solid var(--border); background:#0b1220; color:var(--text); }
+    .meta-full { grid-column:1 / -1; }
+    .routine-scroll { overflow:auto; border:1px solid var(--border); border-radius:12px; background:var(--card); max-height:70vh; }
+    .mobile-routine { display:none; gap:10px; }
+    .horse-accordion { border:1px solid var(--border); border-radius:12px; background:var(--card); overflow:hidden; }
+    .acc-head { width:100%; border:none; padding:12px; background:#132033; color:var(--text); text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+    .acc-head .meta { font-size:11px; color:var(--muted); margin-top:3px; display:block; }
+    .acc-body { display:none; padding:12px; border-top:1px solid rgba(255,255,255,0.08); }
+    .horse-accordion.open .acc-body { display:block; }
+    .horse-accordion.open .acc-chevron { transform:rotate(180deg); }
+    .acc-chevron { transition:transform .2s ease; color:var(--accent); font-size:12px; }
+    .acc-section-title { color:var(--accent); font-size:12px; font-weight:700; margin:8px 0 6px; }
+    .acc-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .acc-field { display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:6px; }
+    .acc-field label { flex:1; color:var(--muted); }
+    .acc-field input, .acc-field select, .acc-field textarea { flex:1; min-width:0; padding:7px; border-radius:8px; border:1px solid var(--border); background:#0b1220; color:var(--text); font-size:12px; }
+    .acc-field textarea { min-height:42px; }
+    .acc-total-row { display:flex; justify-content:space-between; align-items:center; background:rgba(201,168,76,0.08); border:1px solid rgba(201,168,76,0.22); border-radius:8px; padding:6px 8px; margin-top:5px; font-size:12px; }
+    table { border-collapse:collapse; min-width:1200px; width:max-content; }
+    th, td { border:1px solid rgba(255,255,255,0.08); padding:6px 4px; text-align:center; vertical-align:middle; }
+    th { background:#1e293b; color:var(--accent); font-size:10px; font-weight:700; position:sticky; top:0; z-index:2; }
+    th.sticky-col, td.sticky-col { position:sticky; left:0; z-index:3; background:var(--sticky); text-align:left; min-width:120px; }
+    th.sticky-col2, td.sticky-col2 { position:sticky; left:120px; z-index:3; background:var(--sticky); text-align:left; min-width:150px; }
+    th.sticky-col3, td.sticky-col3 { position:sticky; left:230px; z-index:3; background:var(--sticky); text-align:left; min-width:140px; }
+    td.med-cell textarea { width:130px; min-height:36px; font-size:10px; max-width:140px; }
+    td input, td select { width:56px; max-width:72px; padding:4px; border-radius:6px; border:1px solid var(--border); background:#0b1220; color:var(--text); font-size:11px; }
+    td.sticky-col input, td.sticky-col select { width:100%; max-width:110px; }
+    td.sticky-col2 select { width:100%; max-width:90px; }
+    .total-cell { background:rgba(201,168,76,0.08); font-weight:700; color:var(--accent); }
+    .section-head th { background:#0f3460; color:#9BACC4; font-size:9px; }
+    h1 { margin:0 0 4px; font-size:22px; }
+    p.hint { margin:0 0 12px; color:var(--muted); font-size:13px; }
+    .btn-save { width:100%; margin-top:12px; border:none; background:var(--accent); color:#111827; font-weight:700; padding:14px; border-radius:10px; cursor:pointer; font-size:14px; }
+    body.app-page { padding:0; padding-bottom:max(24px, env(safe-area-inset-bottom)); }
+    .content.form-page-body { padding:12px; }
+    @media (max-width:640px) {
+      .meta-bar { grid-template-columns:1fr; }
+      .routine-scroll { display:none; }
+      .mobile-routine { display:grid; }
+      .acc-grid-2 { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body class="app-page">
+<script>
+  window.__APP_PAGE__ = '<?= appPage ?>';
+  window.__APP_TAB__ = 'forms';
+</script>
+<?!= include('AppChrome'); ?>
+<div class="content form-page-body">
+  <h1>Daily Routine Log</h1>
+  <p class="hint" id="routineHint">Horses in the first column — enter activity, feed servings (7AM / 1PM / 6PM / Extra), and water. Totals calculate automatically. Saves to DailyRoutineLog and reduces stock.</p>
+
+  <div class="meta-bar">
+    <div class="field"><label>Date</label><input type="date" id="logDate" required></div>
+    <div class="field"><label>Location</label><select id="logLocation" required><option value="">Select</option></select></div>
+    <div class="field"><label>Default Trainer</label><select id="defaultTrainer"><option value="">—</option></select></div>
+  </div>
+
+  <div class="routine-scroll">
+    <table id="routineTable">
+      <thead id="routineHead"></thead>
+      <tbody id="routineBody"></tbody>
+    </table>
+  </div>
+  <div class="mobile-routine" id="mobileRoutineBody"></div>
+  <button type="button" class="btn-save" id="saveRoutineBtn">Save All Entries</button>
+</div>
+
+<script>
+  const PAGE_KEY = "form-daily-routine";
+  const FEED_SLOTS = ["7AM", "1PM", "6PM", "Extra"];
+  const FEED_KEYS = [
+    { key: "wet_grass", label: "Wet" },
+    { key: "dry_grass", label: "Dry" },
+    { key: "feed_mixed", label: "Mix" },
+    { key: "barley", label: "Barley" },
+    { key: "oats", label: "Oats" }
+  ];
+  const DURATION_OPTIONS = ["15", "30", "45", "1hr", "1.50", "2hr"];
+  const FEED_KG_OPTIONS = ["1", "1.5", "2", "2.5", "3", "4"];
+  const WATER_LTR_OPTIONS = ["10", "20", "30", "40"];
+  let bootstrapData = null;
+
+  function routineOpts(key, fallback) {
+    return (bootstrapData && bootstrapData[key] && bootstrapData[key].length) ? bootstrapData[key] : fallback;
+  }
+
+  function snapToSelectOption(val, options) {
+    var n = parseFloat(val);
+    if (!isFinite(n) || n <= 0) return "";
+    var best = "";
+    var bestDiff = Infinity;
+    (options || []).forEach(function(o) {
+      var on = parseFloat(o);
+      if (!isFinite(on)) return;
+      var diff = Math.abs(on - n);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = o;
+      }
+    });
+    return bestDiff <= 0.6 ? best : "";
+  }
+
+  function buildSelectHtml(field, options, suffix, selected) {
+    var html = "<select data-f='" + field + "'><option value=''></option>";
+    (options || []).forEach(function(v) {
+      var label = suffix ? (v + suffix) : v;
+      var sel = String(selected) === String(v) ? " selected" : "";
+      html += "<option value='" + v + "'" + sel + ">" + label + "</option>";
+    });
+    html += "</select>";
+    return html;
+  }
+
+  function wireRowTotalListeners(rowEl) {
+    rowEl.querySelectorAll("input, select").forEach(function(el) {
+      el.addEventListener("input", function() { updateRowTotals(rowEl); });
+      el.addEventListener("change", function() { updateRowTotals(rowEl); });
+    });
+  }
+
+  function redirectToApp(url) {
+    if (!url) return;
+    try { if (window.top && window.top !== window.self) { window.top.location.replace(url); return; } } catch (e) {}
+    window.location.replace(url);
+  }
+  function goToLogin() {
+    if (window.google && google.script.run) {
+      google.script.run.withSuccessHandler(redirectToApp).getLoginUrl(PAGE_KEY);
+      return;
+    }
+    redirectToApp("?page=login");
+  }
+  function getAuthToken() {
+    var p = new URLSearchParams(window.location.search);
+    var t = p.get("token");
+    if (t) localStorage.setItem("opsAuthToken", t);
+    return localStorage.getItem("opsAuthToken") || "";
+  }
+  function requireAuth() {
+    if (!getAuthToken()) { goToLogin(); return ""; }
+    return getAuthToken();
+  }
+
+  function sumInputs(row, prefix) {
+    var t = 0;
+    FEED_SLOTS.forEach(function(s) {
+      var el = row.querySelector('[data-f="' + prefix + "_" + s + '"]');
+      t += parseFloat(el && el.value) || 0;
+    });
+    return t;
+  }
+  function updateRowTotals(tr) {
+    FEED_KEYS.forEach(function(f) {
+      var tot = sumInputs(tr, f.key);
+      var cell = tr.querySelector('[data-total="' + f.key + '"]');
+      if (cell) cell.textContent = tot ? tot.toFixed(1) : "0";
+    });
+    var wt = 0;
+    FEED_SLOTS.forEach(function(s) {
+      var el = tr.querySelector('[data-f="water_' + s + '"]');
+      wt += parseFloat(el && el.value) || 0;
+    });
+    var wc = tr.querySelector('[data-total="water"]');
+    if (wc) wc.textContent = wt ? wt.toFixed(1) : "0";
+  }
+
+  function calcFeedDefault(h, feedKey) {
+    if (h.defaults && h.defaults[feedKey] !== "" && h.defaults[feedKey] !== undefined) {
+      return String(h.defaults[feedKey]);
+    }
+    var std = parseFloat(h.standardDefaults && h.standardDefaults[feedKey]);
+    var w = parseFloat(h.weight);
+    var mult = parseFloat(h.facilityMultiplier);
+    var slots = FEED_SLOTS.length || 4;
+    if (!isFinite(std) || std <= 0) return "";
+    if (!isFinite(mult) || mult <= 0) mult = 1;
+    if (!isFinite(w) || w <= 0) {
+      return (Math.round((std / slots) * 100) / 100).toString();
+    }
+    var daily = std * mult * w / 100;
+    return (Math.round((daily / slots) * 100) / 100).toString();
+  }
+
+  function horseRowSubtitle(h) {
+    var parts = [];
+    if (h.weight !== "" && h.weight !== undefined && h.weight !== null) {
+      parts.push(h.weight + " kg");
+    }
+    if (h.groom) {
+      parts.push("Groom: " + h.groom);
+    }
+    return parts.join(" · ");
+  }
+
+  function calcWaterDefault(h) {
+    if (h.defaults && h.defaults.water !== "" && h.defaults.water !== undefined) {
+      return String(h.defaults.water);
+    }
+    var daily = parseFloat(h.standardDefaults && h.standardDefaults.water);
+    if (!isFinite(daily) || daily <= 0) return "";
+    var slots = FEED_SLOTS.length || 4;
+    return (Math.round((daily / slots) * 100) / 100).toString();
+  }
+
+  function buildTableHead() {
+    var head = document.getElementById("routineHead");
+    var r1 = "<tr class='section-head'><th class='sticky-col' rowspan='2'>#</th><th class='sticky-col2' rowspan='2'>Horse name</th>";
+    r1 += "<th class='sticky-col3' rowspan='2'>Present medication</th>";
+    r1 += "<th colspan='4'>Activity</th>";
+    FEED_KEYS.forEach(function() { r1 += "<th colspan='5'>Feed (kg)</th>"; });
+    r1 += "<th colspan='5'>Water (liters)</th><th rowspan='2'>Notes</th></tr>";
+    var r2 = "<tr class='section-head'><th>Act1</th><th>Duration</th><th>Act2</th><th>Duration</th>";
+    FEED_KEYS.forEach(function(f) {
+      FEED_SLOTS.forEach(function(s) { r2 += "<th>" + f.label + " " + s + " (kg)</th>"; });
+      r2 += "<th>Tot kg</th>";
+    });
+    FEED_SLOTS.forEach(function(s) { r2 += "<th>" + s + " (L)</th>"; });
+    r2 += "<th>Tot L</th></tr>";
+    head.innerHTML = r1 + r2;
+  }
+
+  function buildTableBody(horses) {
+    var body = document.getElementById("routineBody");
+    body.innerHTML = "";
+    if (!horses || !horses.length) {
+      body.innerHTML = "<tr><td colspan='20' style='padding:24px;text-align:center;color:var(--muted)'>No horses assigned to you at this location. Ask admin to set Trainer/Groom on each horse in Add Horse.</td></tr>";
+      return;
+    }
+    (horses || []).forEach(function(h, idx) {
+      var tr = document.createElement("tr");
+      tr.dataset.horseId = h.id || "";
+      tr.dataset.horseName = h.name || "";
+      tr.dataset.groom = h.groom || "";
+      var html = "<td class='sticky-col'>" + (h.serial || idx + 1) + "</td>";
+      var sub = horseRowSubtitle(h);
+      html += "<td class='sticky-col2'><strong>" + (h.name || "") + "</strong>" +
+        (sub ? "<br><small style='color:var(--muted)'>" + sub + "</small>" : "") + "</td>";
+      html += "<td class='sticky-col3 med-cell'><textarea data-f='present_medication' rows='2' placeholder='Current meds'>" +
+        (h.presentMedication || "") + "</textarea></td>";
+      var activities = routineOpts("activities", []);
+      html += "<td><select data-f='activity1'><option value=''></option>" + activities.map(function(a) {
+        return "<option>" + a + "</option>";
+      }).join("") + "</select></td>";
+      html += "<td>" + buildSelectHtml("duration1", routineOpts("durationOptions", DURATION_OPTIONS), "", "") + "</td>";
+      html += "<td><select data-f='activity2'><option value=''></option>" + activities.map(function(a) {
+        return "<option>" + a + "</option>";
+      }).join("") + "</select></td>";
+      html += "<td>" + buildSelectHtml("duration2", routineOpts("durationOptions", DURATION_OPTIONS), "", "") + "</td>";
+      var feedOpts = routineOpts("feedKgOptions", FEED_KG_OPTIONS);
+      FEED_KEYS.forEach(function(f) {
+        var def = snapToSelectOption(calcFeedDefault(h, f.key), feedOpts);
+        FEED_SLOTS.forEach(function(s) {
+          html += "<td>" + buildSelectHtml(f.key + "_" + s, feedOpts, " kg", s === "7AM" ? def : "") + "</td>";
+        });
+        html += "<td class='total-cell' data-total='" + f.key + "'>0</td>";
+      });
+      var waterOpts = routineOpts("waterLtrOptions", WATER_LTR_OPTIONS);
+      var wdef = snapToSelectOption(calcWaterDefault(h), waterOpts);
+      FEED_SLOTS.forEach(function(s) {
+        html += "<td>" + buildSelectHtml("water_" + s, waterOpts, " L", s === "7AM" ? wdef : "") + "</td>";
+      });
+      html += "<td class='total-cell' data-total='water'>0</td>";
+      html += "<td><input type='text' data-f='notes' style='min-width:80px'></td>";
+      tr.innerHTML = html;
+      wireRowTotalListeners(tr);
+      body.appendChild(tr);
+    });
+  }
+
+  function isMobileRoutineView() {
+    return window.matchMedia && window.matchMedia("(max-width:640px)").matches;
+  }
+
+  function buildMobileAccordion(horses) {
+    var body = document.getElementById("mobileRoutineBody");
+    body.innerHTML = "";
+    if (!horses || !horses.length) {
+      body.innerHTML = "<div style='padding:24px;text-align:center;color:var(--muted);border:1px solid var(--border);border-radius:12px;background:var(--card)'>No horses assigned to you at this location. Ask admin to set Trainer/Groom on each horse in Add Horse.</div>";
+      return;
+    }
+    var activities = routineOpts("activities", []);
+    var durationOpts = routineOpts("durationOptions", DURATION_OPTIONS);
+    var feedOpts = routineOpts("feedKgOptions", FEED_KG_OPTIONS);
+    var waterOpts = routineOpts("waterLtrOptions", WATER_LTR_OPTIONS);
+    var activityOptions = "<option value=''></option>" + activities.map(function(a) {
+      return "<option>" + a + "</option>";
+    }).join("");
+    (horses || []).forEach(function(h, idx) {
+      var card = document.createElement("div");
+      card.className = "horse-accordion" + (idx === 0 ? " open" : "");
+      card.dataset.horseId = h.id || "";
+      card.dataset.horseName = h.name || "";
+      card.dataset.groom = h.groom || "";
+      var sub = horseRowSubtitle(h);
+      var html = "<button type='button' class='acc-head'>" +
+        "<span><strong>" + (h.name || "") + "</strong>" +
+        (sub ? "<span class='meta'>" + sub + "</span>" : "") + "</span>" +
+        "<span class='acc-chevron'>▼</span>" +
+      "</button>";
+      html += "<div class='acc-body'>";
+      html += "<div class='acc-section-title'>Activity</div>";
+      html += "<div class='acc-grid-2'>";
+      html += "<div class='acc-field'><label>Activity 1</label><select data-f='activity1'>" + activityOptions + "</select></div>";
+      html += "<div class='acc-field'><label>Duration 1</label>" + buildSelectHtml("duration1", durationOpts, "", "") + "</div>";
+      html += "<div class='acc-field'><label>Activity 2</label><select data-f='activity2'>" + activityOptions + "</select></div>";
+      html += "<div class='acc-field'><label>Duration 2</label>" + buildSelectHtml("duration2", durationOpts, "", "") + "</div>";
+      html += "</div>";
+
+      html += "<div class='acc-section-title'>Present Medication</div>";
+      html += "<div class='acc-field'><label>Current meds</label><textarea data-f='present_medication' placeholder='Current meds'>" + (h.presentMedication || "") + "</textarea></div>";
+
+      html += "<div class='acc-section-title'>Feed (kg)</div>";
+      FEED_KEYS.forEach(function(f) {
+        var def = snapToSelectOption(calcFeedDefault(h, f.key), feedOpts);
+        html += "<div class='acc-field'><label><strong>" + f.label + "</strong> 7AM</label>" + buildSelectHtml(f.key + "_7AM", feedOpts, " kg", def) + "</div>";
+        html += "<div class='acc-field'><label>" + f.label + " 1PM</label>" + buildSelectHtml(f.key + "_1PM", feedOpts, " kg", "") + "</div>";
+        html += "<div class='acc-field'><label>" + f.label + " 6PM</label>" + buildSelectHtml(f.key + "_6PM", feedOpts, " kg", "") + "</div>";
+        html += "<div class='acc-field'><label>" + f.label + " Extra</label>" + buildSelectHtml(f.key + "_Extra", feedOpts, " kg", "") + "</div>";
+        html += "<div class='acc-total-row'><span>Total " + f.label + " (kg)</span><strong data-total='" + f.key + "'>0</strong></div>";
+      });
+
+      var wdef = snapToSelectOption(calcWaterDefault(h), waterOpts);
+      html += "<div class='acc-section-title'>Water (L)</div>";
+      html += "<div class='acc-field'><label>7AM</label>" + buildSelectHtml("water_7AM", waterOpts, " L", wdef) + "</div>";
+      html += "<div class='acc-field'><label>1PM</label>" + buildSelectHtml("water_1PM", waterOpts, " L", "") + "</div>";
+      html += "<div class='acc-field'><label>6PM</label>" + buildSelectHtml("water_6PM", waterOpts, " L", "") + "</div>";
+      html += "<div class='acc-field'><label>Extra</label>" + buildSelectHtml("water_Extra", waterOpts, " L", "") + "</div>";
+      html += "<div class='acc-total-row'><span>Total Water (L)</span><strong data-total='water'>0</strong></div>";
+
+      html += "<div class='acc-section-title'>Notes</div>";
+      html += "<div class='acc-field'><label>Notes</label><input type='text' data-f='notes'></div>";
+      html += "</div>";
+      card.innerHTML = html;
+      var head = card.querySelector(".acc-head");
+      head.addEventListener("click", function() {
+        card.classList.toggle("open");
+      });
+      wireRowTotalListeners(card);
+      updateRowTotals(card);
+      body.appendChild(card);
+    });
+  }
+
+  function renderRoutineRows(horses) {
+    if (isMobileRoutineView()) {
+      buildMobileAccordion(horses);
+      return;
+    }
+    buildTableHead();
+    buildTableBody(horses);
+  }
+
+  function fillMetaSelect(el, values, ph) {
+    el.innerHTML = "<option value=''>" + ph + "</option>";
+    (values || []).forEach(function(v) {
+      var o = document.createElement("option");
+      o.value = typeof v === "object" ? v.value : v;
+      o.textContent = typeof v === "object" ? v.label : v;
+      el.appendChild(o);
+    });
+  }
+
+  function applyStaffMeta(data) {
+    var trainerEl = document.getElementById("defaultTrainer");
+    fillMetaSelect(trainerEl, data.trainers, "Trainer");
+    trainerEl.disabled = false;
+    if (data.assignMode === "trainer") {
+      trainerEl.value = data.defaultTrainer || data.staffName || "";
+      trainerEl.disabled = true;
+    } else if (data.defaultTrainer) {
+      trainerEl.value = data.defaultTrainer;
+    }
+    var hintEl = document.getElementById("routineHint");
+    if (data.assignMode === "trainer") {
+      hintEl.textContent = "Showing " + (data.horses || []).length + " horse(s) assigned to you as trainer" +
+        (data.horsesAtLocation > (data.horses || []).length ? " (of " + data.horsesAtLocation + " at this location)." : ".");
+    } else if (data.assignMode === "groom") {
+      hintEl.textContent = "Showing " + (data.horses || []).length + " horse(s) assigned to you as groom" +
+        (data.horsesAtLocation > (data.horses || []).length ? " (of " + data.horsesAtLocation + " at this location)." : ".");
+    } else {
+      hintEl.textContent = "All horses at this location (" + (data.horses || []).length + "). Enter activity, feed, and water.";
+    }
+    if (data.feedFormulaHint) {
+      hintEl.textContent += " " + data.feedFormulaHint + ".";
+    }
+  }
+
+  function loadRoutine() {
+    var token = requireAuth();
+    if (!token || !google.script.run) return;
+    var loc = document.getElementById("logLocation").value;
+    var date = document.getElementById("logDate").value;
+    if (!loc) return;
+    google.script.run
+      .withSuccessHandler(function(data) {
+        bootstrapData = data;
+        applyStaffMeta(data);
+        renderRoutineRows(data.horses);
+      })
+      .withFailureHandler(function(err) {
+        alert(err.message || err);
+      })
+      .getDailyRoutineBootstrap(token, loc, date);
+  }
+
+  document.getElementById("logDate").value = new Date().toISOString().slice(0, 10);
+
+  document.getElementById("logLocation").addEventListener("change", loadRoutine);
+
+  function collectRows() {
+    var rows = [];
+    var allRows = document.querySelectorAll("#routineBody tr, #mobileRoutineBody .horse-accordion");
+    allRows.forEach(function(tr) {
+      var row = {
+        horseId: tr.dataset.horseId,
+        horseName: tr.dataset.horseName,
+        trainer: document.getElementById("defaultTrainer").value,
+        groom: tr.dataset.groom || ""
+      };
+      tr.querySelectorAll("[data-f]").forEach(function(el) {
+        row[el.getAttribute("data-f")] = el.value;
+      });
+      rows.push(row);
+    });
+    return rows;
+  }
+
+  document.getElementById("saveRoutineBtn").addEventListener("click", function() {
+    var token = requireAuth();
+    if (!token) return;
+    var loc = document.getElementById("logLocation").value;
+    if (!loc) { alert("Select location"); return; }
+    var payload = {
+      date: document.getElementById("logDate").value,
+      location: loc,
+      trainer: document.getElementById("defaultTrainer").value,
+      rows: collectRows()
+    };
+    if (window.AppLoader) window.AppLoader.show("Saving routine log…");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (window.AppLoader) window.AppLoader.hide();
+        var cons = res.consumption || {};
+        var consTxt = "";
+        var ck;
+        for (ck in cons) {
+          if (cons.hasOwnProperty(ck) && cons[ck] > 0) {
+            consTxt += (consTxt ? ", " : "") + ck + ": " + cons[ck];
+          }
+        }
+        alert("Saved " + (res.saved || 0) + " horse entries." +
+          (consTxt ? "\nInventory reduced — " + consTxt : "\nNo feed quantities entered (stock unchanged)."));
+        loadRoutine();
+      })
+      .withFailureHandler(function(err) {
+        if (window.AppLoader) window.AppLoader.hide();
+        alert("Save failed: " + (err.message || err));
+      })
+      .submitFormData("routine", payload, token);
+  });
+
+  window.addEventListener("resize", function() {
+    if (!bootstrapData) return;
+    renderRoutineRows(bootstrapData.horses || []);
+  });
+
+  (function init() {
+    var token = requireAuth();
+    if (!token || !google.script.run) return;
+    google.script.run
+      .withSuccessHandler(function(opts) {
+        var locEl = document.getElementById("logLocation");
+        if (window.AppLocation) {
+          window.AppLocation.applyField(locEl, opts);
+        } else {
+          fillMetaSelect(locEl, opts.Location || [], "Location");
+        }
+        if (opts.locationLocked && locEl.value) loadRoutine();
+      })
+      .getDropdownOptions("routine", token);
+  })();
+</script>
+</body>
+</html>

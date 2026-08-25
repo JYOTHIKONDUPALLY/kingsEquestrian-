@@ -1,0 +1,617 @@
+<!--
+  REFERENCE COPY ONLY — for Apps Script, use AppChrome.html (location code is embedded there).
+  Do not add <?!= include('AppLocation'); ?> unless you also deploy this file as AppLocation.html.
+-->
+<style>
+  /* ── Location pill ─────────────────────────────────────────── */
+  .app-location-wrap { position: relative; display: inline-flex; align-items: center; }
+
+  .app-loc-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(201,168,76,0.12); border: 1px solid rgba(201,168,76,0.45);
+    color: #C9A84C; border-radius: 20px; padding: 4px 11px 4px 9px;
+    font-size: 11px; font-weight: 600; font-family: inherit;
+    cursor: pointer; white-space: nowrap; max-width: 210px;
+    transition: background 0.15s, border-color 0.15s; line-height: 1.4;
+  }
+  .app-loc-pill:hover:not(.is-locked) {
+    background: rgba(201,168,76,0.22); border-color: rgba(201,168,76,0.7);
+  }
+  .app-loc-pill.is-locked {
+    cursor: default; pointer-events: none;
+    background: rgba(155,172,196,0.10); border-color: rgba(155,172,196,0.3); color: #9BACC4;
+  }
+  .app-loc-pill .loc-icon  { font-size: 12px; flex-shrink: 0; }
+  .app-loc-pill .loc-text  { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 110px; }
+  .app-loc-pill .loc-id-tag {
+    background: rgba(201,168,76,0.2); border-radius: 8px;
+    padding: 1px 5px; font-size: 9px; font-weight: 700;
+    letter-spacing: 0.5px; flex-shrink: 0;
+  }
+  .app-loc-pill.is-locked .loc-id-tag { background: rgba(155,172,196,0.15); color: #9BACC4; }
+  .app-loc-pill .loc-chevron {
+    font-size: 8px; opacity: 0.7; flex-shrink: 0; transition: transform 0.2s;
+  }
+  .app-loc-pill.dd-open .loc-chevron { transform: rotate(180deg); }
+
+  .role-badge.is-loading {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.08);
+    color: #9BACC4;
+    min-width: 48px;
+    animation: roleSkeleton 1.2s ease-in-out infinite;
+  }
+  @keyframes roleSkeleton {
+    0%,100% { opacity: 0.5 } 50% { opacity: 1 }
+  }
+
+  /* ── Dropdown ─────────────────────────────────────────────── */
+  .app-loc-dropdown {
+    display: none; position: absolute; top: calc(100% + 8px); right: 0;
+    min-width: 275px; max-height: 340px; overflow-y: auto;
+    background: linear-gradient(145deg,#16213E,#0F3460);
+    border: 1px solid rgba(201,168,76,0.4); border-radius: 12px;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.55); z-index: 300; padding: 6px 0;
+    scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.3) transparent;
+  }
+  .app-loc-dropdown.is-open { display: block; }
+  .app-loc-dropdown::-webkit-scrollbar { width: 4px; }
+  .app-loc-dropdown::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 4px; }
+
+  .app-loc-dd-header {
+    padding: 9px 14px 7px; font-size: 9px; font-weight: 700; color: #9BACC4;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 4px;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .app-loc-option {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    color: #F0EAD6; font-size: 12px; font-weight: 500; padding: 9px 14px;
+    cursor: pointer; font-family: inherit; transition: background 0.12s;
+  }
+  .app-loc-option:hover  { background: rgba(201,168,76,0.11); }
+  .app-loc-option.active { background: rgba(201,168,76,0.18); color: #C9A84C; }
+
+  .app-loc-opt-row  { display: flex; align-items: center; gap: 8px; }
+  .app-loc-opt-name { flex: 1; font-weight: 600; font-size: 12px; }
+  .app-loc-opt-check{ color: #C9A84C; font-size: 12px; flex-shrink: 0; }
+
+  .app-loc-opt-badge {
+    background: rgba(201,168,76,0.18); color: #C9A84C;
+    font-size: 9px; font-weight: 700; padding: 2px 6px;
+    border-radius: 8px; flex-shrink: 0; letter-spacing: 0.3px;
+  }
+  .app-loc-opt-badge.all-badge { background: rgba(76,175,130,0.18); color: #4CAF82; }
+
+  .app-loc-opt-meta {
+    display: flex; gap: 10px; margin-top: 2px;
+    font-size: 10px; color: #9BACC4; font-weight: 400;
+  }
+  .app-loc-opt-meta span { display: flex; align-items: center; gap: 3px; }
+  .app-loc-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0; }
+
+  /* locked form selects */
+  select.location-locked { opacity: 0.85; cursor: not-allowed; pointer-events: none; }
+
+  @media (max-width: 480px) {
+    .app-loc-pill { max-width: 130px; font-size: 10px; padding: 3px 8px 3px 7px; }
+    .app-loc-pill .loc-id-tag { display: none; }
+    .app-loc-dropdown { min-width: 230px; right: -10px; }
+  }
+</style>
+
+<script>
+(function () {
+  /* Set localStorage.opsDebug = "1" or add ?debug=1 to URL for extra logs */
+  var OPS_DEBUG = true;
+
+  function log() {
+    if (!OPS_DEBUG || typeof console === "undefined" || !console.log) return;
+    var args = ["[KingsOps Location]"].concat(Array.prototype.slice.call(arguments));
+    console.log.apply(console, args);
+  }
+
+  function logWarn() {
+    if (typeof console === "undefined" || !console.warn) return;
+    var args = ["[KingsOps Location]"].concat(Array.prototype.slice.call(arguments));
+    console.warn.apply(console, args);
+  }
+
+  function logError() {
+    if (typeof console === "undefined" || !console.error) return;
+    var args = ["[KingsOps Location]"].concat(Array.prototype.slice.call(arguments));
+    console.error.apply(console, args);
+  }
+
+  function tokenHint(token) {
+    if (!token) return "(none)";
+    return token.length <= 12 ? token : token.substring(0, 8) + "…";
+  }
+
+  function summarizeContext(data) {
+    if (!data) return null;
+    return {
+      email: data.email,
+      name: data.name,
+      role: data.role,
+      location: data.location,
+      locationId: data.locationId,
+      locationLabel: data.locationLabel,
+      isAdmin: data.isAdmin,
+      viewLocation: data.viewLocation,
+      viewLabel: data.viewLabel,
+      defaultAdminLocation: data.defaultAdminLocation,
+      adminOptionsCount: data.adminOptions ? data.adminOptions.length : 0,
+      locationsSheetCount: data.locations ? data.locations.length : 0
+    };
+  }
+
+  /* ── state ─────────────────────────────────────────────────── */
+  var ctx = null;
+  var SKEY = "opsViewLocation";
+  var ALL  = "__ALL__";
+  var ddOpen = false;
+
+  /* ── token ─────────────────────────────────────────────────── */
+  function syncToken() {
+    var t = new URLSearchParams(window.location.search).get("token");
+    if (t) try { localStorage.setItem("opsAuthToken", t); } catch(e){}
+  }
+  function getToken() { syncToken(); return localStorage.getItem("opsAuthToken") || ""; }
+
+  /* ── session storage for admin view ────────────────────────── */
+  function storedView() {
+    try { var v = sessionStorage.getItem(SKEY); return v === null ? null : v === ALL ? "" : v; }
+    catch(e){ return null; }
+  }
+  function hasStored() { try { return sessionStorage.getItem(SKEY) !== null; } catch(e){ return false; } }
+  function saveView(loc) {
+    try { sessionStorage.setItem(SKEY, isAll(loc) ? ALL : String(loc||"")); } catch(e){}
+  }
+
+  /* ── helpers ────────────────────────────────────────────────── */
+  function isAll(v) { var s=String(v||"").trim().toLowerCase(); return !s||s==="all"||s==="all locations"; }
+
+  function labelOf(locValue) {
+    if (!ctx || !ctx.adminOptions) return locValue || "—";
+    for (var i=0;i<ctx.adminOptions.length;i++){
+      var o=ctx.adminOptions[i];
+      if (o.value===locValue||o.id===locValue) return o.label||o.value;
+    }
+    return locValue || "—";
+  }
+
+  function closeDD() {
+    ddOpen = false;
+    var dd  = document.getElementById("appLocDropdown");
+    var btn = document.getElementById("appLocPill");
+    if (dd)  dd.classList.remove("is-open");
+    if (btn) { btn.classList.remove("dd-open"); btn.setAttribute("aria-expanded","false"); }
+  }
+
+  function fireChanged() {
+    try {
+      window.dispatchEvent(new CustomEvent("ops-location-changed",{
+        detail:{ viewLocation:AppLocation.getViewLocation(), viewLabel:AppLocation.getViewLabel(), context:ctx }
+      }));
+    } catch(e){}
+  }
+
+  /** Location display name from Users sheet / Locations tab */
+  function locationNameFromCtx(c) {
+    if (!c) return "—";
+    if (c.location) return String(c.location).trim();
+    var lbl = String(c.locationLabel || "").trim();
+    if (!lbl) return "—";
+    var m = lbl.match(/^LOC\d+\s*[·•·]\s*(.+)$/i);
+    return m ? m[1].trim() : lbl;
+  }
+
+  function headerLocationName() {
+    if (!ctx) return "—";
+    if (!ctx.isAdmin) {
+      return locationNameFromCtx(ctx);
+    }
+    if (isAll(ctx.viewLocation)) return "All Locations";
+    return locationNameFromCtx({
+      location: ctx.viewLocation,
+      locationLabel: ctx.viewLabel
+    });
+  }
+
+  function updateLocationBadge() {
+    var el = document.getElementById("locationLabel");
+    if (!el) {
+      logWarn("updateLocationBadge: #locationLabel not found in DOM");
+      return;
+    }
+    el.classList.remove("is-loading");
+    var name = headerLocationName();
+    log("updateLocationBadge →", name, "| ctx:", summarizeContext(ctx));
+    el.textContent = "📍 " + name;
+    if (ctx && ctx.isAdmin) {
+      el.title = "Dashboard view: " + name + " (click ▼ to switch)";
+    } else if (ctx) {
+      var tip = "Your location: " + name;
+      if (ctx.locationId) tip += " (" + ctx.locationId + ")";
+      el.title = tip;
+    } else {
+      el.title = "Your location";
+    }
+  }
+
+  /* ── role badge ─────────────────────────────────────────────── */
+  function updateRoleBadge() {
+    var el = document.getElementById("roleLabel");
+    if (!el) {
+      logWarn("updateRoleBadge: #roleLabel not found in DOM");
+      return;
+    }
+    el.classList.remove("is-loading");
+    var role = ctx ? String(ctx.role || "User") : "User";
+    log("updateRoleBadge →", role, "| isAdmin:", !!(ctx && ctx.isAdmin));
+    /* Capitalise first letter only, rest lower */
+    el.textContent = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+    /* Highlight admin badge distinctively */
+    if (ctx && ctx.isAdmin) {
+      el.style.background  = "rgba(201,168,76,0.22)";
+      el.style.borderColor = "rgba(201,168,76,0.65)";
+      el.style.color       = "#C9A84C";
+    } else {
+      el.style.background  = "";
+      el.style.borderColor = "";
+      el.style.color       = "";
+    }
+  }
+
+  var initPending = false;
+
+  function showHeaderLoading() {
+    var roleEl = document.getElementById("roleLabel");
+    var locEl = document.getElementById("locationLabel");
+    if (roleEl) { roleEl.textContent = "…"; roleEl.classList.add("is-loading"); }
+    if (locEl) { locEl.textContent = "📍 …"; locEl.classList.add("is-loading"); }
+  }
+
+  function clearHeaderLoadingFallback(roleText, locText) {
+    var roleEl = document.getElementById("roleLabel");
+    if (roleEl) {
+      roleEl.classList.remove("is-loading");
+      roleEl.textContent = roleText || "User";
+      roleEl.style.background = "";
+      roleEl.style.borderColor = "";
+      roleEl.style.color = "";
+    }
+    var locEl = document.getElementById("locationLabel");
+    if (locEl) {
+      locEl.classList.remove("is-loading");
+      locEl.textContent = "📍 " + (locText || "—");
+    }
+    var wrap = document.getElementById("locControl");
+    if (wrap) { wrap.innerHTML = ""; wrap.style.display = "none"; }
+  }
+
+  /* ── location: badge for everyone; admin view switcher in locControl ── */
+  function render() {
+    updateLocationBadge();
+    var wrap = document.getElementById("locControl");
+    if (!wrap || !ctx) return;
+    wrap.innerHTML = "";
+
+    if (!ctx.isAdmin) {
+      wrap.style.display = "none";
+      wrap.setAttribute("aria-hidden", "true");
+      return;
+    }
+
+    wrap.style.display = "";
+    wrap.setAttribute("aria-hidden", "false");
+
+    if (ctx.isAdmin) {
+      var viewLoc   = ctx.viewLocation || "";
+      var viewIsAll = isAll(viewLoc);
+
+      var btn = document.createElement("button");
+      btn.type      = "button";
+      btn.id        = "appLocPill";
+      btn.className = "app-loc-pill";
+      btn.style.padding = "4px 10px";
+      btn.setAttribute("aria-haspopup","listbox");
+      btn.setAttribute("aria-expanded","false");
+      btn.title     = "Switch location view";
+      btn.innerHTML = '<span class="loc-chevron" style="font-size:10px">▼</span>';
+
+      /* Dropdown */
+      var dd = document.createElement("div");
+      dd.id        = "appLocDropdown";
+      dd.className = "app-loc-dropdown";
+      dd.setAttribute("role","listbox");
+      dd.innerHTML = '<div class="app-loc-dd-header"><span>📍</span> Switch Location</div>';
+
+      (ctx.adminOptions || []).forEach(function(opt, idx) {
+        /* Divider between "All" and the real locations */
+        if (idx === 1) {
+          var dv = document.createElement("div"); dv.className = "app-loc-divider"; dd.appendChild(dv);
+        }
+
+        var optIsAll  = isAll(opt.value);
+        var isActive  = optIsAll ? viewIsAll : opt.value === viewLoc;
+
+        var badge = optIsAll
+          ? '<span class="app-loc-opt-badge all-badge">ALL</span>'
+          : (opt.id ? '<span class="app-loc-opt-badge">'+opt.id+'</span>' : '');
+
+        var name = opt.name || (optIsAll ? "All Locations"
+          : (opt.label ? opt.label.replace(/^LOC\d+\s*[·•·]\s*/i,"") : opt.value));
+
+        var metaParts = "";
+        if (optIsAll) {
+          metaParts = '<span>Combined view across all locations</span>';
+        } else {
+          if (opt.manager) metaParts += '<span>👤 '+opt.manager+'</span>';
+          if (opt.phone)   metaParts += '<span>📞 '+opt.phone+'</span>';
+        }
+
+        var item = document.createElement("button");
+        item.type      = "button";
+        item.className = "app-loc-option" + (isActive ? " active" : "");
+        item.setAttribute("role","option");
+        item.setAttribute("aria-selected", isActive ? "true" : "false");
+        item.innerHTML =
+          '<div class="app-loc-opt-row">' +
+            badge +
+            '<span class="app-loc-opt-name">'+name+'</span>' +
+            (isActive ? '<span class="app-loc-opt-check">✓</span>' : '') +
+          '</div>' +
+          (metaParts ? '<div class="app-loc-opt-meta">'+metaParts+'</div>' : '');
+
+        item.addEventListener("click", function(){
+          ctx.viewLocation = optIsAll ? "" : opt.value;
+          ctx.viewLabel    = optIsAll ? "All Locations" : labelOf(opt.value);
+          saveView(ctx.viewLocation);
+          updateLocationBadge();
+          render();
+          closeDD();
+          fireChanged();
+        });
+        dd.appendChild(item);
+      });
+
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        ddOpen = !ddOpen;
+        dd.classList.toggle("is-open", ddOpen);
+        btn.classList.toggle("dd-open", ddOpen);
+        btn.setAttribute("aria-expanded", ddOpen ? "true" : "false");
+      });
+
+      wrap.appendChild(btn);
+      wrap.appendChild(dd);
+    }
+  }
+
+  /* ── applyField: fill / lock a location <select> in forms ───── */
+  function applyField(selectEl, options) {
+    if (!selectEl) return;
+    options = options || {};
+    var locs       = options.Location || options.locations || [];
+    var locked     = !!options.locationLocked;
+    var defaultLoc = options.defaultLocation || (ctx && ctx.location) || "";
+
+    selectEl.innerHTML = "";
+
+    if (locked && defaultLoc) {
+      var o = document.createElement("option");
+      o.value = defaultLoc; o.textContent = defaultLoc; o.selected = true;
+      selectEl.appendChild(o);
+      selectEl.value = defaultLoc;
+      selectEl.disabled = true;
+      selectEl.classList.add("location-locked");
+      return;
+    }
+
+    selectEl.disabled = false;
+    selectEl.classList.remove("location-locked");
+    var emp = document.createElement("option"); emp.value=""; emp.textContent="Select location";
+    selectEl.appendChild(emp);
+    locs.forEach(function(v){
+      var op = document.createElement("option");
+      op.value = v; op.textContent = v;
+      if (defaultLoc && v===defaultLoc) op.selected = true;
+      selectEl.appendChild(op);
+    });
+    if (defaultLoc) selectEl.value = defaultLoc;
+  }
+
+  /* ── close dropdown on outside click ────────────────────────── */
+  document.addEventListener("click", closeDD);
+
+  function scriptReady() {
+    return !!(window.google && google.script && google.script.run);
+  }
+
+  function fetchContext(cb, attempt) {
+    attempt = attempt || 0;
+    var token = getToken();
+    log("fetchContext attempt", attempt, "| token:", tokenHint(token), "| scriptReady:", scriptReady());
+
+    if (!token) {
+      logError("No auth token — check Login redirect and localStorage.opsAuthToken");
+      initPending = false;
+      clearHeaderLoadingFallback("Guest", "Sign in");
+      if (cb) cb(null);
+      return;
+    }
+    if (!scriptReady()) {
+      if (attempt < 40) {
+        if (attempt === 0) logWarn("google.script.run not ready yet, retrying…");
+        setTimeout(function() { fetchContext(cb, attempt + 1); }, 50);
+        return;
+      }
+      logError("google.script.run still unavailable after retries — open deployed /exec URL");
+      initPending = false;
+      clearHeaderLoadingFallback("User", "Offline");
+      if (cb) cb(null);
+      return;
+    }
+
+    var sv = storedView();
+    log("Calling backend getAppContext | storedView:", sv, "| viewParam:", sv === null ? "(empty→server)" : sv);
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        initPending = false;
+        log("getAppContext SUCCESS — raw response:", data);
+        log("getAppContext summary:", summarizeContext(data));
+        ctx = data || null;
+        if (!ctx) {
+          logError("Backend returned null/empty context");
+        }
+        if (ctx && ctx.isAdmin) {
+          if (!hasStored()) {
+            var def = ctx.defaultAdminLocation || ctx.defaultAdminLocationId || "";
+            if (!def && ctx.adminOptions && ctx.adminOptions.length) {
+              for (var i = 0; i < ctx.adminOptions.length; i++) {
+                if (ctx.adminOptions[i].id === "LOC004") {
+                  def = ctx.adminOptions[i].value;
+                  break;
+                }
+              }
+            }
+            ctx.viewLocation = def;
+            ctx.viewLabel = def ? labelOf(def) : (ctx.viewLabel || "All Locations");
+            saveView(ctx.viewLocation);
+          } else {
+            ctx.viewLocation = isAll(sv) ? "" : sv;
+            ctx.viewLabel = isAll(sv) ? "All Locations" : labelOf(sv);
+          }
+        }
+        updateRoleBadge();
+        updateLocationBadge();
+        render();
+        var roleEl = document.getElementById("roleLabel");
+        var locEl = document.getElementById("locationLabel");
+        log("Header after load — role:", roleEl ? roleEl.textContent : "(missing)",
+            "| location:", locEl ? locEl.textContent : "(missing)");
+        if (cb) cb(ctx);
+
+        if (OPS_DEBUG && google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler(function(dbg) {
+              log("debugAppContext (server) —", dbg);
+            })
+            .withFailureHandler(function(e) {
+              logError("debugAppContext failed:", e);
+            })
+            .debugAppContext(token, sv === null ? "" : sv);
+        }
+      })
+      .withFailureHandler(function(err) {
+        initPending = false;
+        ctx = null;
+        var msg = err && err.message ? err.message : String(err || "unknown error");
+        logError("getAppContext FAILED:", msg, err);
+        if (String(msg).toLowerCase().indexOf("unauthorized") >= 0) {
+          logError("Session invalid — log in again; token was:", tokenHint(token));
+          clearHeaderLoadingFallback("Session expired", "—");
+        } else {
+          clearHeaderLoadingFallback("User", "—");
+        }
+        if (cb) cb(null);
+
+        if (google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler(function(dbg) {
+              log("debugAppContext after failure —", dbg);
+            })
+            .withFailureHandler(function(e2) {
+              logError("debugAppContext after failure also failed:", e2);
+            })
+            .debugAppContext(token, sv === null ? "" : sv);
+        }
+      })
+      .getAppContext(token, sv === null ? "" : sv);
+  }
+
+  /* ── public API ─────────────────────────────────────────────── */
+  var AppLocation = {
+    init: function(cb) {
+      log("AppLocation.init() | hasCtx:", !!ctx, "| initPending:", initPending,
+          "| DOM roleLabel:", !!document.getElementById("roleLabel"),
+          "| DOM locationLabel:", !!document.getElementById("locationLabel"));
+
+      if (ctx) {
+        log("Using cached context:", summarizeContext(ctx));
+        updateRoleBadge();
+        updateLocationBadge();
+        render();
+        if (cb) cb(ctx);
+        return;
+      }
+      if (initPending) {
+        log("Init already in progress, waiting for ops-location-ready…");
+        if (cb) {
+          document.addEventListener("ops-location-ready", function once() {
+            document.removeEventListener("ops-location-ready", once);
+            cb(ctx);
+          });
+        }
+        return;
+      }
+
+      log("Starting header load (showing … until backend responds)");
+      showHeaderLoading();
+
+      initPending = true;
+      fetchContext(function(result) {
+        try {
+          window.dispatchEvent(new CustomEvent("ops-location-ready", { detail: { context: result } }));
+        } catch (e) {}
+        if (cb) cb(result);
+      });
+    },
+
+    refresh: function(cb) { ctx = null; initPending = false; this.init(cb); },
+
+    getContext:      function() { return ctx; },
+    isAdmin:         function() { return !!(ctx && ctx.isAdmin); },
+    isLocked:        function() { return !!(ctx && ctx.locationLocked); },
+    getUserLocation: function() { return ctx ? (ctx.location || "") : ""; },
+
+    getViewLocation: function() {
+      if (!ctx) return "";
+      if (ctx.isAdmin) {
+        var s = storedView();
+        return s === null ? (ctx.defaultAdminLocation || "") : (isAll(s) ? "" : s);
+      }
+      return ctx.location || "";
+    },
+
+    getViewLabel: function() {
+      if (!ctx) return "";
+      return ctx.isAdmin
+        ? (ctx.viewLabel || "All Locations")
+        : (ctx.locationLabel || ctx.location || "");
+    },
+
+    applyField: applyField,
+
+    withDropdownOptions: function(serverOpts) {
+      var opts = serverOpts || {};
+      if (ctx && ctx.locationLocked) {
+        opts.locationLocked  = true;
+        opts.defaultLocation = ctx.location;
+        opts.Location        = [ctx.location];
+      }
+      return opts;
+    }
+  };
+
+  window.AppLocation = AppLocation;
+
+  /* NOTE: Auto-boot removed.
+     AppChrome.html calls AppLocation.init() explicitly from its own
+     <script> block, which runs after #roleLabel and #locControl exist in the DOM. */
+})();
+</script>
